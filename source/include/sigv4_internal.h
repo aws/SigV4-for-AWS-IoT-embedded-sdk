@@ -71,40 +71,40 @@
  * @brief The separator between each component of the credential scope.
  */
 #define CREDENTIAL_SCOPE_SEPARATOR           '/'
-#define CREDENTIAL_SCOPE_SEPARATOR_LEN       1U     /**< The length of #CREDENTIAL_SCOPE_SEPARATOR. */
+#define CREDENTIAL_SCOPE_SEPARATOR_LEN       1U /**< The length of #CREDENTIAL_SCOPE_SEPARATOR. */
 
 /**
  * @brief The last component that terminates the credential scope.
  */
 #define CREDENTIAL_SCOPE_TERMINATOR          "aws4_request"
-#define CREDENTIAL_SCOPE_TERMINATOR_LEN      ( sizeof( CREDENTIAL_SCOPE_TERMINATOR ) - 1U )     /**< The length of #CREDENTIAL_SCOPE_TERMINATOR. */
+#define CREDENTIAL_SCOPE_TERMINATOR_LEN      ( sizeof( CREDENTIAL_SCOPE_TERMINATOR ) - 1U ) /**< The length of #CREDENTIAL_SCOPE_TERMINATOR. */
 
 /**
  * @brief Default value when HttpParameters_t.pPath == NULL.
  */
 #define HTTP_EMPTY_PATH                      "/"
-#define HTTP_EMPTY_PATH_LEN                  ( sizeof( HTTP_EMPTY_PATH ) - 1U )                   /**< The length of #HTTP_EMPTY_PATH. */
+#define HTTP_EMPTY_PATH_LEN                  ( sizeof( HTTP_EMPTY_PATH ) - 1U )               /**< The length of #HTTP_EMPTY_PATH. */
 
-#define LINEFEED_CHAR                        '\n'                                                 /**< A linefeed character used to build the canonical request. */
-#define LINEFEED_CHAR_LEN                    1U                                                   /**< The length of #LINEFEED_CHAR. */
+#define LINEFEED_CHAR                        '\n'                                             /**< A linefeed character used to build the canonical request. */
+#define LINEFEED_CHAR_LEN                    1U                                               /**< The length of #LINEFEED_CHAR. */
 
-#define SPACE_CHAR                           ' '                                                  /**< A linefeed character used to build the Authorization header value. */
-#define SPACE_CHAR_LEN                       1U                                                   /**< The length of #SPACE_CHAR. */
+#define SPACE_CHAR                           ' '                                              /**< A linefeed character used to build the Authorization header value. */
+#define SPACE_CHAR_LEN                       1U                                               /**< The length of #SPACE_CHAR. */
 
-#define S3_SERVICE_NAME                      "s3"                                                 /**< S3 is the only service where the URI must only be encoded once. */
-#define S3_SERVICE_NAME_LEN                  ( sizeof( S3_SERVICE_NAME ) - 1U )                   /**< The length of #S3_SERVICE_NAME. */
+#define S3_SERVICE_NAME                      "s3"                                             /**< S3 is the only service where the URI must only be encoded once. */
+#define S3_SERVICE_NAME_LEN                  ( sizeof( S3_SERVICE_NAME ) - 1U )               /**< The length of #S3_SERVICE_NAME. */
 
-#define SIGV4_HMAC_SIGNING_KEY_PREFIX        "AWS4"                                               /**< HMAC signing key prefix. */
-#define SIGV4_HMAC_SIGNING_KEY_PREFIX_LEN    ( sizeof( SIGV4_HMAC_SIGNING_KEY_PREFIX ) - 1U )     /**< The length of #SIGV4_HMAC_SIGNING_KEY_PREFIX. */
+#define SIGV4_HMAC_SIGNING_KEY_PREFIX        "AWS4"                                           /**< HMAC signing key prefix. */
+#define SIGV4_HMAC_SIGNING_KEY_PREFIX_LEN    ( sizeof( SIGV4_HMAC_SIGNING_KEY_PREFIX ) - 1U ) /**< The length of #SIGV4_HMAC_SIGNING_KEY_PREFIX. */
 
-#define AUTH_CREDENTIAL_PREFIX               "Credential="                                        /**< The prefix that goes before the credential value in the Authorization header value. */
-#define AUTH_CREDENTIAL_PREFIX_LEN           ( sizeof( AUTH_CREDENTIAL_PREFIX ) - 1U )            /**< The length of #AUTH_CREDENTIAL_PREFIX. */
-#define AUTH_SEPARATOR                       ", "                                                 /**< The separator between each component in the Authorization header value. */
-#define AUTH_SEPARATOR_LEN                   ( sizeof( AUTH_SEPARATOR ) - 1U )                    /**< The length of #AUTH_SEPARATOR. */
-#define AUTH_SIGNED_HEADERS_PREFIX           "SignedHeaders="                                     /**< The prefix that goes before the signed headers in the Authorization header value. */
-#define AUTH_SIGNED_HEADERS_PREFIX_LEN       ( sizeof( AUTH_SIGNED_HEADERS_PREFIX ) - 1U )        /**< The length of #AUTH_SIGNED_HEADERS_PREFIX. */
-#define AUTH_SIGNATURE_PREFIX                "Signature="                                         /**< The prefix that goes before the signature in the Authorization header value. */
-#define AUTH_SIGNATURE_PREFIX_LEN            ( sizeof( AUTH_SIGNATURE_PREFIX ) - 1U )             /**< The length of #AUTH_SIGNATURE_PREFIX. */
+#define AUTH_CREDENTIAL_PREFIX               "Credential="                                    /**< The prefix that goes before the credential value in the Authorization header value. */
+#define AUTH_CREDENTIAL_PREFIX_LEN           ( sizeof( AUTH_CREDENTIAL_PREFIX ) - 1U )        /**< The length of #AUTH_CREDENTIAL_PREFIX. */
+#define AUTH_SEPARATOR                       ", "                                             /**< The separator between each component in the Authorization header value. */
+#define AUTH_SEPARATOR_LEN                   ( sizeof( AUTH_SEPARATOR ) - 1U )                /**< The length of #AUTH_SEPARATOR. */
+#define AUTH_SIGNED_HEADERS_PREFIX           "SignedHeaders="                                 /**< The prefix that goes before the signed headers in the Authorization header value. */
+#define AUTH_SIGNED_HEADERS_PREFIX_LEN       ( sizeof( AUTH_SIGNED_HEADERS_PREFIX ) - 1U )    /**< The length of #AUTH_SIGNED_HEADERS_PREFIX. */
+#define AUTH_SIGNATURE_PREFIX                "Signature="                                     /**< The prefix that goes before the signature in the Authorization header value. */
+#define AUTH_SIGNATURE_PREFIX_LEN            ( sizeof( AUTH_SIGNATURE_PREFIX ) - 1U )         /**< The length of #AUTH_SIGNATURE_PREFIX. */
 
 /**
  * @brief A helper macro to print insufficient memory errors.
@@ -193,7 +193,7 @@ typedef struct HmacContext
     /**
      * @brief All accumulated key data.
      */
-    char key[ SIGV4_HASH_DIGEST_LENGTH ];
+    char key[ SIGV4_HASH_MAX_BLOCK_LENGTH ];
 
     /**
      * @brief The length of the accumulated key data.

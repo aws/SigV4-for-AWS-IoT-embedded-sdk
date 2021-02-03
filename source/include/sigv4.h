@@ -49,20 +49,23 @@
 /** @addtogroup sigv4_constants
  *  @{
  */
-#define SIGV4_AWS4_HMAC_SHA256                      "AWS4-HMAC-SHA256"                   /**< AWS identifier for SHA256 signing algorithm. */
-#define SIGV4_HTTP_X_AMZ_DATE_HEADER                "x-amz-date"                         /**< AWS identifier for HTTP date header. */
-#define SIGV4_HTTP_X_AMZ_SECURITY_TOKEN_HEADER      "x-amz-security-token"               /**< AWS identifier for security token. */
+#define SIGV4_AWS4_HMAC_SHA256                      "AWS4-HMAC-SHA256"                        /**< AWS identifier for SHA256 signing algorithm. */
+#define SIGV4_AWS4_HMAC_SHA256_LENGTH               ( sizeof( SIGV4_AWS4_HMAC_SHA256 ) - 1U ) /**< AWS identifier for SHA256 signing algorithm. */
+#define SIGV4_HTTP_X_AMZ_DATE_HEADER                "x-amz-date"                              /**< AWS identifier for HTTP date header. */
+#define SIGV4_HTTP_X_AMZ_SECURITY_TOKEN_HEADER      "x-amz-security-token"                    /**< AWS identifier for security token. */
 
-#define SIGV4_STREAMING_AWS4_HMAC_SHA256_PAYLOAD    "STREAMING-AWS4-HMAC-SHA256-PAYLOAD" /**< S3 identifier for chunked payloads. */
-#define SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER      "x-amz-content-sha256"               /**< S3 identifier for streaming requests. */
-#define SIGV4_HTTP_X_AMZ_STORAGE_CLASS_HEADER       "x-amz-storage-class"                /**< S3 identifier for reduced streaming redundancy. */
+#define SIGV4_STREAMING_AWS4_HMAC_SHA256_PAYLOAD    "STREAMING-AWS4-HMAC-SHA256-PAYLOAD"      /**< S3 identifier for chunked payloads. */
+#define SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER      "x-amz-content-sha256"                    /**< S3 identifier for streaming requests. */
+#define SIGV4_HTTP_X_AMZ_STORAGE_CLASS_HEADER       "x-amz-storage-class"                     /**< S3 identifier for reduced streaming redundancy. */
 
-#define SIGV4_ACCESS_KEY_ID_LENGTH                  20U                                  /**< Length of access key ID. */
-#define SIGV4_SECRET_ACCESS_KEY_LENGTH              40U                                  /**< Length of secret access key. */
+#define SIGV4_ACCESS_KEY_ID_LENGTH                  20U                                       /**< Length of access key ID. */
+#define SIGV4_SECRET_ACCESS_KEY_LENGTH              40U                                       /**< Length of secret access key. */
 
-#define SIGV4_ISO_STRING_LEN                        16U                                  /**< Length of ISO 8601 date string. */
-#define SIGV4_EXPECTED_LEN_RFC_3339                 20U                                  /**< Length of RFC 3339 date input. */
-#define SIGV4_EXPECTED_LEN_RFC_5322                 29U                                  /**< Length of RFC 5322 date input. */
+#define SIGV4_ISO_STRING_LEN                        16U                                       /**< Length of ISO 8601 date string. */
+#define SIGV4_EXPECTED_LEN_RFC_3339                 20U                                       /**< Length of RFC 3339 date input. */
+#define SIGV4_EXPECTED_LEN_RFC_5322                 29U
+/**< Length of RFC 5322 date input. */
+
 /** @}*/
 
 /**
@@ -108,7 +111,7 @@
  *
  * This flag is valid only for #SigV4HttpParameters_t.flags.
  */
-#define SIGV4_HTTP_ALL_ARE_CANONICAL_FLAG        0x8U
+#define SIGV4_HTTP_ALL_ARE_CANONICAL_FLAG        0x7U
 
 /**
  * @ingroup sigv4_enum_types
@@ -162,7 +165,24 @@ typedef enum SigV4Status
      * Functions that may return this value:
      * - #SigV4_GenerateHTTPAuthorization
      */
-    SigV4MaxHeaderPairCountExceeded
+    SigV4MaxHeaderPairCountExceeded,
+
+    /**
+     * @brief The maximum number of query parameters was exceeded while parsing
+     * the query string input parameter.
+     *
+     * Functions that may return this value:
+     * - #SigV4_GenerateHTTPAuthorization
+     */
+    SigV4MaxQueryPairCountExceeded,
+
+    /**
+     * @brief An error occurred while performing a hash operation.
+     *
+     * Functions that may return this value:
+     * - #SigV4_GenerateHTTPAuthorization
+     */
+    SigV4HashError,
 } SigV4Status_t;
 
 /**
@@ -193,7 +213,7 @@ typedef struct SigV4CryptoInterface
      * @return Zero on success, all other return values are failures.
      */
     int32_t ( * hashUpdate )( void * pHashContext,
-                              const uint8_t * pInput,
+                              const char * pInput,
                               size_t inputLen );
 
     /**
@@ -205,18 +225,28 @@ typedef struct SigV4CryptoInterface
      * output.
      * @param[in] outputLen The length of the pOutput buffer, which must be
      * larger than the hash digest length specified in
-     * #SIGV4_HASH_DIGEST_LENGTH.
+     * #SIGV4_HASH_MAX_DIGEST_LENGTH.
      *
      * @return Zero on success, all other return values are failures.
      */
     int32_t ( * hashFinal )( void * pHashContext,
-                             uint8_t * pOutput,
+                             char * pOutput,
                              size_t outputLen );
 
     /**
      * @brief Context for the hashInit, hashUpdate, and hashFinal interfaces.
      */
     void * pHashContext;
+
+    /**
+     * @brief The block length of the hash function.
+     */
+    size_t hashBlockLen;
+
+    /**
+     * @brief The digest length of the hash function.
+     */
+    size_t hashDigestLen;
 } SigV4CryptoInterface_t;
 
 /**
@@ -238,7 +268,7 @@ typedef struct SigV4HttpParameters
      * - #SIGV4_HTTP_PATH_IS_CANONICAL_FLAG     0x1
      * - #SIGV4_HTTP_QUERY_IS_CANONICAL_FLAG    0x2
      * - #SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG 0x4
-     * - #SIGV4_HTTP_ALL_ARE_CANONICAL_FLAG     0x8
+     * - #SIGV4_HTTP_ALL_ARE_CANONICAL_FLAG     0x7
      */
     uint32_t flags;
 
@@ -287,13 +317,13 @@ typedef struct SigV4HttpParameters
 typedef struct SigV4Credentials
 {
     /**
-     * @brief The pAccessKeyId MUST be 20 characters long.
+     * @brief The pAccessKeyId MUST be at least 16 characters long.
      */
     const char * pAccessKeyId;
-    size_t accessKeyLen; /**< @brief Length of pAccessKeyId. */
+    size_t accessKeyIdLen; /**< @brief Length of pAccessKeyId. */
 
     /**
-     * @brief The pSecretAccessKey MUST be 40 characters long.
+     * @brief The pSecretAccessKey MUST be at least 40 characters long.
      */
     const char * pSecretAccessKey;
     size_t secretAccessKeyLen; /**< @brief Length of pSecretAccessKey. */
@@ -339,6 +369,14 @@ typedef struct SigV4Parameters
     const char * pDateIso8601;
 
     /**
+     * @brief The algorithm used for SigV4 authentication. If set to NULL,
+     * this will automatically be set to "AWS4-HMAC-SHA256" by default.
+     */
+    const char * pAlgorithm;
+
+    size_t algorithmLen; /**< @brief Length of pAlgorithm. */
+
+    /**
      * @brief The target AWS region for the request. Please see
      * https://docs.aws.amazon.com/general/latest/gr/rande.html for a list of
      * region names and codes.
@@ -369,15 +407,14 @@ typedef struct SigV4Parameters
 
 /**
  * @brief Generates the HTTP Authorization header value.
- *
  * @note The API does not support HTTP headers containing empty HTTP header keys or values.
  *
  * @param[in] pParams Parameters for generating the SigV4 signature.
  * @param[out] pAuthBuf Buffer to hold the generated Authorization header value.
- * @param[in, out] authBufLen Input: the length of pAuthBuf, output: the length
+ * @param[in, out] authBufLen Input: the length of @p pAuthBuf, output: the length
  * of the authorization value written to the buffer.
  * @param[out] pSignature Location of the signature in the authorization string.
- * @param[out] signatureLen The length of pSignature.
+ * @param[out] signatureLen The length of @p pSignature.
  *
  * @return #SigV4Success if successful, error code otherwise.
  */
@@ -437,7 +474,6 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
                                          size_t dateLen,
                                          char * pDateISO8601,
                                          size_t dateISO8601Len );
-
 /* @[declare_sigV4_awsIotDateToIso8601_function] */
 
 #endif /* SIGV4_H_ */
