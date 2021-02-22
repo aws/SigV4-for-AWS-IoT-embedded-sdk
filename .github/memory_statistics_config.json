@@ -1,0 +1,12 @@
+{
+    "lib_name": "AWS IoT SigV4 Library",
+    "src": [
+        "source/sigv4.c"
+    ],
+    "include": [
+        "source/include"
+    ],
+    "compiler_flags": [
+        "SIGV4_DO_NOT_USE_CUSTOM_CONFIG"
+    ]
+}
