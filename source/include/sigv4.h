@@ -147,7 +147,15 @@ typedef enum SigV4Status
      * Functions that may return this value:
      * - #SigV4_GenerateHTTPAuthorization
      */
-    SigV4InsufficientMemory
+    SigV4InsufficientMemory,
+
+    /**
+     * @brief An error occurred while formatting the provided date header.
+     *
+     * Functions that may return this value:
+     * - #SigV4_AwsIotDateToIso8601
+     */
+    SigV4ISOFormattingError
 } SigV4Status_t;
 
 /**
