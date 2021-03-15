@@ -205,7 +205,9 @@ typedef struct SigV4CryptoInterface
                              uint8_t * pOutput,
                              size_t outputLen );
 
-    /* Context for the hashInit, hashUpdate, and hashFinal interfaces. */
+    /**
+     * @brief Context for the hashInit, hashUpdate, and hashFinal interfaces.
+     */
     void * pHashContext;
 } SigV4CryptoInterface_t;
 
@@ -216,11 +218,8 @@ typedef struct SigV4CryptoInterface
  */
 typedef struct SigV4HttpParameters
 {
-    /**
-     * @brief The HTTP method: GET, POST, PUT, etc.
-     */
-    const char * pHttpMethod;
-    size_t httpMethodLen;
+    const char * pHttpMethod; /**< @brief The HTTP method: GET, POST, PUT, etc. */
+    size_t httpMethodLen;     /**< @brief Length of pHttpMethod. */
 
     /**
      * @brief These flags are used to indicate if the path, query, or headers are already
@@ -243,7 +242,7 @@ typedef struct SigV4HttpParameters
      * then this input must already be in canonical form.
      */
     const char * pPath;
-    size_t pathLen;
+    size_t pathLen; /**< @brief Length of pPath. */
 
     /**
      * @brief The HTTP request query from the URL. This contains all characters
@@ -252,7 +251,7 @@ typedef struct SigV4HttpParameters
      * be in canonical form.
      */
     const char * pQuery;
-    size_t queryLen;
+    size_t queryLen; /**< @brief Length of pQuery. */
 
     /**
      * @brief The headers from the HTTP request that we want to sign. This
@@ -261,7 +260,7 @@ typedef struct SigV4HttpParameters
      * already be in canonical form.
      */
     const char * pHeaders;
-    size_t headersLen;
+    size_t headersLen; /**< @brief Length of pHeaders. */
 
     /**
      * @brief The HTTP response body, if one exists (ex. PUT request). If this
@@ -269,7 +268,7 @@ typedef struct SigV4HttpParameters
      * STREAMING-AWS4-HMAC-SHA256-PAYLOAD.
      */
     const char * pPayload;
-    size_t payloadLen;
+    size_t payloadLen; /**< @brief Length of pPayload. */
 } SigV4HttpParameters_t;
 
 /**
@@ -283,13 +282,13 @@ typedef struct SigV4Credentials
      * @brief The pAccessKeyId MUST be 20 characters long.
      */
     const char * pAccessKeyId;
-    size_t accessKeyLen;
+    size_t accessKeyLen; /**< @brief Length of pAccessKeyId. */
 
     /**
      * @brief The pSecretAccessKey MUST be 40 characters long.
      */
     const char * pSecretAccessKey;
-    size_t secretAccessKeyLen;
+    size_t secretAccessKeyLen; /**< @brief Length of pSecretAccessKey. */
 
     /**
      * @brief The Security Token from STS is of varying length. This can be NULL
@@ -297,7 +296,7 @@ typedef struct SigV4Credentials
      * temporary token service.
      */
     const char * pSecurityToken;
-    size_t securityTokenLen;
+    size_t securityTokenLen; /**< @brief Length of pSecurityToken. */
 
     /**
      * @brief The expiration time for the pAccessKeyId, pSecretAccessKey, and
@@ -305,13 +304,17 @@ typedef struct SigV4Credentials
      * service. This is in ISO8601 date and time format.
      */
     const char * pExpiration;
-    size_t expirationLen;
+    size_t expirationLen; /**< @brief Length of pExpiration. */
 } SigV4Credentials_t;
 
 /**
  * @ingroup sigv4_struct_types
- * @brief Nested struct containing the above parameters required to create the
- * String to Sign and the Signing Key.
+ * @brief Complete configurations required for generating "String to Sign" and
+ * "Signing Key" values.
+ *
+ * Consists of parameter structures #SigV4Credentials_t,
+ * #SigV4CryptoInterface_t, and #SigV4HttpParameters_t, along with date, region,
+ * and service specifications.
  */
 typedef struct SigV4Parameters
 {
@@ -333,7 +336,7 @@ typedef struct SigV4Parameters
      * region names and codes.
      */
     const char * pRegion;
-    size_t regionLen;
+    size_t regionLen; /**< @brief Length of pRegion. */
 
     /**
      * @brief The target AWS service for the request.  The service name can be
@@ -343,7 +346,7 @@ typedef struct SigV4Parameters
      * for your service of interest.
      */
     const char * pService;
-    size_t serviceLen;
+    size_t serviceLen; /**< @brief Length of pService. */
 
     /**
      * @brief The cryptography interface.
