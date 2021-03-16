@@ -384,12 +384,16 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
  * @param[in] pDate The date header value.
  * @param[in] dateLen length of the pDate header value.
  * @param[out] pDateISO8601 The ISO8601 format compliant date. This buffer must
- * be 17 characters in length to account for the null terminator.
+ * be large enough to hold both the ISO8601-formatted date (16 characters) and
+ * the terminating null character (17 in total).
+ * @param[in] dateISO8601Len The length of buffer pDateISO8601. Must be at least
+ * 17 for valid input parameters.
  *
  * @return #SigV4Success code if successful, error code otherwise.
  */
 SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
                                          size_t dateLen,
-                                         char pDateISO8601[ 17 ] );
+                                         char pDateISO8601[ 17 ],
+                                         size_t dateISO8601Len );
 
 #endif /* SIGV4_H_ */
