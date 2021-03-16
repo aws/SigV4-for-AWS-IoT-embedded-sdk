@@ -35,7 +35,8 @@
 
 SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
                                          size_t dateLen,
-                                         char pDateISO8601[ 17 ] )
+                                         char pDateISO8601[ 17 ],
+                                         size_t dateISO8601Len )
 {
     SigV4Status_t returnStatus = SigV4Success;
     size_t lenFormatted = 0U;
@@ -48,15 +49,23 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
         LogError( ( "Parameter check failed: pDate is NULL." ) );
         returnStatus = SigV4InvalidParameter;
     }
+    /* Check validity of the date header size provided. */
+    else if( dateLen == 0U )
+    {
+        LogError( ( "Parameter check failed: dateLen must be greater than 0." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
     else if( pDateISO8601 == NULL )
     {
         LogError( ( "Parameter check failed: pDateISO8601 is NULL." ) );
         returnStatus = SigV4InvalidParameter;
     }
-    /* Check validity of the date header size provided. */
-    else if( dateLen == 0U )
+
+    /* Check that the buffer provided is large enough for the formatted
+     * output string. */
+    else if( dateISO8601Len < 17U )
     {
-        LogError( ( "Parameter check failed: dateLen must be greater than 0." ) );
+        LogError( ( "Parameter check failed: dateISO8601Len must be at least 17." ) );
         returnStatus = SigV4InvalidParameter;
     }
 
@@ -70,7 +79,7 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
             LogError( ( "Error matching input to ISO8601 format string." ) );
             returnStatus == SigV4ISOFormattingError;
         }
-        else if( pLastChar != '\0' )
+        else if( pLastChar[ 0 ] != '\0' )
         {
             LogWarn( ( "Input contained more characters than expected." ) );
         }
