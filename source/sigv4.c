@@ -38,7 +38,7 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
                                          char pDateISO8601[ 17 ],
                                          size_t dateISO8601Len )
 {
-    SigV4Status_t returnStatus = SigV4ISOFormattingError;
+    SigV4Status_t returnStatus = SigV4InvalidParameter;
     size_t lenFormatted = 0U;
     char * pLastChar = NULL;
     struct tm dateInfo;
@@ -47,50 +47,48 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
     if( pDate == NULL )
     {
         LogError( ( "Parameter check failed: pDate is NULL." ) );
-        returnStatus = SigV4InvalidParameter;
     }
     /* Check validity of the date header size provided. */
     else if( dateLen == 0U )
     {
         LogError( ( "Parameter check failed: dateLen must be greater than 0." ) );
-        returnStatus = SigV4InvalidParameter;
     }
     else if( pDateISO8601 == NULL )
     {
         LogError( ( "Parameter check failed: pDateISO8601 is NULL." ) );
-        returnStatus = SigV4InvalidParameter;
     }
-
-    /* Check that the buffer provided is large enough for the formatted
-     * output string. */
+    /* Check that the buffer provided is large enough for the formatted output
+     * string. */
     else if( dateISO8601Len < ISO_BUFFER_MIN_LEN )
     {
         LogError( ( "Parameter check failed: dateISO8601Len must be at least %u.",
                     ISO_BUFFER_MIN_LEN ) );
-        returnStatus = SigV4InvalidParameter;
     }
     else
     {
         memset( &dateInfo, 0, sizeof( struct tm ) );
+
+        /* Parse pDate according to the input's expected string format, and
+         * populate the date struct with its components.  */
         pLastChar = strptime( pDate, "%Y-%m-%dT%H:%M:%SZ", &dateInfo );
 
         if( pLastChar == NULL )
         {
             LogError( ( "Error matching input to ISO8601 format string." ) );
-            returnStatus == SigV4ISOFormattingError;
         }
         else if( pLastChar[ 0 ] != '\0' )
         {
+            /* The expected pattern was found, but additional characters remain
+             * unparsed in the input string. */
             LogWarn( ( "Input contained more characters than expected." ) );
         }
         else
-        {
+            /* Construct ISO 8601 string using members of populated date struct. */
             lenFormatted = strftime( pDateISO8601, ISO_BUFFER_MIN_LEN, "%Y%m%dT%H%M%SZ", &dateInfo );
 
             if( lenFormatted != ISO_BUFFER_MIN_LEN - 1 )
             {
                 LogError( ( "Formatted string is not of expected length 16." ) );
-                returnStatus = SigV4ISOFormattingError;
             }
             else
             {
