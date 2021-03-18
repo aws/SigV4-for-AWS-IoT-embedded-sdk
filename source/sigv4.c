@@ -57,6 +57,7 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
     {
         LogError( ( "Parameter check failed: pDateISO8601 is NULL." ) );
     }
+
     /* Check that the buffer provided is large enough for the formatted output
      * string. */
     else if( dateISO8601Len < ISO_BUFFER_MIN_LEN )
@@ -75,20 +76,24 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
         if( pLastChar == NULL )
         {
             LogError( ( "Error matching input to ISO8601 format string." ) );
-        }
-        else if( pLastChar[ 0 ] != '\0' )
-        {
-            /* The expected pattern was found, but additional characters remain
-             * unparsed in the input string. */
-            LogWarn( ( "Input contained more characters than expected." ) );
+            returnStatus = SigV4ISOFormattingError;
         }
         else
+        {
+            if( pLastChar[ 0 ] != '\0' )
+            {
+                /* The expected pattern was found, but additional characters remain
+                 * unparsed in the input string. */
+                LogWarn( ( "Input contained more characters than expected." ) );
+            }
+
             /* Construct ISO 8601 string using members of populated date struct. */
             lenFormatted = strftime( pDateISO8601, ISO_BUFFER_MIN_LEN, "%Y%m%dT%H%M%SZ", &dateInfo );
 
             if( lenFormatted != ISO_BUFFER_MIN_LEN - 1 )
             {
                 LogError( ( "Formatted string is not of expected length 16." ) );
+                returnStatus = SigV4ISOFormattingError;
             }
             else
             {
