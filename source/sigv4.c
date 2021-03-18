@@ -38,10 +38,10 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
                                          char pDateISO8601[ 17 ],
                                          size_t dateISO8601Len )
 {
-    SigV4Status_t returnStatus = SigV4Success;
+    SigV4Status_t returnStatus = SigV4ISOFormattingError;
     size_t lenFormatted = 0U;
     char * pLastChar = NULL;
-    struct tm tm;
+    struct tm dateInfo;
 
     /* Check for NULL parameters. */
     if( pDate == NULL )
@@ -63,16 +63,16 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
 
     /* Check that the buffer provided is large enough for the formatted
      * output string. */
-    else if( dateISO8601Len < 17U )
+    else if( dateISO8601Len < ISO_BUFFER_MIN_LEN )
     {
-        LogError( ( "Parameter check failed: dateISO8601Len must be at least 17." ) );
+        LogError( ( "Parameter check failed: dateISO8601Len must be at least %u.",
+                    ISO_BUFFER_MIN_LEN ) );
         returnStatus = SigV4InvalidParameter;
     }
-
-    if( returnStatus == SigV4Success )
+    else
     {
-        memset( &tm, 0, sizeof( struct tm ) );
-        pLastChar = strptime( pDate, "%Y-%m-%dT%H:%M:%SZ", &tm );
+        memset( &dateInfo, 0, sizeof( struct tm ) );
+        pLastChar = strptime( pDate, "%Y-%m-%dT%H:%M:%SZ", &dateInfo );
 
         if( pLastChar == NULL )
         {
@@ -83,16 +83,19 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
         {
             LogWarn( ( "Input contained more characters than expected." ) );
         }
-    }
-
-    if( returnStatus == SigV4Success )
-    {
-        lenFormatted = strftime( pDateISO8601, 17, "%Y%m%dT%H%M%SZ", &tm );
-
-        if( lenFormatted != 16 )
+        else
         {
-            LogError( ( "Formatted string is not of expected length 16." ) );
-            returnStatus = SigV4ISOFormattingError;
+            lenFormatted = strftime( pDateISO8601, ISO_BUFFER_MIN_LEN, "%Y%m%dT%H%M%SZ", &dateInfo );
+
+            if( lenFormatted != ISO_BUFFER_MIN_LEN - 1 )
+            {
+                LogError( ( "Formatted string is not of expected length 16." ) );
+                returnStatus = SigV4ISOFormattingError;
+            }
+            else
+            {
+                returnStatus = SigV4Success;
+            }
         }
     }
 
