@@ -65,11 +65,8 @@
 #define SIGV4_ACCESS_KEY_ID_LENGTH                  20U
 #define SIGV4_SECRET_ACCESS_KEY_LENGTH              40U
 
+/**< Length of the date header in ISO 8601 format. */
 #define SIGV4_ISO_STRING_LEN                        16U
-
-/**< Set this to one to statically enable support for canonicalizing the URI,
- * headers, and query in this utility.*/
-#define SIGV4_USE_CANONICAL_SUPPORT                 1
 /** @}*/
 
 /**
@@ -198,7 +195,8 @@ typedef struct SigV4CryptoInterface
      * during incremental updates.
      * @param[out] pOutput The buffer used to place final hash binary digest
      * output.
-     * @param[in] outputLen The length of the pOutput buffer. This is defined in
+     * @param[in] outputLen The length of the pOutput buffer, which must be
+     * larger than the hash digest length specified in
      * #SIGV4_HASH_DIGEST_LENGTH.
      *
      * @return Zero on success, all other return values are failures.
@@ -248,9 +246,9 @@ typedef struct SigV4HttpParameters
 
     /**
      * @brief The HTTP request query from the URL. This contains all characters
-     * following character that denotes the start of the query. If
-     * #SIGV4_HTTP_QUERY_IS_CANONICAL_FLAG is set, then this input must already
-     * be in canonical form.
+     * following the question mark character ("?") that denotes the start of the
+     * query. If #SIGV4_HTTP_QUERY_IS_CANONICAL_FLAG is set, then this input
+     * must already be in canonical form.
      */
     const char * pQuery;
     size_t queryLen; /**< @brief Length of pQuery. */
@@ -293,9 +291,9 @@ typedef struct SigV4Credentials
     size_t secretAccessKeyLen; /**< @brief Length of pSecretAccessKey. */
 
     /**
-     * @brief The Security Token from STS is of varying length. This can be NULL
-     * if the access key id and secret access key were not retrieved from a
-     * temporary token service.
+     * @brief The security token from AWS Security Token Service (AWS STS) is of
+     * varying length. This can be NULL if the access key id and secret access
+     * key were not retrieved from a temporary token service.
      */
     const char * pSecurityToken;
     size_t securityTokenLen; /**< @brief Length of pSecurityToken. */
@@ -341,7 +339,7 @@ typedef struct SigV4Parameters
     size_t regionLen; /**< @brief Length of pRegion. */
 
     /**
-     * @brief The target AWS service for the request.  The service name can be
+     * @brief The target AWS service for the request. The service name can be
      * found as the first segment of the service endpoint. Please see
      * https://docs.aws.amazon.com/general/latest/gr/aws-service-information.html
      * (https://docs.aws.amazon.com/general/latest/gr/aws-service-information.html)

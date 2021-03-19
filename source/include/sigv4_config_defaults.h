@@ -29,7 +29,7 @@
  * configuration macros, a sigv4_config.h file should be provided to the SigV4
  * Utility Library to override the default values defined in this file. To use
  * the custom config file, the preprocessor macro SIGV4_DO_NOT_USE_CUSTOM_CONFIG
- * should NOT be set.
+ * must NOT be set.
  */
 
 #ifndef SIGV4_CONFIG_DEFAULTS_H_
@@ -90,6 +90,20 @@
  */
 #ifndef SIGV4_HASH_DIGEST_LENGTH
     #define SIGV4_HASH_DIGEST_LENGTH    32U
+#endif
+
+/**
+ * @brief Macro to statically enable support for canonicalizing the URI,
+ * headers, and query in this utility.
+ *
+ * Set this to one to enable the encoding functions used to create the canonical
+ * request.
+ *
+ * <b>Possible values:</b> 0 or 1 <br>
+ * <b>Default value:</b> `1`
+ */
+#ifndef SIGV4_USE_CANONICAL_SUPPORT
+    #define SIGV4_USE_CANONICAL_SUPPORT    1
 #endif
 
 /**
