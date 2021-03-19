@@ -25,6 +25,7 @@
  * @brief Implements the user-facing functions in sigv4.h
  */
 
+#include <stdio.h>
 #include <assert.h>
 #include <string.h>
 #include <time.h>
@@ -35,12 +36,11 @@
 
 SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
                                          size_t dateLen,
-                                         char pDateISO8601[ 17 ],
+                                         char * pDateISO8601,
                                          size_t dateISO8601Len )
 {
     SigV4Status_t returnStatus = SigV4InvalidParameter;
     size_t lenFormatted = 0U;
-    char * pLastChar = NULL;
     struct tm dateInfo;
 
     /* Check for NULL parameters. */
@@ -60,10 +60,10 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
 
     /* Check that the buffer provided is large enough for the formatted output
      * string. */
-    else if( dateISO8601Len < ISO_BUFFER_MIN_LEN )
+    else if( dateISO8601Len < SIV4_ISO_STRING_LEN + 1 )
     {
         LogError( ( "Parameter check failed: dateISO8601Len must be at least %u.",
-                    ISO_BUFFER_MIN_LEN ) );
+                    SIV4_ISO_STRING_LEN + 1 ) );
     }
     else
     {
@@ -71,28 +71,32 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
 
         /* Parse pDate according to the input's expected string format, and
          * populate the date struct with its components.  */
-        pLastChar = strptime( pDate, "%Y-%m-%dT%H:%M:%SZ", &dateInfo );
-
-        if( pLastChar == NULL )
+        if( sscanf( pDate, "%4d-%2d-%2dT%2d:%2d:%2dZ",
+                    &dateInfo.tm_year,
+                    &dateInfo.tm_mon,
+                    &dateInfo.tm_mday,
+                    &dateInfo.tm_hour,
+                    &dateInfo.tm_min,
+                    &dateInfo.tm_sec ) != SIV4_ISO_STRING_LEN - 10U )
         {
-            LogError( ( "Error matching input to ISO8601 format string." ) );
+            LogError( ( "sscanf() failed to parse the date string using the format expected." ) );
             returnStatus = SigV4ISOFormattingError;
         }
         else
         {
-            if( pLastChar[ 0 ] != '\0' )
-            {
-                /* The expected pattern was found, but additional characters remain
-                 * unparsed in the input string. */
-                LogWarn( ( "Input contained more characters than expected." ) );
-            }
+            /* Standardize month and year values for struct tm's specifications:
+             *  - tm_mon = "months from January" (0-11)
+             *  - tm_year = "years since 1900" */
+            dateInfo.tm_mon--;
+            dateInfo.tm_year -= 1900;
 
             /* Construct ISO 8601 string using members of populated date struct. */
-            lenFormatted = strftime( pDateISO8601, ISO_BUFFER_MIN_LEN, "%Y%m%dT%H%M%SZ", &dateInfo );
+            lenFormatted = strftime( pDateISO8601, SIV4_ISO_STRING_LEN + 1, "%Y%m%dT%H%M%SZ", &dateInfo );
 
-            if( lenFormatted != ISO_BUFFER_MIN_LEN - 1 )
+            if( lenFormatted != SIV4_ISO_STRING_LEN )
             {
-                LogError( ( "Formatted string is not of expected length 16." ) );
+                LogError( ( "Formatted string is not of expected length %u.",
+                            SIV4_ISO_STRING_LEN ) );
                 returnStatus = SigV4ISOFormattingError;
             }
             else
