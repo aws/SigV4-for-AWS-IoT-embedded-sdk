@@ -48,17 +48,20 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
     {
         LogError( ( "Parameter check failed: pDate is NULL." ) );
     }
-    /* Check validity of the date header size provided. */
-    else if( dateLen == 0U )
-    {
-        LogError( ( "Parameter check failed: dateLen must be greater than 0." ) );
-    }
     else if( pDateISO8601 == NULL )
     {
         LogError( ( "Parameter check failed: pDateISO8601 is NULL." ) );
     }
 
-    /* Check that the buffer provided is large enough for the formatted output
+    /* Check that the date buffer provided is not shorter than the expected
+     * input format. */
+    else if( dateLen < SIGV4_EXPECTED_DATE_LEN + 1 )
+    {
+        LogError( ( "Parameter check failed: dateLen must be at least %u.",
+                    SIGV4_EXPECTED_DATE_LEN + 1 ) );
+    }
+
+    /* Check that the output buffer provided is large enough for the formatted
      * string. */
     else if( dateISO8601Len < SIV4_ISO_STRING_LEN + 1 )
     {
@@ -77,7 +80,7 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
                     &dateInfo.tm_mday,
                     &dateInfo.tm_hour,
                     &dateInfo.tm_min,
-                    &dateInfo.tm_sec ) != SIV4_ISO_STRING_LEN - 10U )
+                    &dateInfo.tm_sec ) != 6 )
         {
             LogError( ( "sscanf() failed to parse the date string using the format expected." ) );
             returnStatus = SigV4ISOFormattingError;

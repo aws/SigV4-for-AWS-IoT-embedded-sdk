@@ -67,6 +67,7 @@
 
 /**< Length of the date header in ISO 8601 format. */
 #define SIGV4_ISO_STRING_LEN                        16U
+#define SIGV4_EXPECTED_DATE_LEN                     20U
 /** @}*/
 
 /**
