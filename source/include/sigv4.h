@@ -65,6 +65,8 @@
 #define SIGV4_ACCESS_KEY_ID_LENGTH                  20U
 #define SIGV4_SECRET_ACCESS_KEY_LENGTH              40U
 
+#define SIGV4_ISO_STRING_LEN                        16U
+
 /**< Set this to one to statically enable support for canonicalizing the URI,
  * headers, and query in this utility.*/
 #define SIGV4_USE_CANONICAL_SUPPORT                 1
@@ -393,7 +395,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
  */
 SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
                                          size_t dateLen,
-                                         char pDateISO8601[ 17 ],
+                                         char * pDateISO8601,
                                          size_t dateISO8601Len );
 
 #endif /* SIGV4_H_ */
