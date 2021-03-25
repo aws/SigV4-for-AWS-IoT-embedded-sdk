@@ -67,7 +67,8 @@
 
 /**< Length of the date header in ISO 8601 format. */
 #define SIGV4_ISO_STRING_LEN                        16U
-#define SIGV4_EXPECTED_DATE_LEN                     20U
+/**< Length of the date header found in AWS IoT's HTTP response. */
+#define SIGV4_EXPECTED_AWS_IOT_DATE_LEN             20U
 /** @}*/
 
 /**
@@ -380,9 +381,12 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
 
 /**
  * @brief Parse the date header value from the AWS IoT response.
- * The AWS IoT response date is of the form: 2018-01-18T09:18:06Z.
  *
- * @param[in] pDate The date header value.
+ * The AWS IoT response date is of the form: 2018-01-18T09:18:06Z.
+ * The ISO8601-formatted date is: 20180118T091806Z.
+ *
+ * @param[in] pDate The RFC3339-formatted date header value, found in the HTTP
+ * response returned by AWS IoT (ex. "2018-01-18T09:18:06Z").
  * @param[in] dateLen length of the pDate header value.
  * @param[out] pDateISO8601 The ISO8601 format compliant date. This buffer must
  * be large enough to hold both the ISO8601-formatted date (16 characters) and

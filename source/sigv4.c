@@ -40,8 +40,6 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
                                          size_t dateISO8601Len )
 {
     SigV4Status_t returnStatus = SigV4InvalidParameter;
-    size_t lenFormatted = 0U;
-    struct tm dateInfo;
 
     /* Check for NULL parameters. */
     if( pDate == NULL )
@@ -55,22 +53,22 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
 
     /* Check that the date buffer provided is not shorter than the expected
      * input format. */
-    else if( dateLen < SIGV4_EXPECTED_DATE_LEN + 1 )
+    else if( dateLen < SIGV4_EXPECTED_AWS_IOT_DATE_LEN )
     {
         LogError( ( "Parameter check failed: dateLen must be at least %u.",
-                    SIGV4_EXPECTED_DATE_LEN + 1 ) );
+                    SIGV4_EXPECTED_AWS_IOT_DATE_LEN ) );
     }
 
     /* Check that the output buffer provided is large enough for the formatted
      * string. */
-    else if( dateISO8601Len < SIV4_ISO_STRING_LEN + 1 )
+    else if( dateISO8601Len < SIGV4_ISO_STRING_LEN + 1 )
     {
         LogError( ( "Parameter check failed: dateISO8601Len must be at least %u.",
-                    SIV4_ISO_STRING_LEN + 1 ) );
+                    SIGV4_ISO_STRING_LEN + 1 ) );
     }
     else
     {
-        memset( &dateInfo, 0, sizeof( struct tm ) );
+        struct tm dateInfo = { 0 };
 
         /* Parse pDate according to the input's expected string format, and
          * populate the date struct with its components.  */
@@ -87,6 +85,8 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
         }
         else
         {
+            size_t lenFormatted = 0U;
+
             /* Standardize month and year values for struct tm's specifications:
              *  - tm_mon = "months from January" (0-11)
              *  - tm_year = "years since 1900" */
@@ -94,12 +94,13 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
             dateInfo.tm_year -= 1900;
 
             /* Construct ISO 8601 string using members of populated date struct. */
-            lenFormatted = strftime( pDateISO8601, SIV4_ISO_STRING_LEN + 1, "%Y%m%dT%H%M%SZ", &dateInfo );
+            lenFormatted = strftime( pDateISO8601, SIGV4_ISO_STRING_LEN + 1, "%Y%m%dT%H%M%SZ", &dateInfo );
 
-            if( lenFormatted != SIV4_ISO_STRING_LEN )
+            if( lenFormatted != SIGV4_ISO_STRING_LEN )
             {
-                LogError( ( "Formatted string is not of expected length %u.",
-                            SIV4_ISO_STRING_LEN ) );
+                LogError( ( "Failed to generate ISO 8601 date: Call to strftime() for string formatting failed: "
+                            "ExpectedReturnValue=%u, ActualReturnValue=%lu.",
+                            SIGV4_ISO_STRING_LEN, lenFormatted ) );
                 returnStatus = SigV4ISOFormattingError;
             }
             else
