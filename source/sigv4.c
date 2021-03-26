@@ -80,7 +80,7 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
                     &dateInfo.tm_min,
                     &dateInfo.tm_sec ) != 6 )
         {
-            LogError( ( "sscanf() failed to parse the date string using the format expected." ) );
+            LogError( ( "Failed to generate ISO 8601 date: call to sscanf() for input parsing failed." ) );
             returnStatus = SigV4ISOFormattingError;
         }
         else
@@ -98,7 +98,7 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
 
             if( lenFormatted != SIGV4_ISO_STRING_LEN )
             {
-                LogError( ( "Failed to generate ISO 8601 date: Call to strftime() for string formatting failed: "
+                LogError( ( "Failed to generate ISO 8601 date: call to strftime() for string formatting failed: "
                             "ExpectedReturnValue=%u, ActualReturnValue=%lu.",
                             SIGV4_ISO_STRING_LEN, lenFormatted ) );
                 returnStatus = SigV4ISOFormattingError;

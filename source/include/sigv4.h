@@ -380,19 +380,35 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
                                                size_t * signatureLen );
 
 /**
- * @brief Parse the date header value from the AWS IoT response.
+ * @brief Parse the date header value from the AWS IoT response, and generate
+ * the formatted ISO 8601 date required for authentication.
  *
- * The AWS IoT response date is of the form: 2018-01-18T09:18:06Z.
- * The ISO8601-formatted date is: 20180118T091806Z.
+ * This is an optional utility function available to the application, to assist
+ * with formatting of the date header obtained from AWS IoT (when requesting a
+ * temporary token or sending a POST request).
  *
- * @param[in] pDate The RFC3339-formatted date header value, found in the HTTP
- * response returned by AWS IoT (ex. "2018-01-18T09:18:06Z").
- * @param[in] dateLen length of the pDate header value.
+ * AWS SigV4 authentication requires an ISO 8601 date to be present in the
+ * "x-amz-date" request header, as well as in the credential scope (must be
+ * identical). For additional information on date handling, please see
+ * https://docs.aws.amazon.com/general/latest/gr/sigv4-date-handling.html.
+ *
+ * Formatting Overview:
+ * - The AWS IoT response date is of the form "YYYY-MM-DD'T'hh:mm:ss'Z'" (ex.
+ *   "2018-01-18T09:18:06Z").
+ * - The ISO8601-formatted date is of the form "YYYYMMDD'T'HHMMSS'Z'" (ex.
+ *   "20180118T091806Z").
+ *
+ * @param[in] pDate The date header (in
+ * [RFC339](https://tools.ietf.org/html/rfc3339) format), found in the HTTP
+ * response returned by AWS IoT. This value is expected to be 20 characters in
+ * length, to comply with the RFC339 formatting standard used in the response.
+ * @param[in] dateLen The length of the pDate header value. Must be at least
+ * #SIGV4_EXPECTED_AWS_IOT_DATE_LEN, for valid input parameters.
  * @param[out] pDateISO8601 The ISO8601 format compliant date. This buffer must
  * be large enough to hold both the ISO8601-formatted date (16 characters) and
  * the terminating null character (17 in total).
  * @param[in] dateISO8601Len The length of buffer pDateISO8601. Must be at least
- * 17 for valid input parameters.
+ * #SIGV4_ISO_STRING_LEN bytes, for valid input parameters.
  *
  * @return #SigV4Success code if successful, error code otherwise.
  */
