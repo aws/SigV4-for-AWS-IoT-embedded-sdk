@@ -67,8 +67,10 @@
 
 /**< Length of the date header in ISO 8601 format. */
 #define SIGV4_ISO_STRING_LEN                        16U
-/**< Length of the date header found in AWS IoT's HTTP response. */
-#define SIGV4_EXPECTED_AWS_IOT_DATE_LEN             20U
+/**< Expected length of an RFC 3339 date input. */
+#define SIGV4_EXPECTED_LEN_RFC_3339                 20U
+/**< Expected length of an RFC 5322 date input. */
+#define SIGV4_EXPECTED_LEN_RFC_5322                 29U
 /** @}*/
 
 /**
