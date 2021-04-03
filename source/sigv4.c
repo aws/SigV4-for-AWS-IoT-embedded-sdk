@@ -35,6 +35,20 @@
 /*-----------------------------------------------------------*/
 
 /**
+ * @brief Converts an integer value to its ASCII respresentation, and stores the
+ * result in the provided buffer.
+ *
+ * @param[in] value The value to convert to ASCII.
+ * @param[in, out] pBuffer The starting location of the buffer on input, and the
+ * ending location on output.
+ * @param[in] lenBuf Width of value to write (padded with leading 0s if
+ * necessary).
+ */
+static void intToAscii( int32_t value,
+                        char ** pBuffer,
+                        size_t lenBuf );
+
+/**
  * @brief Parses date according to format string parameter, and populates date
  * representation struct SigV4DateTime_t with its elements.
  *
@@ -57,39 +71,57 @@ static size_t parseDate( const char * pDate,
                          SigV4DateTime_t * pDateElements );
 
 /**
+ * @brief Verify date stored in a SigV4DateTime_t date representation.
+ *
+ * @param[in] pDateElements The date representation to be verified.
+ *
+ * @return #SigV4Success if successful, and #SigV4ISOFormattingError if any
+ * member of SigV4DateTime_t is invalid or represents an out-of-range date.
+ */
+static SigV4Status_t validateDateTime( SigV4DateTime_t * pDateElements );
+
+/**
  * @brief Format an ISO 8601 date, and fill the output buffer with the result.
  *
  * @param[in] pDate The date to be formatted, in RFC3339 format.
+ * @param[in] dateLen Length of pDate, the date to be formatted.
  * @param[in] pDateISO8601 The buffer to hold the ISO 8601 encoded date.
+ * @param[in] dateISO8601Len Length of pDateISO8601, the formatted date buffer.
  *
  * @return #SigV4Success if successful, and #SigV4ISOFormattingError if a
- * parsing error occurred due to an incorrectly formatted date. If pDate is
- * correctly formatted but contains an out-of-range date, #SigV4InvalidParameter
- * is returned.
+ * parsing error occurred due to an incorrectly formatted date, or if pDate
+ * contains an out-of-range date.
  */
-static SigV4Status_t formatDate( const char * pDate,
-                                 char * pDateISO8601 );
+static SigV4Status_t dateToIso8601( const char * pDate,
+                                    size_t dateLen,
+                                    char * pDateISO8601,
+                                    size_t dateISO8601Len );
 
 /*-----------------------------------------------------------*/
 
-static SigV4Status_t formatDate( const char * pDate,
-                                 char * pDateISO8601 )
+static void intToAscii( int32_t value,
+                        char ** pBuffer,
+                        size_t bufferLen )
 {
-    SigV4Status_t returnStatus = SigV4ISOFormattingError;
-    struct tm dateInfo = { 0 };
+    int32_t currentVal = value;
+    size_t lenRemaining = bufferLen;
 
-    /* Parse pDate according to the input's expected string format, and populate
-     * the date struct with its components.  */
-    if( sscanf( pDate, "%4d-%2d-%2dT%2d:%2d:%2dZ",
-                &dateInfo.tm_year,
-                &dateInfo.tm_mon,
-                &dateInfo.tm_mday,
-                &dateInfo.tm_hour,
-                &dateInfo.tm_min,
-                &dateInfo.tm_sec ) != 6 )
+    assert( pBuffer != NULL );
+    assert( bufferLen > 0U );
+
+    /* Write base-10 remainder in its ASCII representation, and fill any
+     * remaining width with '0' characters. */
+    while( lenRemaining-- )
     {
-        LogError( ( "Failed to generate ISO 8601 date: call to sscanf() for input parsing failed." ) );
-        returnStatus = SigV4ISOFormattingError;
+        ( *pBuffer )[ lenRemaining ] = ( currentVal % 10 ) + '0';
+        currentVal /= 10;
+    }
+
+    /* Move pointer to follow last written character. */
+    *pBuffer += bufferLen;
+}
+
+/*-----------------------------------------------------------*/
 
 static size_t parseDate( const char * pDate,
                          size_t dateLen,
@@ -233,80 +265,139 @@ static size_t parseDate( const char * pDate,
 
 /*-----------------------------------------------------------*/
 
-        if( ( dateInfo.tm_year < 1900 ) )
+static SigV4Status_t validateDateTime( SigV4DateTime_t * pDateElements )
+{
+    SigV4Status_t returnStatus = SigV4InvalidParameter;
+    int32_t daysPerMonth[] = MONTH_DAYS;
+
+    assert( pDateElements != NULL );
+
+    if( pDateElements->tm_year < YEAR_MIN )
     {
         LogError( ( "Invalid 'year' value parsed from date string. "
-                        "Expected an integer larger than 1900, received: %ld",
-                        ( long int ) dateInfo.tm_year ) );
-            returnStatus = SigV4InvalidParameter;
+                    "Expected an integer %ld or greater, received: %ld",
+                    ( long int ) YEAR_MIN,
+                    ( long int ) pDateElements->tm_year ) );
+        returnStatus = SigV4ISOFormattingError;
     }
 
-        if( ( dateInfo.tm_mon < 1 ) || ( dateInfo.tm_mon > 12 ) )
+    if( ( pDateElements->tm_mon < 1 ) || ( pDateElements->tm_mon > 12 ) )
     {
         LogError( ( "Invalid 'month' value parsed from date string. "
                     "Expected an integer between 1 and 12, received: %ld",
-                        ( long int ) dateInfo.tm_mon ) );
-            returnStatus = SigV4InvalidParameter;
+                    ( long int ) pDateElements->tm_mon ) );
+        returnStatus = SigV4ISOFormattingError;
     }
 
-        if( ( dateInfo.tm_mday < 1 ) || ( dateInfo.tm_mday > 31 ) )
+    /* Ensure that day value is within the valid range of its relevant month. */
+    else if( ( pDateElements->tm_mday < 1 ) ||
+             ( pDateElements->tm_mday > daysPerMonth[ pDateElements->tm_mon - 1 ] ) )
+    {
+        /* Check validity of a leap year date. */
+        if( ( pDateElements->tm_mon == 2 ) && ( pDateElements->tm_mday == 29 ) )
+        {
+            if( ( ( pDateElements->tm_year % 400 ) != 0 ) &&
+                ( ( ( pDateElements->tm_year % 4 ) != 0 ) ||
+                  ( ( pDateElements->tm_year % 100 ) == 0 ) ) )
+            {
+                LogError( ( "%ld is not a valid leap year.",
+                            ( long int ) pDateElements->tm_year ) );
+                returnStatus = SigV4ISOFormattingError;
+            }
+        }
+        else
         {
             LogError( ( "Invalid 'day' value parsed from date string. "
                         "Expected an integer between 1 and 31, received: %ld",
-                        ( long int ) dateInfo.tm_mday ) );
-            returnStatus = SigV4InvalidParameter;
+                        ( long int ) pDateElements->tm_mday ) );
+
+            returnStatus = SigV4ISOFormattingError;
+        }
     }
 
-        if( ( dateInfo.tm_hour < 0 ) || ( dateInfo.tm_hour > 23 ) )
+    if( ( pDateElements->tm_hour < 0 ) || ( pDateElements->tm_hour > 23 ) )
     {
         LogError( ( "Invalid 'hour' value parsed from date string. "
                     "Expected an integer between 0 and 23, received: %ld",
-                        ( long int ) dateInfo.tm_hour ) );
-            returnStatus = SigV4InvalidParameter;
+                    ( long int ) pDateElements->tm_hour ) );
+        returnStatus = SigV4ISOFormattingError;
     }
 
-        if( ( dateInfo.tm_min < 0 ) || ( dateInfo.tm_min > 59 ) )
+    if( ( pDateElements->tm_min < 0 ) || ( pDateElements->tm_min > 59 ) )
     {
         LogError( ( "Invalid 'minute' value parsed from date string. "
                     "Expected an integer between 0 and 59, received: %ld",
-                        ( long int ) dateInfo.tm_min ) );
-            returnStatus = SigV4InvalidParameter;
+                    ( long int ) pDateElements->tm_min ) );
+        returnStatus = SigV4ISOFormattingError;
     }
 
-        /* C90 allows for an additional leap second corresponding to the (rare)
-         * UTC adjustment. */
-        if( ( dateInfo.tm_sec < 0 ) || ( dateInfo.tm_sec > 60 ) )
+    /* An upper limit of 60 accounts for the occasional leap second UTC
+     * adjustment. */
+    if( ( pDateElements->tm_sec < 0 ) || ( pDateElements->tm_sec > 60 ) )
     {
         LogError( ( "Invalid 'second' value parsed from date string. "
                     "Expected an integer between 0 and 60, received: %ld",
-                        ( long int ) dateInfo.tm_sec ) );
-            returnStatus = SigV4InvalidParameter;
+                    ( long int ) pDateElements->tm_sec ) );
+        returnStatus = SigV4ISOFormattingError;
     }
 
-        if( returnStatus != SigV4InvalidParameter )
+    return ( returnStatus != SigV4ISOFormattingError ) ? SigV4Success : returnStatus;
+}
+
+/*-----------------------------------------------------------*/
+
+static SigV4Status_t dateToIso8601( const char * pDate,
+                                    size_t dateLen,
+                                    char * pDateISO8601,
+                                    size_t dateISO8601Len )
 {
-            /* Standardize month and year values for struct tm's specifications:
-             *  - tm_mon = "months from January" (0-11)
-             *  - tm_year = "years since 1900" */
-            dateInfo.tm_mon--;
-            dateInfo.tm_year -= 1900;
+    SigV4Status_t returnStatus = SigV4InvalidParameter;
+    SigV4DateTime_t date = { 0 };
+    char * pWriteLoc = pDateISO8601;
+    const char * pFormatStr = NULL;
+    size_t formatLen = 0U;
 
-            /* Construct ISO 8601 string using members of populated date struct. */
-            lenFormatted = strftime( pDateISO8601, SIGV4_ISO_STRING_LEN + 1, "%Y%m%dT%H%M%SZ", &dateInfo );
+    assert( pDate != NULL );
+    assert( pDateISO8601 != NULL );
+    assert( dateLen == SIGV4_EXPECTED_LEN_RFC_3339 ||
+            dateLen == SIGV4_EXPECTED_LEN_RFC_5322 );
+    assert( dateISO8601Len >= SIGV4_ISO_STRING_LEN );
 
-            if( lenFormatted != SIGV4_ISO_STRING_LEN )
+    /* Assign format string according to input type received. */
+    pFormatStr = ( dateLen == SIGV4_EXPECTED_LEN_RFC_3339 ) ?
+                 FORMAT_RFC_3339 : FORMAT_RFC_5322;
+
+    formatLen = ( dateLen == SIGV4_EXPECTED_LEN_RFC_3339 ) ?
+                FORMAT_RFC_3339_LEN : FORMAT_RFC_5322_LEN;
+
+    /* ISO 8601 contains 6 numerical date components requiring parsing. */
+    if( parseDate( pDate, dateLen, pFormatStr, formatLen, &date ) == 6U )
     {
-                LogError( ( "Failed to generate ISO 8601 date: call to strftime() for string formatting failed: "
-                            "ExpectedReturnValue=%u, ActualReturnValue=%lu.",
-                            SIGV4_ISO_STRING_LEN,
-                            ( unsigned long ) lenFormatted ) );
-                returnStatus = SigV4ISOFormattingError;
+        returnStatus = validateDateTime( &date );
     }
     else
     {
-                returnStatus = SigV4Success;
-            }
+        LogError( ( "Parsing Error: Date did not match expected string format." ) );
+        returnStatus = SigV4ISOFormattingError;
     }
+
+    if( returnStatus == SigV4Success )
+    {
+        /* Combine date elements into complete ASCII representation, and fill
+         * buffer with result. */
+        intToAscii( date.tm_year, &pWriteLoc, ISO_YEAR_LEN );
+        intToAscii( date.tm_mon, &pWriteLoc, ISO_NON_YEAR_LEN );
+        intToAscii( date.tm_mday, &pWriteLoc, ISO_NON_YEAR_LEN );
+        *pWriteLoc++ = 'T';
+
+        intToAscii( date.tm_hour, &pWriteLoc, ISO_NON_YEAR_LEN );
+        intToAscii( date.tm_min, &pWriteLoc, ISO_NON_YEAR_LEN );
+        intToAscii( date.tm_sec, &pWriteLoc, ISO_NON_YEAR_LEN );
+        *pWriteLoc++ = 'Z';
+
+        LogDebug( ( "Successfully formatted ISO 8601 date: \"%.*s\"",
+                    ( int ) dateISO8601Len,
+                    pDateISO8601 ) );
     }
 
     return returnStatus;
@@ -349,7 +440,7 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
     }
     else
     {
-        returnStatus = formatDate( pDate, pDateISO8601 );
+        returnStatus = dateToIso8601( pDate, dateLen, pDateISO8601, dateISO8601Len );
     }
 
     return returnStatus;
