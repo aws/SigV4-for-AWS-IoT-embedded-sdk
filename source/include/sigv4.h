@@ -394,22 +394,31 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
  * identical). For additional information on date handling, please see
  * https://docs.aws.amazon.com/general/latest/gr/sigv4-date-handling.html.
  *
- * Formatting Overview:
- * - The AWS IoT response date is of the form "YYYY-MM-DD'T'hh:mm:ss'Z'" (ex.
- *   "2018-01-18T09:18:06Z").
- * - The ISO8601-formatted date is of the form "YYYYMMDD'T'HHMMSS'Z'" (ex.
- *   "20180118T091806Z").
+ * Acceptable Input Formats:
+ * - RFC 5322 (ex. "Thu, 18 Jan 2018 09:18:06 GMT"), the preferred format in
+ *   HTTP 'Date' response headers. If using this format, the date parameter
+ *   should match "***, DD 'MMM' YYYY hh:mm:ss GMT" exactly.
+ * - RFC 3339 (ex. "2018-01-18T09:18:06Z"), found occasionally in 'Date' and
+ *   expiration headers. If using this format, the date parameter should match
+ *   "YYYY-MM-DD'T'hh:mm:ss'Z'" exactly.
  *
- * @param[in] pDate The date header (in [RFC3339
- * format](https://tools.ietf.org/html/rfc3339)), found in the HTTP response
- * returned by AWS IoT. This value should use UTC (indicated by the "Z"
- * character postfix, with no time-zone offset), and be 20 characters in length
- * (excluding the null character).
- * @param[in] dateLen The length of the pDate header value. Must be
- * #SIGV4_EXPECTED_AWS_IOT_DATE_LEN, for valid input parameters.
- * @param[out] pDateISO8601 The ISO8601 format compliant date. This buffer must
- * be large enough to hold both the ISO8601-formatted date (16 characters) and
- * the terminating null character (17 in total).
+ * Formatted Output:
+ * - The ISO8601-formatted date will be returned in the form
+ *   "YYYYMMDD'T'HHMMSS'Z'" (ex. "20180118T091806Z").
+ *
+ * @param[in] pDate The date header (in
+ * [RFC 3339](https://tools.ietf.org/html/rfc3339) or
+ * [RFC 5322](https://tools.ietf.org/html/rfc5322) formats). An acceptable date
+ * header can be found in the HTTP response returned by AWS IoT. This value
+ * should use UTC (with no time-zone offset), and be exactly 20 or 29 characters
+ * in length (excluding the null character), to comply with RFC 3339 and RFC
+ * 5322 formats, respectively.
+ * @param[in] dateLen The length of the pDate header value. Must be either
+ * #SIGV4_EXPECTED_LEN_RFC_3339 or #SIGV4_EXPECTED_LEN_RFC_5322, for valid input
+ * parameters.
+ * @param[out] pDateISO8601 The formatted ISO8601-compliant date. The date value
+ * written to this buffer will be exactly 16 characters in length, to comply
+ * with the ISO8601 standard required for SigV4 authentication.
  * @param[in] dateISO8601Len The length of buffer pDateISO8601. Must be at least
  * #SIGV4_ISO_STRING_LEN bytes, for valid input parameters.
  *
