@@ -52,6 +52,7 @@ mainpage
 min
 mmm
 mon
+monthsperday
 noninfringement
 ored
 org
@@ -107,6 +108,7 @@ sts
 sublicense
 thu
 tm
+tue
 txt
 un
 uri
