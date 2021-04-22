@@ -34,7 +34,7 @@
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Converts an integer value to its ASCII respresentation, and stores the
+ * @brief Converts an integer value to its ASCII representation, and stores the
  * result in the provided buffer.
  *
  * @param[in] value The value to convert to ASCII.
@@ -68,18 +68,16 @@ static SigV4Status_t checkLeap( const SigV4DateTime_t * pDateElements );
 static SigV4Status_t validateDateTime( const SigV4DateTime_t * pDateElements );
 
 /**
- * @brief Append calculated integer value to the internal date representation.
+ * @brief Append the value of a date element to the internal date representation
+ * structure.
  *
  * @param[in] formatChar The specifier identifying the struct member to fill.
  * @param[in] result The value to assign to the specified struct member.
  * @param[in, out] pDateElements The date representation structure to modify.
- *
- * @return #SigV4Success if the formatChar specifier corresponds to a
- * SigV4DateTime_t member, #SigV4ISOFormattingError otherwise.
  */
-static SigV4Status_t addToDate( const char formatChar,
-                                int32_t result,
-                                SigV4DateTime_t * pDateElements );
+static void addToDate( const char formatChar,
+                       int32_t result,
+                       SigV4DateTime_t * pDateElements );
 
 /**
  * @brief Interpret the value of the specified characters in date, based on the
@@ -178,7 +176,7 @@ static SigV4Status_t checkLeap( const SigV4DateTime_t * pDateElements )
 
 static SigV4Status_t validateDateTime( const SigV4DateTime_t * pDateElements )
 {
-    SigV4Status_t returnStatus = SigV4InvalidParameter;
+    SigV4Status_t returnStatus = SigV4Success;
     const int32_t daysPerMonth[] = MONTH_DAYS;
 
     assert( pDateElements != NULL );
@@ -211,12 +209,16 @@ static SigV4Status_t validateDateTime( const SigV4DateTime_t * pDateElements )
         if( returnStatus == SigV4ISOFormattingError )
         {
             LogError( ( "Invalid 'day' value parsed from date string. "
-                        "Expected an integer between 1 and 31, received: %ld",
+                        "Expected an integer between 1 and %ld, received: %ld",
+                        ( long int ) daysPerMonth[ pDateElements->tm_mon - 1 ],
                         ( long int ) pDateElements->tm_mday ) );
         }
     }
 
-    if( ( pDateElements->tm_hour < 0 ) || ( pDateElements->tm_hour > 23 ) )
+    /* SigV4DateTime_t values are asserted to be non-negative before they are
+     * assigned in function addToDate(). Therefore, we only verify logical upper
+     * bounds for the following values. */
+    if( pDateElements->tm_hour > 23 )
     {
         LogError( ( "Invalid 'hour' value parsed from date string. "
                     "Expected an integer between 0 and 23, received: %ld",
@@ -224,7 +226,7 @@ static SigV4Status_t validateDateTime( const SigV4DateTime_t * pDateElements )
         returnStatus = SigV4ISOFormattingError;
     }
 
-    if( ( pDateElements->tm_min < 0 ) || ( pDateElements->tm_min > 59 ) )
+    if( pDateElements->tm_min > 59 )
     {
         LogError( ( "Invalid 'minute' value parsed from date string. "
                     "Expected an integer between 0 and 59, received: %ld",
@@ -234,7 +236,7 @@ static SigV4Status_t validateDateTime( const SigV4DateTime_t * pDateElements )
 
     /* An upper limit of 60 accounts for the occasional leap second UTC
      * adjustment. */
-    if( ( pDateElements->tm_sec < 0 ) || ( pDateElements->tm_sec > 60 ) )
+    if( pDateElements->tm_sec > 60 )
     {
         LogError( ( "Invalid 'second' value parsed from date string. "
                     "Expected an integer between 0 and 60, received: %ld",
@@ -242,18 +244,17 @@ static SigV4Status_t validateDateTime( const SigV4DateTime_t * pDateElements )
         returnStatus = SigV4ISOFormattingError;
     }
 
-    return ( returnStatus != SigV4ISOFormattingError ) ? SigV4Success : returnStatus;
+    return returnStatus;
 }
 
 /*-----------------------------------------------------------*/
 
-static SigV4Status_t addToDate( const char formatChar,
-                                int32_t result,
-                                SigV4DateTime_t * pDateElements )
+static void addToDate( const char formatChar,
+                       int32_t result,
+                       SigV4DateTime_t * pDateElements )
 {
-    SigV4Status_t returnStatus = SigV4Success;
-
     assert( pDateElements != NULL );
+    assert( result >= 0 );
 
     switch( formatChar )
     {
@@ -281,18 +282,12 @@ static SigV4Status_t addToDate( const char formatChar,
             pDateElements->tm_sec = result;
             break;
 
-        case '*':
-            break;
-
         default:
-            LogError( ( "Parsing error: Unexpected character '%c' "
-                        "found in format string.",
-                        ( char ) formatChar ) );
-            returnStatus = SigV4ISOFormattingError;
+
+            /* Do not assign values for skipped characters ('*'), or
+             * unrecognized format specifiers. */
             break;
     }
-
-    return returnStatus;
 }
 
 /*-----------------------------------------------------------*/
@@ -363,9 +358,9 @@ static SigV4Status_t scanValue( const char * pDate,
 
     if( returnStatus != SigV4ISOFormattingError )
     {
-        returnStatus = addToDate( formatChar,
-                                  result,
-                                  pDateElements );
+        addToDate( formatChar,
+                   result,
+                   pDateElements );
     }
 
     return returnStatus;
@@ -397,7 +392,7 @@ static SigV4Status_t parseDate( const char * pDate,
             formatIndex++;
 
             /* Numerical value of length specifier character. */
-            lenToRead = ( ( uint64_t ) pFormat[ formatIndex ] - ( uint64_t ) '0' );
+            lenToRead = ( ( uint32_t ) pFormat[ formatIndex ] - ( uint32_t ) '0' );
             formatIndex++;
 
             /* Ensure read is within buffer bounds. */
