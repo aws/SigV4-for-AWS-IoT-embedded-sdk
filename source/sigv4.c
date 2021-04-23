@@ -73,7 +73,7 @@ static SigV4Status_t validateDateTime( const SigV4DateTime_t * pDateElements );
  *
  * @param[in] formatChar The specifier identifying the struct member to fill.
  * @param[in] result The value to assign to the specified struct member.
- * @param[in, out] pDateElements The date representation structure to modify.
+ * @param[out] pDateElements The date representation structure to modify.
  */
 static void addToDate( const char formatChar,
                        int32_t result,
@@ -87,7 +87,7 @@ static void addToDate( const char formatChar,
  * @param[in] formatChar The format specifier used to interpret characters.
  * @param[in] readLoc The index of pDate to read from.
  * @param[in] lenToRead The number of characters to read.
- * @param[in, out] pDateElements The date representation to modify.
+ * @param[out] pDateElements The date representation to modify.
  *
  * @return #SigV4Success if parsing succeeded, #SigV4ISOFormattingError if the
  * characters read did not match the format specifier.
@@ -105,9 +105,9 @@ static SigV4Status_t scanValue( const char * pDate,
  *
  * @param[in] pDate The date to be parsed.
  * @param[in] dateLen Length of pDate, the date to be formatted.
- * @param[in] pFormat The format string used to extract date pDateElements from pDate.
- * This string, among other characters, may contain specifiers of the form
- * "%LV", where L is the number of characters to be readLoc, and V is one of
+ * @param[in] pFormat The format string used to extract date pDateElements from
+ * pDate. This string, among other characters, may contain specifiers of the
+ * form "%LV", where L is the number of characters to be read, and V is one of
  * {Y, M, D, h, m, s, *}, representing a year, month, day, hour, minute, second,
  * or skipped (un-parsed) value, respectively.
  * @param[in] formatLen Length of the format string pFormat.
@@ -301,7 +301,7 @@ static SigV4Status_t scanValue( const char * pDate,
     SigV4Status_t returnStatus = SigV4InvalidParameter;
     const char * pMonthNames[] = MONTH_NAMES;
     const char * pLoc = pDate + readLoc;
-    size_t readLen = lenToRead;
+    size_t remainingLenToRead = lenToRead;
     int32_t result = 0;
 
     assert( pDate != NULL );
@@ -309,13 +309,13 @@ static SigV4Status_t scanValue( const char * pDate,
 
     if( formatChar == '*' )
     {
-        readLen = 0U;
+        remainingLenToRead = 0U;
     }
 
     /* Determine if month value is non-numeric. */
     if( ( formatChar == 'M' ) && ( *pLoc >= 'A' ) && ( *pLoc <= 'Z' ) )
     {
-        assert( readLen == MONTH_ASCII_LEN );
+        assert( remainingLenToRead == MONTH_ASCII_LEN );
 
         while( result++ < 12 )
         {
@@ -334,18 +334,18 @@ static SigV4Status_t scanValue( const char * pDate,
             returnStatus = SigV4ISOFormattingError;
         }
 
-        readLen = 0U;
+        remainingLenToRead = 0U;
     }
 
     /* Interpret integer value of numeric representation. */
-    while( ( readLen > 0U ) && ( *pLoc >= '0' ) && ( *pLoc <= '9' ) )
+    while( ( remainingLenToRead > 0U ) && ( *pLoc >= '0' ) && ( *pLoc <= '9' ) )
     {
         result = ( result * 10 ) + ( int32_t ) ( *pLoc - '0' );
-        readLen--;
+        remainingLenToRead--;
         pLoc += 1;
     }
 
-    if( readLen != 0U )
+    if( remainingLenToRead != 0U )
     {
         LogError( ( "Parsing Error: Expected numerical string of type '%%%d%c', "
                     "but received '%.*s'.",
