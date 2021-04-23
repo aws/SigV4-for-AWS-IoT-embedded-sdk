@@ -27,26 +27,36 @@
 /* Include paths for public enums, structures, and macros. */
 #include "sigv4.h"
 
+/* The number of invalid date inputs tested in
+ * test_SigV4_AwsIotDateToIso8601_Formatting_Error() */
+#define SIGV4_TEST_INVALID_DATE_COUNT    22U
+
 /* File-scoped global variables */
 static SigV4Status_t returnVal = SigV4Success;
 static char pTestBufferValid[ SIGV4_ISO_STRING_LEN ] = { 0 };
 
 /* ============================ HELPER FUNCTIONS ============================ */
 
-void testAwsIotDateToIso8601( const char * pInputDate,
-                              SigV4Status_t expectedStatus,
-                              const char * pExpectedOutputDate )
+/**
+ * @brief Format a date input with SigV4_AwsIotDateToIso8601(), and verify the
+ * output against the expected result, if no errors occurred.
+ */
+void formatAndVerifyInputDate( const char * pInputDate,
+                               SigV4Status_t expectedStatus,
+                               const char * pExpectedOutputDate )
 {
+    TEST_ASSERT_NOT_NULL( pInputDate );
+
     returnVal = SigV4_AwsIotDateToIso8601( pInputDate,
                                            strlen( pInputDate ),
                                            pTestBufferValid,
                                            SIGV4_ISO_STRING_LEN );
 
-
     TEST_ASSERT_EQUAL( expectedStatus, returnVal );
 
     if( returnVal == SigV4Success )
     {
+        TEST_ASSERT_NOT_NULL( pExpectedOutputDate );
         TEST_ASSERT_EQUAL_STRING_LEN( pExpectedOutputDate,
                                       pTestBufferValid,
                                       SIGV4_ISO_STRING_LEN );
@@ -55,12 +65,17 @@ void testAwsIotDateToIso8601( const char * pInputDate,
     tearDown();
 }
 
-void testInvalidOutputBuffer( const char * pInputDate,
-                              const char * pOutputBuffer,
-                              size_t lenOutputBuffer )
+/**
+ * @brief Pass invalid parameters (and their length specifications) to
+ * SigV4_AwsIotDateToIso8601(), instead of using the default global values.
+ */
+void useInvalidDateBuffer( const char * pInputDate,
+                           size_t lenInputDate,
+                           char * pOutputBuffer,
+                           size_t lenOutputBuffer )
 {
     returnVal = SigV4_AwsIotDateToIso8601( pInputDate,
-                                           strlen( pInputDate ),
+                                           lenInputDate,
                                            pOutputBuffer,
                                            lenOutputBuffer );
 
@@ -100,33 +115,34 @@ int suiteTearDown( int numFailures )
  */
 void test_SigV4_AwsIotDateToIso8601_Happy_Path()
 {
-    /* Test equivalent RFC 3339 and 5322 parameters against expected outputs. */
+    /* Test unformatted inputs against their final expected values, in both RFC
+     * 3339 and 5322 formats. */
     /* Valid non-leap year date. */
-    testAwsIotDateToIso8601( "2018-01-18T09:18:06Z",
-                             SigV4Success,
-                             "20180118T091806Z" );
+    formatAndVerifyInputDate( "2018-01-18T09:18:06Z",
+                              SigV4Success,
+                              "20180118T091806Z" );
 
-    testAwsIotDateToIso8601( "Wed, 18 Jan 2018 09:18:06 GMT",
-                             SigV4Success,
-                             "20180118T091806Z" );
+    formatAndVerifyInputDate( "Wed, 18 Jan 2018 09:18:06 GMT",
+                              SigV4Success,
+                              "20180118T091806Z" );
 
     /* Valid leap year date (not divisible by 400). */
-    testAwsIotDateToIso8601( "2004-02-29T11:04:59Z",
-                             SigV4Success,
-                             "20040229T110459Z" );
+    formatAndVerifyInputDate( "2004-02-29T11:04:59Z",
+                              SigV4Success,
+                              "20040229T110459Z" );
 
-    testAwsIotDateToIso8601( "Sun, 29 Feb 2004 11:04:59 GMT",
-                             SigV4Success,
-                             "20040229T110459Z" );
+    formatAndVerifyInputDate( "Sun, 29 Feb 2004 11:04:59 GMT",
+                              SigV4Success,
+                              "20040229T110459Z" );
 
-    /* Valid leap year date (divisible by 400, a leap year property). */
-    testAwsIotDateToIso8601( "2000-02-29T11:04:59Z",
-                             SigV4Success,
-                             "20000229T110459Z" );
+    /* Valid leap year date (divisible by 400, a property of leap years). */
+    formatAndVerifyInputDate( "2000-02-29T11:04:59Z",
+                              SigV4Success,
+                              "20000229T110459Z" );
 
-    testAwsIotDateToIso8601( "Tue, 29 Feb 2000 11:04:59 GMT",
-                             SigV4Success,
-                             "20000229T110459Z" );
+    formatAndVerifyInputDate( "Tue, 29 Feb 2000 11:04:59 GMT",
+                              SigV4Success,
+                              "20000229T110459Z" );
 }
 
 /**
@@ -138,39 +154,45 @@ void test_SigV4_AwsIotDateToIso8601_Invalid_Params()
     char testBufferShort[ SIGV4_ISO_STRING_LEN - 1U ] = { 0 };
 
     /* Test pDateISO8601 == NULL. */
-    testInvalidOutputBuffer( "2018-01-18T09:18:06Z",
-                             NULL,
-                             SIGV4_ISO_STRING_LEN );
+    useInvalidDateBuffer( "2018-01-18T09:18:06Z",
+                          SIGV4_EXPECTED_LEN_RFC_3339,
+                          NULL,
+                          SIGV4_ISO_STRING_LEN );
 
     /* Test dateISO8601Len < SIGV4_ISO_STRING_LEN. */
-    testInvalidOutputBuffer( "Wed, 18 Jan 2018 09:18:06 GMT",
-                             testBufferShort,
-                             SIGV4_ISO_STRING_LEN - 1U );
+    useInvalidDateBuffer( "Wed, 18 Jan 2018 09:18:06 GMT",
+                          SIGV4_EXPECTED_LEN_RFC_5322,
+                          testBufferShort,
+                          SIGV4_ISO_STRING_LEN - 1U );
 
     /* Test pDate == NULL. */
-    testAwsIotDateToIso8601( NULL,
-                             SigV4InvalidParameter,
-                             NULL );
+    useInvalidDateBuffer( NULL,
+                          SIGV4_EXPECTED_LEN_RFC_3339,
+                          pTestBufferValid,
+                          SIGV4_ISO_STRING_LEN );
 
-    /* dateLen < SIGV4_EXPECTED_LEN_RFC_3339 */
-    testAwsIotDateToIso8601( "2018-01T09:18Z",
-                             SigV4InvalidParameter,
-                             NULL );
+    /* There are no 'expected output values' for invalid parameters, as
+     * SigV4_AwsIotDateToIso8601() will return with an error prior to any
+     * further execution. */
+    /* dateLen < SIGV4_EXPECTED_LEN_RFC_3339. */
+    formatAndVerifyInputDate( "2018-01T09:18Z",
+                              SigV4InvalidParameter,
+                              NULL );
 
     /* dateLen > SIGV4_EXPECTED_LEN_RFC_3339 */
-    testAwsIotDateToIso8601( "2018-01-18T09:18:06Z00:00",
-                             SigV4InvalidParameter,
-                             NULL );
+    formatAndVerifyInputDate( "2018-01-18T09:18:06Z00:00",
+                              SigV4InvalidParameter,
+                              NULL );
 
     /* dateLen < SIGV4_EXPECTED_LEN_RFC_5322 */
-    testAwsIotDateToIso8601( "Wed, 18 Jan 2018 09:18:06",
-                             SigV4InvalidParameter,
-                             NULL );
+    formatAndVerifyInputDate( "Wed, 18 Jan 2018 09:18:06",
+                              SigV4InvalidParameter,
+                              NULL );
 
     /* dateLen > SIGV4_EXPECTED_LEN_RFC_5322 */
-    testAwsIotDateToIso8601( "Wed, 18 Jan 2018 09:18:06 GMT+8",
-                             SigV4InvalidParameter,
-                             NULL );
+    formatAndVerifyInputDate( "Wed, 18 Jan 2018 09:18:06 GMT+8",
+                              SigV4InvalidParameter,
+                              NULL );
 }
 
 /**
@@ -178,16 +200,17 @@ void test_SigV4_AwsIotDateToIso8601_Invalid_Params()
  */
 void test_SigV4_AwsIotDateToIso8601_Formatting_Error()
 {
-    size_t testInputCount = 20U;
     size_t index = 0U;
 
-    /* Test valid parameters representing invalid dates. */
-    const char * pInvalidDateInputs[ testInputCount ] =
+    /* Test parameters of acceptable size and format, with flawed date
+     * representations, in both RFC3339 and RFC5322 form. */
+    const char * pInvalidDateInputs[ SIGV4_TEST_INVALID_DATE_COUNT ] =
     {
         "1776-01-18T09:18:06Z", "Thu, 18 Jan 1776 09:18:06 GMT", /* year < YEAR_MIN */
         "2018-00-18T03:21:09Z", "Wed, 18 Air 2018 09:18:06 GMT", /* month < 1 */
         "2018-15-18T03:21:09Z", "Wed, 18 a01 2018 09:18:06 GMT", /* month > 12 */
         "2018-01-00T03:21:09Z", "Mon, 31 Feb 2018 09:18:06 GMT", /* day < 1 */
+        "1973-09-31T23:59:59Z", "Mon, 31 Sep 1973 23:59:59 GMT", /* day > days in month (28-31) */
         "1998-02-29T03:21:09Z", "Thu, 29 Feb 1900 09:18:06 GMT", /* Leap day in a non-leap year. */
         "2018-01-18T25:18:06Z", "Wed, 18 Jan 2018 61:18:06 GMT", /* hour > 23 */
         "1800-02-28T03:61:09Z", "Wed, 18 Jan 2018 09:99:06 GMT", /* minute > 59 */
@@ -196,11 +219,11 @@ void test_SigV4_AwsIotDateToIso8601_Formatting_Error()
         "2018-01-1!X09:18:06Z", "Wed. 31 Apr 2018T0A:18:06 GMT"  /* Unexpected non-digit found in date element. */
     };
 
-    for( index = 0U; index < testInputCount - 2; index += 2 )
+    for( index = 0U; index < SIGV4_TEST_INVALID_DATE_COUNT - 1; index += 2 )
     {
         /* Test equivalent RFC 3339 and RFC 5322 representations of an invalid
          * date, and ensure that a formatting error code is received. */
-        testAwsIotDateToIso8601( pInvalidDateInputs[ index ], SigV4ISOFormattingError, NULL );
-        testAwsIotDateToIso8601( pInvalidDateInputs[ index + 1 ], SigV4ISOFormattingError, NULL );
+        formatAndVerifyInputDate( pInvalidDateInputs[ index ], SigV4ISOFormattingError, NULL );
+        formatAndVerifyInputDate( pInvalidDateInputs[ index + 1 ], SigV4ISOFormattingError, NULL );
     }
 }
