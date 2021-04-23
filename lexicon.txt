@@ -97,6 +97,7 @@ secretaccesskey
 secretaccesskeylen
 securitytoken
 securitytokenlen
+sep
 servicelen
 sha
 signaturelen
