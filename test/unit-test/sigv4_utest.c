@@ -32,7 +32,6 @@
 #define SIGV4_TEST_INVALID_DATE_COUNT    22U
 
 /* File-scoped global variables */
-static SigV4Status_t returnVal = SigV4Success;
 static char pTestBufferValid[ SIGV4_ISO_STRING_LEN ] = { 0 };
 
 /* ============================ HELPER FUNCTIONS ============================ */
@@ -47,11 +46,10 @@ void formatAndVerifyInputDate( const char * pInputDate,
 {
     TEST_ASSERT_NOT_NULL( pInputDate );
 
-    returnVal = SigV4_AwsIotDateToIso8601( pInputDate,
-                                           strlen( pInputDate ),
-                                           pTestBufferValid,
-                                           SIGV4_ISO_STRING_LEN );
-
+    SigV4Status_t returnVal = SigV4_AwsIotDateToIso8601( pInputDate,
+                                                         strlen( pInputDate ),
+                                                         pTestBufferValid,
+                                                         SIGV4_ISO_STRING_LEN );
     TEST_ASSERT_EQUAL( expectedStatus, returnVal );
 
     if( returnVal == SigV4Success )
@@ -65,23 +63,6 @@ void formatAndVerifyInputDate( const char * pInputDate,
     tearDown();
 }
 
-/**
- * @brief Pass invalid parameters (and their length specifications) to
- * SigV4_AwsIotDateToIso8601(), instead of using the default global values.
- */
-void useInvalidDateBuffer( const char * pInputDate,
-                           size_t lenInputDate,
-                           char * pOutputBuffer,
-                           size_t lenOutputBuffer )
-{
-    returnVal = SigV4_AwsIotDateToIso8601( pInputDate,
-                                           lenInputDate,
-                                           pOutputBuffer,
-                                           lenOutputBuffer );
-
-    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnVal );
-}
-
 /* ============================ UNITY FIXTURES ============================== */
 
 /* Called before each test method. */
@@ -92,7 +73,6 @@ void setUp()
 /* Called after each test method. */
 void tearDown()
 {
-    returnVal = SigV4Success;
     memset( &pTestBufferValid, 0, sizeof( pTestBufferValid ) );
 }
 
@@ -153,23 +133,28 @@ void test_SigV4_AwsIotDateToIso8601_Invalid_Params()
     /* Output buffer of insufficient length. */
     char testBufferShort[ SIGV4_ISO_STRING_LEN - 1U ] = { 0 };
 
+    /* Test pDate == NULL. */
+    SigV4Status_t returnVal = SigV4_AwsIotDateToIso8601( NULL,
+                                                         SIGV4_EXPECTED_LEN_RFC_3339,
+                                                         pTestBufferValid,
+                                                         SIGV4_ISO_STRING_LEN );
+
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnVal );
+    tearDown();
+
     /* Test pDateISO8601 == NULL. */
-    useInvalidDateBuffer( "2018-01-18T09:18:06Z",
-                          SIGV4_EXPECTED_LEN_RFC_3339,
-                          NULL,
-                          SIGV4_ISO_STRING_LEN );
+    returnVal = SigV4_AwsIotDateToIso8601( "2018-01-18T09:18:06Z",
+                                           SIGV4_EXPECTED_LEN_RFC_3339,
+                                           NULL,
+                                           SIGV4_ISO_STRING_LEN );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnVal );
 
     /* Test dateISO8601Len < SIGV4_ISO_STRING_LEN. */
-    useInvalidDateBuffer( "Wed, 18 Jan 2018 09:18:06 GMT",
-                          SIGV4_EXPECTED_LEN_RFC_5322,
-                          testBufferShort,
-                          SIGV4_ISO_STRING_LEN - 1U );
-
-    /* Test pDate == NULL. */
-    useInvalidDateBuffer( NULL,
-                          SIGV4_EXPECTED_LEN_RFC_3339,
-                          pTestBufferValid,
-                          SIGV4_ISO_STRING_LEN );
+    returnVal = SigV4_AwsIotDateToIso8601( "Wed, 18 Jan 2018 09:18:06 GMT",
+                                           SIGV4_EXPECTED_LEN_RFC_5322,
+                                           testBufferShort,
+                                           SIGV4_ISO_STRING_LEN - 1U );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnVal );
 
     /* There are no 'expected output values' for invalid parameters, as
      * SigV4_AwsIotDateToIso8601() will return with an error prior to any
@@ -204,7 +189,7 @@ void test_SigV4_AwsIotDateToIso8601_Formatting_Error()
 
     /* Test parameters of acceptable size and format, with flawed date
      * representations, in both RFC3339 and RFC5322 form. */
-    const char * pInvalidDateInputs[ SIGV4_TEST_INVALID_DATE_COUNT ] =
+    const char * pInvalidDateInputs[] =
     {
         "1776-01-18T09:18:06Z", "Thu, 18 Jan 1776 09:18:06 GMT", /* year < YEAR_MIN */
         "2018-00-18T03:21:09Z", "Wed, 18 Air 2018 09:18:06 GMT", /* month < 1 */
