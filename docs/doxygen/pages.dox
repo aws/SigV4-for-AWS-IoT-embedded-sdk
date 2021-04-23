@@ -1,0 +1,10 @@
+/**
+@mainpage Overview
+@anchor sigv4
+@brief AWS Iot SigV4 Utility
+
+@section sigv4_memory_requirements Memory Requirements
+@brief Memory requirements of the SigV4 Utility library.
+
+@include{doc} size_table.html
+ */
