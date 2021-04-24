@@ -1,6 +1,6 @@
 /*
  * SigV4 Utility Library v1.0.0
- * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -60,7 +60,7 @@ typedef struct SigV4DateTime
 {
     int32_t tm_year; /**< Year (1900 or later) */
     int32_t tm_mon;  /**< Month (1 to 12) */
-    int32_t tm_mday; /**< Day of Month (1 to 28/29/20/31) */
+    int32_t tm_mday; /**< Day of Month (1 to 28/29/30/31) */
     int32_t tm_hour; /**< Hour (0 to 23) */
     int32_t tm_min;  /**< Minutes (0 to 59) */
     int32_t tm_sec;  /**< Seconds (0 to 60) */
