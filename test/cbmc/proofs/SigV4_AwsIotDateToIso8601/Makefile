@@ -15,6 +15,6 @@ REMOVE_FUNCTION_BODY +=
 UNWINDSET +=
 
 PROOF_SOURCES += $(PROOFDIR)/$(HARNESS_FILE).c
-PROJECT_SOURCES += $(SRCDIR)/test/cbmc/proofs/source/sigv4.c
+PROJECT_SOURCES += $(SRCDIR)/source/sigv4.c
 
 include ../Makefile.common

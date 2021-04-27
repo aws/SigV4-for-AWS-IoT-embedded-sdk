@@ -1,3 +1,4 @@
+PROOF_ROOT ?= $(abspath .)
 
 # Absolute path to the root of the source tree.
 #
@@ -6,7 +7,7 @@ SRCDIR ?= $(abspath $(PROOF_ROOT)/../../..)
 
 # Absolute path to the litani script.
 #
-LITANI ?= $(abspath $(PROOF_ROOT)/../litani)
+LITANI ?= $(abspath $(PROOF_ROOT)/../litani/litani)
 
 
 # Name of this proof project, displayed in proof reports. For example,
@@ -16,4 +17,3 @@ LITANI ?= $(abspath $(PROOF_ROOT)/../litani)
 # 	  make PROJECT_NAME="FreeRTOS MQTT" report
 #
 PROJECT_NAME = "sigv4-for-aws-iot-embedded-sdk"
-
