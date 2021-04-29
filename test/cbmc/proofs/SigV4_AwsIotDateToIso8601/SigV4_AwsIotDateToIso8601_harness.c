@@ -35,7 +35,7 @@ void harness()
     char * pDateISO8601;
     size_t dateISO8601Len;
 
-    __CPROVER_assume( dateLen < CBMC_MAX_OBJECT_SIZE );
+    __CPROVER_assume( dateLen == SIGV4_EXPECTED_LEN_RFC_3339 || dateLen == SIGV4_EXPECTED_LEN_RFC_5322 || dateLen == 0 );
     pInputDate = malloc( dateLen );
 
     __CPROVER_assume( dateISO8601Len < CBMC_MAX_OBJECT_SIZE );
