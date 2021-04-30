@@ -14,7 +14,7 @@
 
 ### Steps to build **Unit Tests**
 
-1. `cd` in this repo.
+1. `cd` in this repository.
 
 1. Run the *cmake* command: `cmake -S test -B build -DBUILD_CLONE_SUBMODULES=ON`.
 
