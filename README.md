@@ -14,7 +14,7 @@
 
 ### Steps to build **Unit Tests**
 
-1. Go to the root directory of this repository.
+1. Go to the root directory of this repo.
 
 1. Run the *cmake* command: `cmake -S test -B build -DBUILD_CLONE_SUBMODULES=ON`.
 
