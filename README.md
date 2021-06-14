@@ -1,6 +1,14 @@
-# AWS IoT SigV4 Client library
+# AWS IoT SigV4 Utility Library
+
+**Note** This library is currently under development.
+
+The AWS IoT SigV4 Library is a standalone utility for generating a signature and authorization header according to the specifications of the [Signature Version 4](https://docs.aws.amazon.com/general/latest/gr/signature-version-4.html) signing process. This utility is an optional addition to applications sending direct HTTP requests to AWS services requiring SigV4 authentication.
 
 ## Building the SigV4 Library
+
+The [source](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/tree/main/source) directory contains all of the source files required to build the SigV4 Library. The [source/include](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/tree/main/source/include) folder should be added to the compiler's include path.
+
+To use CMake, please refer to the [sigV4FilePaths.cmake](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/blob/main/sigv4FilePaths.cmake) file, which contains the relevant information regarding source files and header include paths required to build this library.
 
 ## Building Unit Tests
 
