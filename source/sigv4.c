@@ -27,6 +27,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "sigv4.h"
 #include "sigv4_internal.h"
@@ -517,7 +518,22 @@ static SigV4Status_t parseDate( const char * pDate,
 /* Converts a hex character to its integer value */
 static char hexToInt( char pHex )
 {
-    return isdigit( pHex ) ? pHex - '0' : tolower( pHex ) - 'a' + 10;
+    uint8_t byte = pHex;
+
+    if( ( byte >= '0' ) && ( byte <= '9' ) )
+    {
+        byte = byte - '0';
+    }
+    else if( ( byte >= 'a' ) && ( byte <= 'f' ) )
+    {
+        byte = byte - 'a' + 10;
+    }
+    else if( ( byte >= 'A' ) && ( byte <= 'F' ) )
+    {
+        byte = byte - 'A' + 10;
+    }
+
+    return byte & 0xF;
 }
 
 /* Converts an integer value to its hex character */
@@ -530,7 +546,7 @@ static char intToHex( char pInt )
 
 /*-----------------------------------------------------------*/
 
-#if ( SIGV4_USE_CANONICAL_SUPPORT == 1U )
+#if ( SIGV4_USE_CANONICAL_SUPPORT == 1 )
 
     static void encodeURI( const char * pURI,
                            size_t uriLen,
@@ -539,7 +555,7 @@ static char intToHex( char pInt )
                            bool encodeSlash,
                            bool nullTerminate )
     {
-        char * pURILoc = pURI;
+        const char * pURILoc = pURI;
         char * pBufLoc = pCanonicalURI;
         size_t index = 0U;
 
@@ -608,28 +624,6 @@ static char intToHex( char pInt )
         canonicalRequest->bufRemaining -= remainingLen + 1;
     }
 
-    static int cmpFun( const void * a,
-                       const void * b )
-    {
-        char * token_a = strtok( ( char * ) a, "=" );
-        char * token_b = strtok( ( char * ) b, "=" );
-
-        int compare = strcmp( token_a, token_b );
-
-        if( strcmp == 0 )
-        {
-            token_a = strtok( NULL, "=" );
-            token_b = strtok( NULL, "=" );
-
-            assert( token_a != NULL );
-            assert( token_b != NULL );
-
-            compare = strcmp( token_a, token_b );
-        }
-
-        return compare;
-    }
-
     static void generateCanonicalQuery( const char * pQuery,
                                         size_t queryLen,
                                         canonicalContext_t * canonicalRequest )
@@ -638,12 +632,12 @@ static char intToHex( char pInt )
         size_t i = 0U;
         size_t remainingLen = canonicalRequest->bufRemaining;
         char * pBufLoc = canonicalRequest->pBufCur;
-        char * tokenQueries, tokenParams;
+        char * tokenQueries, * tokenParams;
 
         assert( pQuery != NULL );
         assert( canonicalRequest != NULL );
 
-        tokenQueries = strtok( pQuery, "&" );
+        tokenQueries = strtok( ( char * ) pQuery, "&" );
 
         while( tokenQueries != NULL )
         {
@@ -653,7 +647,7 @@ static char intToHex( char pInt )
             index++;
         }
 
-        qsort( canonicalRequest->pQueryLoc, index, cmpFun );
+        qsort( canonicalRequest->pQueryLoc, index, sizeof( char * ), qSortCompare );
 
         for( i = 0U; i < index; i++ )
         {
@@ -692,7 +686,7 @@ static char intToHex( char pInt )
         canonicalRequest->pBufCur = pBufLoc;
     }
 
-#endif /* #if ( SIGV4_USE_CANONICAL_SUPPORT == 1U ) */
+#endif /* #if ( SIGV4_USE_CANONICAL_SUPPORT == 1 ) */
 
 /*-----------------------------------------------------------*/
 
@@ -863,6 +857,57 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
         LogDebug( ( "Successfully formatted ISO 8601 date: \"%.*s\"",
                     ( int ) dateISO8601Len,
                     pDateISO8601 ) );
+    }
+
+    return returnStatus;
+}
+
+SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams,
+                                               char * pAuthBuf,
+                                               size_t * authBufLen,
+                                               char ** pSignature,
+                                               size_t * signatureLen )
+{
+    SigV4Status_t returnStatus = verifySigV4Parameters( pParams );
+
+    if( returnStatus == SigV4InvalidParameter )
+    {
+        LogError( ( "Parameter check failed: pParams is invalid, contains NULL member(s)." ) )
+    }
+    else if( pAuthBuf == NULL )
+    {
+        LogError( ( "Parameter check failed: pAuthBuf is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( authBufLen == NULL )
+    {
+        LogError( ( "Parameter check failed: authBufLen is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( *authBufLen == 0U )
+    {
+        LogError( ( "Parameter check failed: authBufLen[0] must be greater than 0." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( pSignature == NULL )
+    {
+        LogError( ( "Parameter check failed: pSignature is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( signatureLen == NULL )
+    {
+        LogError( ( "Parameter check failed: signatureLen is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+
+    if( returnStatus == SigV4Success )
+    {
+        canonicalContext_t encodingContext = { 0 };
+
+        generateCanonicalURI( pParams->pPath,
+                              pathLen,
+                              true,
+                              &encodingContext );
     }
 
     return returnStatus;
