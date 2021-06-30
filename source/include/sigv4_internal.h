@@ -51,6 +51,8 @@
 #define ISO_YEAR_LEN           4U                                 /**< Length of year value in ISO 8601 date. */
 #define ISO_NON_YEAR_LEN       2U                                 /**< Length of non-year values in ISO 8601 date. */
 
+#define ISO_DATE_SCOPE_LEN     8U                                 /**< Length of date substring used in credential scope. */
+
 /**
  * @brief An aggregator representing the individually parsed elements of the
  * user-provided date parameter. This is used to verify the complete date
@@ -65,5 +67,27 @@ typedef struct SigV4DateTime
     int32_t tm_min;  /**< Minutes (0 to 59) */
     int32_t tm_sec;  /**< Seconds (0 to 60) */
 } SigV4DateTime_t;
+
+/**
+ * @brief A library structure holding the string and length values of parameters to
+ * be sorted and standardized. This allows for a layer of abstraction during the
+ * canonicalization step of the V4 signing process.
+ */
+typedef struct SigV4String
+{
+    unsigned char * pData;
+    size_t dataLen;
+} SigV4String_t;
+
+/**
+ * @brief A key-value pair data structure that allows for sorting of SigV4
+ * string values using internal comparison functions, and provides additional
+ * stability to qSort(), to comply with Misra rule 21.9.
+ */
+typedef struct SigV4KeyValuePair
+{
+    SigV4String_t key;
+    SigV4String_t value;
+} SigV4KeyValuePair_t;
 
 #endif /* ifndef SIGV4_INTERNAL_H_ */
