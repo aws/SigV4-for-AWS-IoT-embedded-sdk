@@ -28,6 +28,8 @@
 #include <assert.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <ctype.h>
 
 #include "sigv4.h"
 #include "sigv4_internal.h"
@@ -585,33 +587,43 @@ static char hexToInt( char pHex )
 
 /* Hex digest of provided parameter string. */
 static void hexEncode( SigV4String_t * pInputStr,
-                       SigV4String_t * pHexOutput );
+                       SigV4String_t * pHexOutput )
 {
     static const unsigned char digitArr[] = "0123456789abcdef";
     unsigned char * hex = pHexOutput->pData;
+    size_t i = 0U;
 
-    for( size_t i = 0; i < pInputStr->lenData; i++ )
+    assert( pInputStr != NULL );
+    assert( pHexOutput != NULL );
+    assert( pInputStr->pData != NULL );
+
+    for( i = 0; i < pInputStr->dataLen; i++ )
     {
         *( hex++ ) = digitArr[ ( pInputStr->pData[ i ] & 0xF0 ) >> 4 ];
         *( hex++ ) = digitArr[ ( pInputStr->pData[ i ] & 0xF0 ) ];
     }
 
-    pHexOutput->len = pInputStr->len * 2;
+    pHexOutput->dataLen = pInputStr->dataLen * 2;
 }
 
 /*-----------------------------------------------------------*/
 
-static SigV4Status getCredentialScope( SigV4Parameters_t * pSigV4Params,
-                                       SigV4String_t * pCredScope );
+static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
+                                         SigV4String_t * pCredScope )
 {
     SigV4Status_t returnVal = SigV4InvalidParameter;
     unsigned char * pBufWrite = pCredScope->pData;
     int32_t bytesWritten = 0;
 
+    assert( pSigV4Params != NULL );
+    assert( pCredScope != NULL );
+    assert( pBufWrite != NULL );
+
     /* Use only the first 8 characters from the provided ISO 8601 string (YYYYMMDD). */
     bytesWritten = snprintf( ( char * ) pBufWrite,
+                             ISO_DATE_SCOPE_LEN + 1,
+                             "%*s",
                              ISO_DATE_SCOPE_LEN,
-                             "%8c",
                              pSigV4Params->pDateIso8601 );
 
     if( bytesWritten == ISO_DATE_SCOPE_LEN )
@@ -623,17 +635,17 @@ static SigV4Status getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
         if( bytesWritten != pSigV4Params->regionLen )
         {
-            LogError( "Error in formatting provided region string for credential scope." );
+            LogError( ( "Error in formatting provided region string for credential scope." ) );
             returnVal = SigV4ISOFormattingError;
         }
     }
     else
     {
-        LogError( "Error obtaining date for credential scope string." );
+        LogError( ( "Error obtaining date for credential scope string." ) );
         returnVal = SigV4ISOFormattingError;
     }
 
-    if( returnStatus != SigV4ISOFormattingError )
+    if( returnVal != SigV4ISOFormattingError )
     {
         bytesWritten = snprintf( ( char * ) pBufWrite,
                                  pSigV4Params->serviceLen,
@@ -642,17 +654,17 @@ static SigV4Status getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
         if( bytesWritten != pSigV4Params->serviceLen )
         {
-            LogError( "Error in formatting provided service string for credential scope." );
+            LogError( ( "Error in formatting provided service string for credential scope." ) );
             returnVal = SigV4ISOFormattingError;
         }
     }
     else
     {
         pCredScope->dataLen = ISO_DATE_SCOPE_LEN + pSigV4Params->regionLen + pSigV4Params->serviceLen;
-        returnStatus = SigV4Success;
+        returnVal = SigV4Success;
     }
 
-    return returnStatus;
+    return returnVal;
 }
 
 /*-----------------------------------------------------------*/
@@ -667,8 +679,8 @@ static SigV4Status getCredentialScope( SigV4Parameters_t * pSigV4Params,
         assert( pInput != NULL );
         assert( lenInput > 0U );
 
-        pSigV4Value.pData = ( unsigned char * pInput );
-        pSigV4Value.dataLen = ( size_t ) lenInput;
+        pSigV4Value->pData = ( unsigned char * ) pInput;
+        pSigV4Value->dataLen = ( size_t ) lenInput;
     }
 
 /*-----------------------------------------------------------*/
@@ -691,16 +703,16 @@ static SigV4Status getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
         assert( pFirstVal != NULL );
         assert( pSecondVal != NULL );
-        assert( !emptySigV4String( pFirstVal->key ) );
-        assert( !emptySigV4String( pSecondVal->key ) );
+        assert( !emptySigV4String( &pFirstVal->key ) );
+        assert( !emptySigV4String( &pSecondVal->key ) );
 
         if( pFirstVal->key.dataLen <= pSecondVal->key.dataLen )
         {
-            len = pFirstVal->key.dataLen;
+            lenSmall = pFirstVal->key.dataLen;
         }
         else
         {
-            len = pSecondVal->key.dataLen;
+            lenSmall = pSecondVal->key.dataLen;
         }
 
         return strncmp( ( char * ) pFirstVal->key.pData,
@@ -813,7 +825,7 @@ static SigV4Status getCredentialScope( SigV4Parameters_t * pSigV4Params,
             index++;
         }
 
-        qsort( canonicalRequest->pQueryLoc, index, sizeof( char * ), qSortCompare );
+        qsort( canonicalRequest->pQueryLoc, index, sizeof( char * ), cmpKeyValue );
 
         for( i = 0U; i < index; i++ )
         {
