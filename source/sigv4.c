@@ -37,6 +37,27 @@
 #if ( SIGV4_USE_CANONICAL_SUPPORT == 1 )
 
 /**
+ * @brief Interpret string parameters into standardized SigV4String_t structs to
+ * assist in sorting and canonicalization.
+ *
+ * @param[in, out] pSigV4Value The SigV4 standardized struct to populate.
+ * @param[in] pInput String containing sorting parameters.
+ * @param[in] lenInput Length of string @pInput.
+ */
+    static void stringToSigV4Value( SigV4String_t * pSigV4Value,
+                                    const unsigned char * pInput,
+                                    size_t lenInput );
+
+/**
+ * @brief Verifies if a SigV4 string value is empty.
+ *
+ * @param[in] pInput The SigV4 string value struct to verify.
+ *
+ * @return Returns 'true' if @pInput is empty, and 'false' otherwise.
+ */
+    static bool emptySigV4String( SigV4String_t * pInput );
+
+/**
  * @brief Normalize a URI string according to RFC 3986 and fill destination
  * buffer with the formatted string.
  *
@@ -100,6 +121,19 @@
                                           size_t headerLen,
                                           canonicalContext_t * canonicalRequest );
 
+/**
+ * @brief Compare two SigV4 data structures lexigraphically, without case-sensitivity.
+ *
+ * @param[in] pFirstVal SigV4 key value data structure to sort.
+ * @param[in] pSecondVal SigV4 key value data structure to sort.
+ *
+ * @return Returns a value less than 0 if @pFirstVal < @pSecondVal, or
+ * a value greater than 0 if @pSecondVal < @pFirstVal. 0 is never returned in
+ * order to provide stability to qSort() calls.
+ */
+    static int cmpKeyValue( SigV4KeyValuePair_t * pFirstVal,
+                            SigV4KeyValuePair_t * pSecondVal );
+
 #endif /* #if (SIGV4_USE_CANONICAL_SUPPORT == 1) */
 
 /**
@@ -115,6 +149,19 @@
 static void intToAscii( int32_t value,
                         char ** pBuffer,
                         size_t bufferLen );
+
+/**
+ * @brief Format the credential scope of the authorization header using the date, region, and service
+ * parameters found in @SigV4Parameters.
+ *
+ * @param[in] pSigV4Params The application parameters defining the credential's scope.
+ * @param[in, out] pCredScope The credential scope in the V4 required format.
+ *
+ * @return SigV4ISOFormattingError if a snprintf() error was encountered,
+ * SigV4Success otherwise.
+ */
+static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
+                                         SigV4String_t * pCredScope );
 
 /**
  * @brief Check if the date represents a valid leap year day.
@@ -225,7 +272,6 @@ static void intToAscii( int32_t value,
 }
 
 /*-----------------------------------------------------------*/
-
 static SigV4Status_t checkLeap( const SigV4DateTime_t * pDateElements )
 {
     SigV4Status_t returnStatus = SigV4ISOFormattingError;
@@ -535,17 +581,134 @@ static char hexToInt( char pHex )
     return byte & 0xF;
 }
 
-/* Converts an integer value to its hex character */
-static char intToHex( char pInt )
-{
-    static char hex[] = "0123456789abcdef";
+/*-----------------------------------------------------------*/
 
-    return hex[ pInt & 15 ];
+/* Hex digest of provided parameter string. */
+static void hexEncode( SigV4String_t * pInputStr,
+                       SigV4String_t * pHexOutput );
+{
+    static const unsigned char digitArr[] = "0123456789abcdef";
+    unsigned char * hex = pHexOutput->pData;
+
+    for( size_t i = 0; i < pInputStr->lenData; i++ )
+    {
+        *( hex++ ) = digitArr[ ( pInputStr->pData[ i ] & 0xF0 ) >> 4 ];
+        *( hex++ ) = digitArr[ ( pInputStr->pData[ i ] & 0xF0 ) ];
+    }
+
+    pHexOutput->len = pInputStr->len * 2;
+}
+
+/*-----------------------------------------------------------*/
+
+static SigV4Status getCredentialScope( SigV4Parameters_t * pSigV4Params,
+                                       SigV4String_t * pCredScope );
+{
+    SigV4Status_t returnVal = SigV4InvalidParameter;
+    unsigned char * pBufWrite = pCredScope->pData;
+    int32_t bytesWritten = 0;
+
+    /* Use only the first 8 characters from the provided ISO 8601 string (YYYYMMDD). */
+    bytesWritten = snprintf( ( char * ) pBufWrite,
+                             ISO_DATE_SCOPE_LEN,
+                             "%8c",
+                             pSigV4Params->pDateIso8601 );
+
+    if( bytesWritten == ISO_DATE_SCOPE_LEN )
+    {
+        bytesWritten = snprintf( ( char * ) pBufWrite,
+                                 pSigV4Params->regionLen,
+                                 "/%s/",
+                                 pSigV4Params->pRegion );
+
+        if( bytesWritten != pSigV4Params->regionLen )
+        {
+            LogError( "Error in formatting provided region string for credential scope." );
+            returnVal = SigV4ISOFormattingError;
+        }
+    }
+    else
+    {
+        LogError( "Error obtaining date for credential scope string." );
+        returnVal = SigV4ISOFormattingError;
+    }
+
+    if( returnStatus != SigV4ISOFormattingError )
+    {
+        bytesWritten = snprintf( ( char * ) pBufWrite,
+                                 pSigV4Params->serviceLen,
+                                 "/%s/",
+                                 pSigV4Params->pService );
+
+        if( bytesWritten != pSigV4Params->serviceLen )
+        {
+            LogError( "Error in formatting provided service string for credential scope." );
+            returnVal = SigV4ISOFormattingError;
+        }
+    }
+    else
+    {
+        pCredScope->dataLen = ISO_DATE_SCOPE_LEN + pSigV4Params->regionLen + pSigV4Params->serviceLen;
+        returnStatus = SigV4Success;
+    }
+
+    return returnStatus;
 }
 
 /*-----------------------------------------------------------*/
 
 #if ( SIGV4_USE_CANONICAL_SUPPORT == 1 )
+
+    static void stringToSigV4Value( SigV4String_t * pSigV4Value,
+                                    const unsigned char * pInput,
+                                    size_t lenInput )
+    {
+        assert( pSigV4Value != NULL );
+        assert( pInput != NULL );
+        assert( lenInput > 0U );
+
+        pSigV4Value.pData = ( unsigned char * pInput );
+        pSigV4Value.dataLen = ( size_t ) lenInput;
+    }
+
+/*-----------------------------------------------------------*/
+
+    static bool emptySigV4String( SigV4String_t * pInput )
+    {
+        bool returnVal = true;
+
+        assert( pInput != NULL );
+
+        return ( pInput->pData == NULL || pInput->dataLen == 0 ) ? returnVal : !returnVal;
+    }
+
+/*-----------------------------------------------------------*/
+
+    static int cmpKeyValue( SigV4KeyValuePair_t * pFirstVal,
+                            SigV4KeyValuePair_t * pSecondVal )
+    {
+        size_t lenSmall = 0U;
+
+        assert( pFirstVal != NULL );
+        assert( pSecondVal != NULL );
+        assert( !emptySigV4String( pFirstVal->key ) );
+        assert( !emptySigV4String( pSecondVal->key ) );
+
+        if( pFirstVal->key.dataLen <= pSecondVal->key.dataLen )
+        {
+            len = pFirstVal->key.dataLen;
+        }
+        else
+        {
+            len = pSecondVal->key.dataLen;
+        }
+
+        return strncmp( ( char * ) pFirstVal->key.pData,
+                        ( char * ) pSecondVal->key.pData,
+                        lenSmall );
+    }
+
+/*-----------------------------------------------------------*/
 
     static void encodeURI( const char * pURI,
                            size_t uriLen,
@@ -596,6 +759,8 @@ static char intToHex( char pInt )
         *canonicalURILen = index;
     }
 
+/*-----------------------------------------------------------*/
+
     static void generateCanonicalURI( const char * pURI,
                                       size_t uriLen,
                                       bool encodeOnce,
@@ -622,6 +787,8 @@ static char intToHex( char pInt )
 
         canonicalRequest->bufRemaining -= remainingLen + 1;
     }
+
+/*-----------------------------------------------------------*/
 
     static void generateCanonicalQuery( const char * pQuery,
                                         size_t queryLen,
