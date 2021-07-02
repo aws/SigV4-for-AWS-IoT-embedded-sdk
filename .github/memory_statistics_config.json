@@ -1,5 +1,5 @@
 {
-    "lib_name": "AWS IoT SigV4 Library",
+    "lib_name": "AWS IoT SigV4",
     "src": [
         "source/sigv4.c"
     ],
