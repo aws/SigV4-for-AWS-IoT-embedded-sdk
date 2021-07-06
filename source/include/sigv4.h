@@ -49,28 +49,20 @@
 /** @addtogroup sigv4_constants
  *  @{
  */
-/**< AWS identifier for this utility's SigV4 signing algorithms. */
-#define SIGV4_AWS4_HMAC_SHA256                      "AWS4-HMAC-SHA256"
+#define SIGV4_AWS4_HMAC_SHA256                      "AWS4-HMAC-SHA256"                   /**< AWS identifier for SHA256 signing algorithm. */
+#define SIGV4_HTTP_X_AMZ_DATE_HEADER                "x-amz-date"                         /**< AWS identifier for HTTP date header. */
+#define SIGV4_HTTP_X_AMZ_SECURITY_TOKEN_HEADER      "x-amz-security-token"               /**< AWS identifier for security token. */
 
-/**< AWS identifier for S3 SigV4 streaming upload. */
-#define SIGV4_STREAMING_AWS4_HMAC_SHA256_PAYLOAD    "STREAMING-AWS4-HMAC-SHA256-PAYLOAD"
+#define SIGV4_STREAMING_AWS4_HMAC_SHA256_PAYLOAD    "STREAMING-AWS4-HMAC-SHA256-PAYLOAD" /**< S3 identifier for chunked payloads. */
+#define SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER      "x-amz-content-sha256"               /**< S3 identifier for streaming requests. */
+#define SIGV4_HTTP_X_AMZ_STORAGE_CLASS_HEADER       "x-amz-storage-class"                /**< S3 identifier for reduced streaming redundancy. */
 
-/**< AWS identifiers for Amazon specific HTTP header fields. */
-#define SIGV4_HTTP_X_AMZ_DATE_HEADER                "x-amz-date"
-#define SIGV4_HTTP_X_AMZ_SECURITY_TOKEN_HEADER      "x-amz-security-token"
-#define SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER      "x-amz-content-sha256"
-#define SIGV4_HTTP_X_AMZ_STORAGE_CLASS_HEADER       "x-amz-storage-class"
+#define SIGV4_ACCESS_KEY_ID_LENGTH                  20U                                  /**< Length of access key ID. */
+#define SIGV4_SECRET_ACCESS_KEY_LENGTH              40U                                  /**< Length of secret access key. */
 
-/**< Lengths of the security tokens. */
-#define SIGV4_ACCESS_KEY_ID_LENGTH                  20U
-#define SIGV4_SECRET_ACCESS_KEY_LENGTH              40U
-
-/**< Length of the date header in ISO 8601 format. */
-#define SIGV4_ISO_STRING_LEN                        16U
-/**< Expected length of an RFC 3339 date input. */
-#define SIGV4_EXPECTED_LEN_RFC_3339                 20U
-/**< Expected length of an RFC 5322 date input. */
-#define SIGV4_EXPECTED_LEN_RFC_5322                 29U
+#define SIGV4_ISO_STRING_LEN                        16U                                  /**< Length of ISO 8601 date string. */
+#define SIGV4_EXPECTED_LEN_RFC_3339                 20U                                  /**< Length of RFC 3339 date input. */
+#define SIGV4_EXPECTED_LEN_RFC_5322                 29U                                  /**< Length of RFC 5322 date input. */
 /** @}*/
 
 /**
@@ -231,10 +223,10 @@ typedef struct SigV4HttpParameters
      * trimming, and encoding done by the library. This is a performance optimization
      * option. Please see https://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html
      * for information on generating a canonical path, query, and headers string.
-     * #define SIGV4_HTTP_PATH_IS_CANONICAL_FLAG     0x1
-     * #define SIGV4_HTTP_QUERY_IS_CANONICAL_FLAG    0x2
-     * #define SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG 0x4
-     * #define SIGV4_HTTP_ALL_ARE_CANONICAL_FLAG     0x8
+     * - #SIGV4_HTTP_PATH_IS_CANONICAL_FLAG     0x1
+     * - #SIGV4_HTTP_QUERY_IS_CANONICAL_FLAG    0x2
+     * - #SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG 0x4
+     * - #SIGV4_HTTP_ALL_ARE_CANONICAL_FLAG     0x8
      */
     uint32_t flags;
 
@@ -242,7 +234,7 @@ typedef struct SigV4HttpParameters
      * @brief The path in the HTTP request. This is the absolute request URI,
      * which contains everything in the URI following the HTTP host until the
      * question mark character ("?") that begins any query string parameters
-     * (e.g. "/path/to/item.txt"). If #SIGV4_HTTP_PATH_IS_CANONICAL_FLAG is set,
+     * (e.g. "/path/to/item.txt"). If SIGV4_HTTP_PATH_IS_CANONICAL_FLAG is set,
      * then this input must already be in canonical form.
      */
     const char * pPath;
@@ -251,7 +243,7 @@ typedef struct SigV4HttpParameters
     /**
      * @brief The HTTP request query from the URL. This contains all characters
      * following the question mark character ("?") that denotes the start of the
-     * query. If #SIGV4_HTTP_QUERY_IS_CANONICAL_FLAG is set, then this input
+     * query. If SIGV4_HTTP_QUERY_IS_CANONICAL_FLAG is set, then this input
      * must already be in canonical form.
      */
     const char * pQuery;
@@ -260,7 +252,7 @@ typedef struct SigV4HttpParameters
     /**
      * @brief The headers from the HTTP request that we want to sign. This
      * should be the raw headers in HTTP request format. If
-     * #SIGV4_HTTP_HEADERS_IS_CANONICAL_FLAG is set, then this input must
+     * SIGV4_HTTP_HEADERS_IS_CANONICAL_FLAG is set, then this input must
      * already be in canonical form.
      */
     const char * pHeaders;
@@ -414,13 +406,13 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
  * in length (excluding the null character), to comply with RFC 3339 and RFC
  * 5322 formats, respectively.
  * @param[in] dateLen The length of the pDate header value. Must be either
- * #SIGV4_EXPECTED_LEN_RFC_3339 or #SIGV4_EXPECTED_LEN_RFC_5322, for valid input
+ * SIGV4_EXPECTED_LEN_RFC_3339 or SIGV4_EXPECTED_LEN_RFC_5322, for valid input
  * parameters.
  * @param[out] pDateISO8601 The formatted ISO8601-compliant date. The date value
  * written to this buffer will be exactly 16 characters in length, to comply
  * with the ISO8601 standard required for SigV4 authentication.
  * @param[in] dateISO8601Len The length of buffer pDateISO8601. Must be at least
- * #SIGV4_ISO_STRING_LEN bytes, for valid input parameters.
+ * SIGV4_ISO_STRING_LEN bytes, for valid input parameters.
  *
  * @return #SigV4Success code if successful, error code otherwise.
  */

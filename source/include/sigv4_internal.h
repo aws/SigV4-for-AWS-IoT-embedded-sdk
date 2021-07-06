@@ -29,13 +29,13 @@
 #define SIGV4_INTERNAL_H_
 
 /* Constants for date verification. */
-#define YEAR_MIN               1900L /**< Minimum year accepted. */
+#define YEAR_MIN               1900L /**< Earliest year accepted. */
+#define MONTH_ASCII_LEN        3U    /**< Length of month abbreviations. */
 
 /**
  * @brief Month name abbreviations for RFC 5322 date parsing.
  */
 #define MONTH_NAMES            { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" }
-#define MONTH_ASCII_LEN        3U
 
 /**
  * @brief Number of days in each respective month.

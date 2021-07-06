@@ -101,3 +101,22 @@ jobs:
         with:
             config: .github/memory_statistics_config.json
             check_against: docs/doxygen/include/size_table.html
+  link-verifier:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: Setup Python for link verifier action
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.7.10'
+      - name: Check Links
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: FreeRTOS/CI-CD-GitHub-Actions/link-verifier@main
+        with:
+          path: ./
+          exclude-dirs: cmock,unity,cbmc
+          include-file-types: .c,.h,.dox
+          allowlist-file: ./.github/links_allowlist.txt
