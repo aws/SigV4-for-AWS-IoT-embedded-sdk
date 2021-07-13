@@ -316,7 +316,6 @@ static SigV4Status_t scanValue( const char * pDate,
     /* Determine if month value is non-numeric. */
     if( ( formatChar == 'M' ) && ( *pLoc >= 'A' ) && ( *pLoc <= 'Z' ) )
     {
-        /*assert( remainingLenToRead == MONTH_ASCII_LEN ); */
         if( remainingLenToRead == MONTH_ASCII_LEN )
         {
             while( result++ < 12 )
