@@ -12,18 +12,20 @@ DEFINES +=
 INCLUDES +=
 
 MONTH_ASCII_LEN=3
-ISO_YEAR_LEN=4
+ISO_YEAR_LEN=5
 MONTHS_IN_YEAR=12
 FORMAT_RFC_5322_LEN=32
 
 REMOVE_FUNCTION_BODY +=
-UNWINDSET += __CPROVER_file_local_sigv4_c_parseDate.0:$(FORMAT_RFC_5322_LEN)
-UNWINDSET += __CPROVER_file_local_sigv4_c_scanValue.0:$(MONTHS_IN_YEAR)
-UNWINDSET += __CPROVER_file_local_sigv4_c_scanValue.1:$(ISO_YEAR_LEN)
-UNWINDSET += __CPROVER_file_local_sigv4_c_intToAscii.0:$(ISO_YEAR_LEN)
-UNWINDSET += strncmp.0:$(MONTH_ASCII_LEN)
+UNWINDSET += parseDate.0:$(FORMAT_RFC_5322_LEN)
+UNWINDSET += scanValue.0:$(ISO_YEAR_LEN)
+UNWINDSET += intToAscii.0:$(ISO_YEAR_LEN)
 
 PROOF_SOURCES += $(PROOFDIR)/$(HARNESS_FILE).c
-PROJECT_SOURCES += $(SRCDIR)/source/sigv4.c
+PROOF_SOURCES += $(SRCDIR)/test/cbmc/stubs/sigv4_stubs.c
 
-include ../Makefile.common
+include ../Makefile-json.common
+
+# Substitution command to pass to sed for patching sigv4.c. The
+# characters " and # must be escaped with backslash.
+SIGV4_SED_EXPR = 1s/^/\#include \"sigv4_stubs.h\" /; s/^static //; s/SigV4Status_t scanValue\b/&_/
