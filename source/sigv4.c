@@ -136,8 +136,9 @@ static void intToAscii( int32_t value,
 
     /* Write base-10 remainder in its ASCII representation, and fill any
      * remaining width with '0' characters. */
-    while( lenRemaining-- > 0U )
+    while( lenRemaining > 0U )
     {
+        lenRemaining--;
         ( *pBuffer )[ lenRemaining ] = ( char ) ( ( currentVal % 10 ) + '0' );
         currentVal /= 10;
     }
@@ -313,10 +314,8 @@ static SigV4Status_t scanValue( const char * pDate,
     }
 
     /* Determine if month value is non-numeric. */
-    if( ( formatChar == 'M' ) && ( *pLoc >= 'A' ) && ( *pLoc <= 'Z' ) )
+    if( ( formatChar == 'M' ) && ( remainingLenToRead == MONTH_ASCII_LEN ) )
     {
-        assert( remainingLenToRead == MONTH_ASCII_LEN );
-
         while( result++ < 12 )
         {
             /* Search month array for parsed string. */

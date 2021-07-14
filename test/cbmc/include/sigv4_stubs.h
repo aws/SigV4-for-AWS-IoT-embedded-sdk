@@ -21,30 +21,25 @@
  */
 
 /**
- * @file SigV4_AwsIotDateToIso8601_harness.c
- * @brief Implements the proof harness for SigV4_AwsIotDateToIso8601 function.
+ * @file sigv4_stubs.h
+ * @brief Declarations for the (normally) static functions from sigv4.c.
+ * Please see sigv4.c for documentation.
  */
 
-#include "stdlib.h"
-#include "sigv4.h"
+#ifndef SIGV4_STUBS_H_
+#define SIGV4_STUBS_H_
 
-void harness()
-{
-    char * pInputDate;
-    size_t dateLen;
-    char * pDateISO8601;
-    size_t dateISO8601Len;
-    SigV4Status_t status;
+#include <sigv4.h>
+#include <sigv4_internal.h>
 
-    __CPROVER_assume( dateLen == SIGV4_EXPECTED_LEN_RFC_3339 || dateLen == SIGV4_EXPECTED_LEN_RFC_5322 || dateLen == 0 );
+void addToDate( const char formatChar,
+                int32_t result,
+                SigV4DateTime_t * pDateElements );
 
-    pInputDate = malloc( dateLen );
+SigV4Status_t scanValue( const char * pDate,
+                         const char formatChar,
+                         size_t readLoc,
+                         size_t lenToRead,
+                         SigV4DateTime_t * pDateElements );
 
-    __CPROVER_assume( dateISO8601Len < CBMC_MAX_OBJECT_SIZE );
-
-    pDateISO8601 = malloc( dateISO8601Len );
-
-    status = SigV4_AwsIotDateToIso8601( pInputDate, dateLen, pDateISO8601, dateISO8601Len );
-
-    __CPROVER_assert( status == SigV4InvalidParameter || status == SigV4Success || status == SigV4ISOFormattingError, "This is not a valid SigV4 return status" );
-}
+#endif /* ifndef SIGV4_STUBS_H_ */
