@@ -29,7 +29,7 @@
 
 /* The number of invalid date inputs tested in
  * test_SigV4_AwsIotDateToIso8601_Formatting_Error() */
-#define SIGV4_TEST_INVALID_DATE_COUNT    22U
+#define SIGV4_TEST_INVALID_DATE_COUNT    24U
 
 /* File-scoped global variables */
 static char pTestBufferValid[ SIGV4_ISO_STRING_LEN ] = { 0 };
@@ -50,6 +50,7 @@ void formatAndVerifyInputDate( const char * pInputDate,
                                                          strlen( pInputDate ),
                                                          pTestBufferValid,
                                                          SIGV4_ISO_STRING_LEN );
+
     TEST_ASSERT_EQUAL( expectedStatus, returnVal );
 
     if( returnVal == SigV4Success )
@@ -201,7 +202,8 @@ void test_SigV4_AwsIotDateToIso8601_Formatting_Error()
         "1800-02-28T03:61:09Z", "Wed, 18 Jan 2018 09:99:06 GMT", /* minute > 59 */
         "1800-01-29T03:21:70Z", "Wed, 18 Jan 2018 09:18:75 GMT", /* seconds > 60 */
         "2018-01-18X09:18:06Z", "Wed. 31 Apr 2018T09:18:06 GMT", /* Unexpected character 'X'. */
-        "2018-01-1@X09:18:06Z", "Wed. 31 Apr 2018T0A:18:06 GMT"  /* Unexpected non-digit found in date element. */
+        "2018-01-1@X09:18:06Z", "Wed. 31 Apr 2018T0A:18:06 GMT", /* Unexpected non-digit found in date element. */
+        "2018-01-1!X09:18:06Z", "Wed. 31 Apr 2018T!9:18:06 GMT"  /* Unexpected non-digit found in date element. */
     };
 
     for( index = 0U; index < SIGV4_TEST_INVALID_DATE_COUNT - 1; index += 2 )
