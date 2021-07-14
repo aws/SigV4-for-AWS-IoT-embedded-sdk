@@ -51,28 +51,9 @@ SigV4Status_t scanValue( const char * pDate,
     }
 
     /* Determine if month value is non-numeric. */
-    if( ( formatChar == 'M' ) && ( *pLoc >= 'A' ) && ( *pLoc <= 'Z' ) )
+    if( ( formatChar == 'M' ) && ( remainingLenToRead == MONTH_ASCII_LEN ) )
     {
-        if( remainingLenToRead == MONTH_ASCII_LEN )
-        {
-            returnStatus = SigV4Success;
-        }
-        else
-        {
-            pLoc++;
-
-            if( ( *pLoc >= '0' ) && ( *pLoc <= '9' ) )
-            {
-                returnStatus = SigV4Success;
-            }
-        }
-
-        if( returnStatus != SigV4Success )
-        {
-            LogError( ( "Unable to match string '%.3s' to a month value.",
-                        pLoc ) );
-            returnStatus = SigV4ISOFormattingError;
-        }
+        returnStatus = SigV4Success;
 
         remainingLenToRead = 0U;
     }

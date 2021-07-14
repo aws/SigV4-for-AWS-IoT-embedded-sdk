@@ -314,27 +314,15 @@ static SigV4Status_t scanValue( const char * pDate,
     }
 
     /* Determine if month value is non-numeric. */
-    if( ( formatChar == 'M' ) && ( *pLoc >= 'A' ) && ( *pLoc <= 'Z' ) )
+    if( ( formatChar == 'M' ) && ( remainingLenToRead == MONTH_ASCII_LEN ) )
     {
-        if( remainingLenToRead == MONTH_ASCII_LEN )
+        while( result++ < 12 )
         {
-            while( result++ < 12 )
-            {
-                /* Search month array for parsed string. */
-                if( strncmp( pMonthNames[ result - 1 ], pLoc, MONTH_ASCII_LEN ) == 0 )
-                {
-                    returnStatus = SigV4Success;
-                    break;
-                }
-            }
-        }
-        else
-        {
-            pLoc++;
-
-            if( ( *pLoc >= '0' ) && ( *pLoc <= '9' ) )
+            /* Search month array for parsed string. */
+            if( strncmp( pMonthNames[ result - 1 ], pLoc, MONTH_ASCII_LEN ) == 0 )
             {
                 returnStatus = SigV4Success;
+                break;
             }
         }
 
