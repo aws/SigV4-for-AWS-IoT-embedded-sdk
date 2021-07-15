@@ -367,11 +367,13 @@ typedef struct SigV4Parameters
  *
  * @return #SigV4Success if successful, error code otherwise.
  */
+/* @[declare_sigV4_generateHTTPAuthorization_function] */
 SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams,
                                                char * pAuthBuf,
                                                size_t * authBufLen,
                                                char ** pSignature,
                                                size_t * signatureLen );
+/* @[declare_sigV4_generateHTTPAuthorization_function] */
 
 /**
  * @brief Parse the date header value from the AWS IoT response, and generate
@@ -416,9 +418,10 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
  *
  * @return #SigV4Success code if successful, error code otherwise.
  */
+/* @[declare_sigV4_awsIotDateToIso8601_function] */
 SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
                                          size_t dateLen,
                                          char * pDateISO8601,
                                          size_t dateISO8601Len );
-
+/* @[declare_ssigV4_awsIotDateToIso8601_function] */
 #endif /* SIGV4_H_ */
