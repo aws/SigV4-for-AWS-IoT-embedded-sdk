@@ -154,7 +154,7 @@ static void intToAscii( int32_t value,
 
 /**
  * @brief Format the credential scope of the authorization header using the date, region, and service
- * parameters found in @SigV4Parameters.
+ * parameters found in #SigV4Parameters_t.
  *
  * @param[in] pSigV4Params The application parameters defining the credential's scope.
  * @param[in, out] pCredScope The credential scope in the V4 required format.
@@ -244,9 +244,18 @@ static SigV4Status_t parseDate( const char * pDate,
  *
  * @param[in] pParams Complete SigV4 configurations passed by application.
  *
- * @return #SigV4Success if successful, #SigV4InvalidParameters otherwise.
+ * @return #SigV4Success if successful, #SigV4InvalidParameter otherwise.
  */
 static SigV4Status_t verifySigV4Parameters( const SigV4Parameters_t * pParams );
+
+/**
+ * @brief Hex digest of provided string parameter.
+ *
+ * @param[in] pInputStr String to encode.
+ * @param[out] pHexOutput Hex representation of @p pInputStr.
+ */
+static void hexEncode( SigV4String_t * pInputStr,
+                       SigV4String_t * pHexOutput );
 
 /*-----------------------------------------------------------*/
 
@@ -562,40 +571,20 @@ static SigV4Status_t parseDate( const char * pDate,
 
 /*-----------------------------------------------------------*/
 
-/* Converts a hex character to its integer value */
-static char hexToInt( char pHex )
-{
-    uint8_t byte = pHex;
-
-    if( ( byte >= '0' ) && ( byte <= '9' ) )
-    {
-        byte = byte - '0';
-    }
-    else if( ( byte >= 'a' ) && ( byte <= 'f' ) )
-    {
-        byte = byte - 'a' + 10;
-    }
-    else if( ( byte >= 'A' ) && ( byte <= 'F' ) )
-    {
-        byte = byte - 'A' + 10;
-    }
-
-    return byte & 0xF;
-}
-
-/*-----------------------------------------------------------*/
-
 /* Hex digest of provided parameter string. */
 static void hexEncode( SigV4String_t * pInputStr,
                        SigV4String_t * pHexOutput )
 {
     static const unsigned char digitArr[] = "0123456789abcdef";
-    unsigned char * hex = pHexOutput->pData;
+    unsigned char * hex = NULL;
     size_t i = 0U;
 
     assert( pInputStr != NULL );
     assert( pHexOutput != NULL );
     assert( pInputStr->pData != NULL );
+    assert( pHexOutput->pData != NULL );
+
+    hex = pHexOutput->pData;
 
     for( i = 0; i < pInputStr->dataLen; i++ )
     {
@@ -612,12 +601,14 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                                          SigV4String_t * pCredScope )
 {
     SigV4Status_t returnVal = SigV4InvalidParameter;
-    unsigned char * pBufWrite = pCredScope->pData;
+    unsigned char * pBufWrite = NULL;
     int32_t bytesWritten = 0;
 
     assert( pSigV4Params != NULL );
     assert( pCredScope != NULL );
-    assert( pBufWrite != NULL );
+    assert( pCredScope->pData != NULL );
+
+    pBufWrite = pCredScope->pData;
 
     /* Use only the first 8 characters from the provided ISO 8601 string (YYYYMMDD). */
     bytesWritten = snprintf( ( char * ) pBufWrite,
@@ -753,8 +744,8 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
             else
             {
                 *pBufLoc++ = '%';
-                *pBufLoc++ = intToHex( *pURILoc >> 4 );
-                *pBufLoc++ = intToHex( *pURILoc & 15 );
+                *pBufLoc++ = *pURILoc >> 4;
+                *pBufLoc++ = *pURILoc & 15;
 
                 index += 3;
             }
