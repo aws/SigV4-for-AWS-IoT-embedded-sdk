@@ -8,8 +8,8 @@
 
 @include{doc} size_table.html
 
-@section sntp_design Design
-@brief SNTP Library Design
+@section sigv4_design Design
+@brief SigV4 Library Design
 
 <h3>Memory Usage</h3>
 <p>
@@ -24,7 +24,7 @@ local variables on the stack.
 @subpage sigV4_generateHTTPAuthorization_function <br>
 @subpage sigV4_awsIotDateToIso8601_function <br>
 
-@page @subpage sigV4_generateHTTPAuthorization_function SigV4_GenerateHTTPAuthorization
+@page sigV4_generateHTTPAuthorization_function SigV4_GenerateHTTPAuthorization
 @snippet sigv4.h declare_sigV4_generateHTTPAuthorization_function
 @copydoc SigV4_GenerateHTTPAuthorization
 

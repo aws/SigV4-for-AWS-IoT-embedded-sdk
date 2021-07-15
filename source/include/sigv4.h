@@ -423,5 +423,5 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
                                          size_t dateLen,
                                          char * pDateISO8601,
                                          size_t dateISO8601Len );
-/* @[declare_ssigV4_awsIotDateToIso8601_function] */
+/* @[declare_sigV4_awsIotDateToIso8601_function] */
 #endif /* SIGV4_H_ */
