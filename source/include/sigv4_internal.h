@@ -75,8 +75,8 @@ typedef struct SigV4DateTime
  */
 typedef struct SigV4String
 {
-    unsigned char * pData;
-    size_t dataLen;
+    char * pData;   /**< SigV4 string data */
+    size_t dataLen; /**< Length of pData */
 } SigV4String_t;
 
 /**
@@ -86,8 +86,24 @@ typedef struct SigV4String
  */
 typedef struct SigV4KeyValuePair
 {
-    SigV4String_t key;
-    SigV4String_t value;
+    SigV4String_t key;   /**< SigV4 string identifier */
+    SigV4String_t value; /**< SigV4 data */
 } SigV4KeyValuePair_t;
+
+typedef SigV4KeyValuePair_t SigV4Header_t;
+
+/**
+ * @brief An aggregator to maintain the internal state of canonicalization
+ * during intermediate calculations.
+ */
+typedef struct canonicalContext
+{
+    char * pQueryLoc[ SIGV4_MAX_QUERY_PAIR_COUNT ];           /**< Query pointers used during sorting. */
+    char * pHeadersLoc[ SIGV4_MAX_HTTP_HEADER_COUNT ];        /**< Header pointers used during sorting. */
+
+    uint8_t pBufProcessing[ SIGV4_PROCESSING_BUFFER_LENGTH ]; /**< Internal calculation buffer used during canonicalization. */
+    char * pBufCur;                                           /**< pBufProcessing cursor */
+    size_t bufRemaining;                                      /**< pBufProcessing value used during internal calculation. */
+} canonicalContext_t;
 
 #endif /* ifndef SIGV4_INTERNAL_H_ */

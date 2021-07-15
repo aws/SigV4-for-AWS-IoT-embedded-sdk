@@ -29,6 +29,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <ctype.h>
 
 #include "sigv4.h"
@@ -47,7 +48,7 @@
  * @param[in] lenInput Length of string @pInput.
  */
     static void stringToSigV4Value( SigV4String_t * pSigV4Value,
-                                    const unsigned char * pInput,
+                                    const char * pInput,
                                     size_t lenInput );
 
 /**
@@ -112,19 +113,7 @@
                                         canonicalContext_t * canonicalRequest );
 
 /**
- * @brief Canonicalize the HTTP request headers.
- *
- * @param[in] pHeaders The raw HTTP headers.
- * @param[in] headerLen Length of pHeaders.
- * @param[in, out] canonicalRequest Struct to maintain intermediary buffer
- * and state of canonicalization.
- */
-    static void generateCanonicalHeaders( const char * pHeaders,
-                                          size_t headerLen,
-                                          canonicalContext_t * canonicalRequest );
-
-/**
- * @brief Compare two SigV4 data structures lexigraphically, without case-sensitivity.
+ * @brief Compare two SigV4 data structures lexicographically, without case-sensitivity.
  *
  * @param[in] pFirstVal SigV4 key value data structure to sort.
  * @param[in] pSecondVal SigV4 key value data structure to sort.
@@ -133,8 +122,8 @@
  * a value greater than 0 if @pSecondVal < @pFirstVal. 0 is never returned in
  * order to provide stability to qSort() calls.
  */
-    static int cmpKeyValue( SigV4KeyValuePair_t * pFirstVal,
-                            SigV4KeyValuePair_t * pSecondVal );
+    static int cmpKeyValue( const void * pFirstVal,
+                            const void * pSecondVal );
 
 #endif /* #if (SIGV4_USE_CANONICAL_SUPPORT == 1) */
 
@@ -283,6 +272,7 @@ static void intToAscii( int32_t value,
 }
 
 /*-----------------------------------------------------------*/
+
 static SigV4Status_t checkLeap( const SigV4DateTime_t * pDateElements )
 {
     SigV4Status_t returnStatus = SigV4ISOFormattingError;
@@ -575,8 +565,8 @@ static SigV4Status_t parseDate( const char * pDate,
 static void hexEncode( SigV4String_t * pInputStr,
                        SigV4String_t * pHexOutput )
 {
-    static const unsigned char digitArr[] = "0123456789abcdef";
-    unsigned char * hex = NULL;
+    static const char digitArr[] = "0123456789abcdef";
+    char * hex = NULL;
     size_t i = 0U;
 
     assert( pInputStr != NULL );
@@ -601,7 +591,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                                          SigV4String_t * pCredScope )
 {
     SigV4Status_t returnVal = SigV4InvalidParameter;
-    unsigned char * pBufWrite = NULL;
+    char * pBufWrite = NULL;
     int32_t bytesWritten = 0;
 
     assert( pSigV4Params != NULL );
@@ -663,14 +653,14 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 #if ( SIGV4_USE_CANONICAL_SUPPORT == 1 )
 
     static void stringToSigV4Value( SigV4String_t * pSigV4Value,
-                                    const unsigned char * pInput,
+                                    const char * pInput,
                                     size_t lenInput )
     {
         assert( pSigV4Value != NULL );
         assert( pInput != NULL );
         assert( lenInput > 0U );
 
-        pSigV4Value->pData = ( unsigned char * ) pInput;
+        pSigV4Value->pData = ( char * ) pInput;
         pSigV4Value->dataLen = ( size_t ) lenInput;
     }
 
@@ -687,27 +677,29 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
 /*-----------------------------------------------------------*/
 
-    static int cmpKeyValue( SigV4KeyValuePair_t * pFirstVal,
-                            SigV4KeyValuePair_t * pSecondVal )
+    static int cmpKeyValue( const void * pFirstVal,
+                            const void * pSecondVal )
     {
+        SigV4KeyValuePair_t * pFirst = ( SigV4KeyValuePair_t * ) pFirstVal;
+        SigV4KeyValuePair_t * pSecond = ( SigV4KeyValuePair_t * ) pSecondVal;
         size_t lenSmall = 0U;
 
-        assert( pFirstVal != NULL );
-        assert( pSecondVal != NULL );
-        assert( !emptySigV4String( &pFirstVal->key ) );
-        assert( !emptySigV4String( &pSecondVal->key ) );
+        assert( pFirst != NULL );
+        assert( pSecond != NULL );
+        assert( !emptySigV4String( &pFirst->key ) );
+        assert( !emptySigV4String( &pSecond->key ) );
 
-        if( pFirstVal->key.dataLen <= pSecondVal->key.dataLen )
+        if( pFirst->key.dataLen <= pSecond->key.dataLen )
         {
-            lenSmall = pFirstVal->key.dataLen;
+            lenSmall = pFirst->key.dataLen;
         }
         else
         {
-            lenSmall = pSecondVal->key.dataLen;
+            lenSmall = pSecond->key.dataLen;
         }
 
-        return strncmp( ( char * ) pFirstVal->key.pData,
-                        ( char * ) pSecondVal->key.pData,
+        return strncmp( ( char * ) pFirst->key.pData,
+                        ( char * ) pSecond->key.pData,
                         lenSmall );
     }
 
@@ -804,6 +796,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         char * tokenQueries, * tokenParams;
 
         assert( pQuery != NULL );
+        assert( queryLen > 0U );
         assert( canonicalRequest != NULL );
 
         tokenQueries = strtok( ( char * ) pQuery, "&" );
