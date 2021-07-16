@@ -18,6 +18,7 @@ chunked
 com
 config
 const
+copydoc
 datalen
 datelen
 dd
