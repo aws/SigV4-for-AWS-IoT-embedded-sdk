@@ -7,4 +7,37 @@
 @brief Memory requirements of the SigV4 Utility library.
 
 @include{doc} size_table.html
- */
+
+@section sigv4_design Design
+@brief SigV4 Library Design
+
+<h3>Memory Usage</h3>
+<p>
+All functions in the SigV4 library operate only on the buffers provided and use only
+local variables on the stack.
+</p>
+*/
+
+/**
+@page sigv4_functions Functions
+@brief Primary functions of the Sigv4 library:<br><br>
+@subpage sigV4_generateHTTPAuthorization_function <br>
+@subpage sigV4_awsIotDateToIso8601_function <br>
+
+@page sigV4_generateHTTPAuthorization_function SigV4_GenerateHTTPAuthorization
+@snippet sigv4.h declare_sigV4_generateHTTPAuthorization_function
+@copydoc SigV4_GenerateHTTPAuthorization
+
+@page sigV4_awsIotDateToIso8601_function SigV4_AwsIotDateToIso8601
+@snippet sigv4.h declare_sigV4_awsIotDateToIso8601_function
+@copydoc SigV4_AwsIotDateToIso8601
+*/
+
+<!-- We do not use doxygen ALIASes here because there have been issues in the past versions with "^^" newlines within the alias definition. -->
+/**
+@defgroup sigv4_enum_types Enumerated Types
+@brief Enumerated types of the SigV4 library
+
+@defgroup sigv4_struct_types Struct Types
+@brief Struct types of the SigV4 library
+*/
