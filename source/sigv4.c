@@ -680,12 +680,15 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
     static int cmpKeyValue( const void * pFirstVal,
                             const void * pSecondVal )
     {
-        SigV4KeyValuePair_t * pFirst = ( SigV4KeyValuePair_t * ) pFirstVal;
-        SigV4KeyValuePair_t * pSecond = ( SigV4KeyValuePair_t * ) pSecondVal;
+        SigV4KeyValuePair_t * pFirst, * pSecond = NULL;
         size_t lenSmall = 0U;
 
-        assert( pFirst != NULL );
-        assert( pSecond != NULL );
+        assert( pFirstVal != NULL );
+        assert( pSecondVal != NULL );
+
+        pFirst = ( SigV4KeyValuePair_t * ) pFirstVal;
+        pSecond = ( SigV4KeyValuePair_t * ) pSecondVal;
+
         assert( !emptySigV4String( &pFirst->key ) );
         assert( !emptySigV4String( &pSecond->key ) );
 
@@ -712,14 +715,17 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                            bool encodeSlash,
                            bool nullTerminate )
     {
-        const char * pURILoc = pURI;
-        char * pBufLoc = pCanonicalURI;
+        const char * pURILoc = NULL;
+        char * pBufLoc = NULL;
         size_t index = 0U;
 
         assert( pURI != NULL );
         assert( pCanonicalURI != NULL );
         assert( canonicalURILen != NULL );
         assert( *canonicalURILen > 0U );
+
+        pURILoc = ( const char * ) pURI;
+        pBufLoc = ( char * ) pCanonicalURI;
 
         while( index < uriLen && *pURILoc )
         {
@@ -761,12 +767,14 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                                       bool encodeOnce,
                                       canonicalContext_t * canonicalRequest )
     {
+        char * pBufLoc = NULL;
         size_t encodedLen, remainingLen = canonicalRequest->bufRemaining;
-        char * pBufLoc = canonicalRequest->pBufCur;
 
         assert( pURI != NULL );
         assert( canonicalRequest != NULL );
+        assert( canonicalRequest->pBufCur != NULL );
 
+        pBufLoc = ( char * ) canonicalRequest->pBufCur;
         encodeURI( pURI, uriLen, pBufLoc, &encodedLen, false, true );
 
         remainingLen -= encodedLen;
@@ -789,15 +797,16 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                                         size_t queryLen,
                                         canonicalContext_t * canonicalRequest )
     {
-        size_t index = 0U;
-        size_t i = 0U;
+        size_t index, i = 0U;
         size_t remainingLen = canonicalRequest->bufRemaining;
-        char * pBufLoc = canonicalRequest->pBufCur;
-        char * tokenQueries, * tokenParams;
+        char * pBufLoc, * tokenQueries, * tokenParams = NULL;
 
         assert( pQuery != NULL );
         assert( queryLen > 0U );
         assert( canonicalRequest != NULL );
+        assert( canonicalRequest->pBufCur != NULL );
+
+        pBufLoc = ( char * ) canonicalRequest->pBufCur;
 
         tokenQueries = strtok( ( char * ) pQuery, "&" );
 
