@@ -731,19 +731,19 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         {
             if( isalnum( *pURILoc ) || ( *pURILoc == '-' ) || ( *pURILoc == '_' ) || ( *pURILoc == '.' ) || ( *pURILoc == '~' ) )
             {
-                *pBufLoc++ = *pURILoc;
+                *( pBufLoc )++ = *pURILoc;
                 index++;
             }
             else if( ( *pURILoc == '/' ) && !encodeSlash )
             {
-                *pBufLoc++ = *pURILoc;
+                *( pBufLoc )++ = *pURILoc;
                 index++;
             }
             else
             {
-                *pBufLoc++ = '%';
-                *pBufLoc++ = *pURILoc >> 4;
-                *pBufLoc++ = *pURILoc & 15;
+                *( pBufLoc )++ = '%';
+                *( pBufLoc )++ = *pURILoc >> 4;
+                *( pBufLoc )++ = *pURILoc & 15;
 
                 index += 3;
             }
@@ -753,7 +753,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
         if( nullTerminate )
         {
-            *pBufLoc++ = '\0';
+            *( pBufLoc )++ = '\0';
             index++;
         }
 
@@ -848,9 +848,9 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
             if( index != i + 1 )
             {
-                *pBufLoc++ = '&';
-                *pBufLoc++ = '\0';
-                *pBufLoc++ = '\n';
+                *( pBufLoc )++ = '&';
+                *( pBufLoc )++ = '\0';
+                *( pBufLoc )++ = '\n';
                 canonicalRequest->bufRemaining -= 3;
             }
         }
