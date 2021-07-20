@@ -27,11 +27,105 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
 
 #include "sigv4.h"
 #include "sigv4_internal.h"
 
 /*-----------------------------------------------------------*/
+
+#if ( SIGV4_USE_CANONICAL_SUPPORT == 1 )
+
+/**
+ * @brief Interpret string parameters into standardized SigV4String_t structs to
+ * assist in sorting and canonicalization.
+ *
+ * @param[in, out] pSigV4Value The SigV4 standardized struct to populate.
+ * @param[in] pInput String containing sorting parameters.
+ * @param[in] lenInput Length of string @pInput.
+ */
+    static void stringToSigV4Value( SigV4String_t * pSigV4Value,
+                                    const char * pInput,
+                                    size_t lenInput );
+
+/**
+ * @brief Verifies if a SigV4 string value is empty.
+ *
+ * @param[in] pInput The SigV4 string value struct to verify.
+ *
+ * @return Returns 'true' if @pInput is empty, and 'false' otherwise.
+ */
+    static bool emptySigV4String( SigV4String_t * pInput );
+
+/**
+ * @brief Normalize a URI string according to RFC 3986 and fill destination
+ * buffer with the formatted string.
+ *
+ * @param[in] pURI The URI string to encode.
+ * @param[in] uriLen Length of pURI.
+ * @param[out] pCanonicalURI The resulting canonicalized URI.
+ * @param[in, out] canonicalURILen input: the length of pCanonicalURI,
+ * output: the length of the generated canonical URI.
+ * @param[in] encodeSlash Option to indicate if slashes should be encoded.
+ * @param[in] nullTerminate Option to indicate if a null character should be
+ * added to the end of the canonical URI.
+ */
+    static void encodeURI( const char * pURI,
+                           size_t uriLen,
+                           char * pCanonicalURI,
+                           size_t * canonicalURILen,
+                           bool encodeSlash,
+                           bool nullTerminate );
+
+/**
+ * @brief Canonicalize the full URI path. The input URI starts after the
+ * HTTP host and ends at the question mark character ("?") that begins the
+ * query string parameters (if any). Example: folder/subfolder/item.txt"
+ *
+ * @param[in] pUri HTTP request URI, also known that the request absolute
+ * path.
+ * @param[in] uriLen Length of pURI.
+ * @param[in] encodeOnce Service-dependent option to indicate whether
+ * encoding should be done once or twice. For example, S3 requires that the
+ * URI is encoded only once, while other services encode twice.
+ * @param[in, out] canonicalRequest Struct to maintain intermediary buffer
+ * and state of canonicalization.
+ */
+    static void generateCanonicalURI( const char * pURI,
+                                      size_t uriLen,
+                                      bool encodeOnce,
+                                      canonicalContext_t * canonicalRequest );
+
+/**
+ * @brief Canonicalize the query string HTTP URL, beginning (but not
+ * including) at the "?" character. Does not include "/".
+ *
+ * @param[in] pQuery HTTP request query.
+ * @param[in] queryLen Length of pQuery.
+ * @param[in, out] canonicalRequest Struct to maintain intermediary buffer
+ * and state of canonicalization.
+ */
+    static void generateCanonicalQuery( const char * pQuery,
+                                        size_t queryLen,
+                                        canonicalContext_t * canonicalRequest );
+
+/**
+ * @brief Compare two SigV4 data structures lexicographically, without case-sensitivity.
+ *
+ * @param[in] pFirstVal SigV4 key value data structure to sort.
+ * @param[in] pSecondVal SigV4 key value data structure to sort.
+ *
+ * @return Returns a value less than 0 if @pFirstVal < @pSecondVal, or
+ * a value greater than 0 if @pSecondVal < @pFirstVal. 0 is never returned in
+ * order to provide stability to qSort() calls.
+ */
+    static int cmpKeyValue( const void * pFirstVal,
+                            const void * pSecondVal );
+
+#endif /* #if (SIGV4_USE_CANONICAL_SUPPORT == 1) */
 
 /**
  * @brief Converts an integer value to its ASCII representation, and stores the
@@ -46,6 +140,19 @@
 static void intToAscii( int32_t value,
                         char ** pBuffer,
                         size_t bufferLen );
+
+/**
+ * @brief Format the credential scope of the authorization header using the date, region, and service
+ * parameters found in #SigV4Parameters_t.
+ *
+ * @param[in] pSigV4Params The application parameters defining the credential's scope.
+ * @param[in, out] pCredScope The credential scope in the V4 required format.
+ *
+ * @return SigV4ISOFormattingError if a snprintf() error was encountered,
+ * SigV4Success otherwise.
+ */
+static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
+                                         SigV4String_t * pCredScope );
 
 /**
  * @brief Check if the date represents a valid leap year day.
@@ -98,7 +205,6 @@ static SigV4Status_t scanValue( const char * pDate,
                                 size_t lenToRead,
                                 SigV4DateTime_t * pDateElements );
 
-
 /**
  * @brief Parses date according to format string parameter, and populates date
  * representation struct SigV4DateTime_t with its elements.
@@ -121,6 +227,24 @@ static SigV4Status_t parseDate( const char * pDate,
                                 const char * pFormat,
                                 size_t formatLen,
                                 SigV4DateTime_t * pDateElements );
+
+/**
+ * @brief Verify @p pParams and its sub-members.
+ *
+ * @param[in] pParams Complete SigV4 configurations passed by application.
+ *
+ * @return #SigV4Success if successful, #SigV4InvalidParameter otherwise.
+ */
+static SigV4Status_t verifySigV4Parameters( const SigV4Parameters_t * pParams );
+
+/**
+ * @brief Hex digest of provided string parameter.
+ *
+ * @param[in] pInputStr String to encode.
+ * @param[out] pHexOutput Hex representation of @p pInputStr.
+ */
+static void hexEncode( SigV4String_t * pInputStr,
+                       SigV4String_t * pHexOutput );
 
 /*-----------------------------------------------------------*/
 
@@ -148,6 +272,7 @@ static void intToAscii( int32_t value,
 }
 
 /*-----------------------------------------------------------*/
+
 static SigV4Status_t checkLeap( const SigV4DateTime_t * pDateElements )
 {
     SigV4Status_t returnStatus = SigV4ISOFormattingError;
@@ -436,6 +561,402 @@ static SigV4Status_t parseDate( const char * pDate,
 
 /*-----------------------------------------------------------*/
 
+/* Hex digest of provided parameter string. */
+static void hexEncode( SigV4String_t * pInputStr,
+                       SigV4String_t * pHexOutput )
+{
+    static const char digitArr[] = "0123456789abcdef";
+    char * hex = NULL;
+    size_t i = 0U;
+
+    assert( pInputStr != NULL );
+    assert( pHexOutput != NULL );
+    assert( pInputStr->pData != NULL );
+    assert( pHexOutput->pData != NULL );
+
+    hex = pHexOutput->pData;
+
+    for( i = 0; i < pInputStr->dataLen; i++ )
+    {
+        *( hex++ ) = digitArr[ ( pInputStr->pData[ i ] & 0xF0 ) >> 4 ];
+        *( hex++ ) = digitArr[ ( pInputStr->pData[ i ] & 0xF0 ) ];
+    }
+
+    pHexOutput->dataLen = pInputStr->dataLen * 2;
+}
+
+/*-----------------------------------------------------------*/
+
+static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
+                                         SigV4String_t * pCredScope )
+{
+    SigV4Status_t returnVal = SigV4InvalidParameter;
+    char * pBufWrite = NULL;
+    int32_t bytesWritten = 0;
+
+    assert( pSigV4Params != NULL );
+    assert( pCredScope != NULL );
+    assert( pCredScope->pData != NULL );
+
+    pBufWrite = pCredScope->pData;
+
+    /* Use only the first 8 characters from the provided ISO 8601 string (YYYYMMDD). */
+    bytesWritten = snprintf( ( char * ) pBufWrite,
+                             ISO_DATE_SCOPE_LEN + 1,
+                             "%*s",
+                             ISO_DATE_SCOPE_LEN,
+                             pSigV4Params->pDateIso8601 );
+
+    if( bytesWritten == ISO_DATE_SCOPE_LEN )
+    {
+        bytesWritten = snprintf( ( char * ) pBufWrite,
+                                 pSigV4Params->regionLen,
+                                 "/%s/",
+                                 pSigV4Params->pRegion );
+
+        if( bytesWritten != pSigV4Params->regionLen )
+        {
+            LogError( ( "Error in formatting provided region string for credential scope." ) );
+            returnVal = SigV4ISOFormattingError;
+        }
+    }
+    else
+    {
+        LogError( ( "Error obtaining date for credential scope string." ) );
+        returnVal = SigV4ISOFormattingError;
+    }
+
+    if( returnVal != SigV4ISOFormattingError )
+    {
+        bytesWritten = snprintf( ( char * ) pBufWrite,
+                                 pSigV4Params->serviceLen,
+                                 "/%s/",
+                                 pSigV4Params->pService );
+
+        if( bytesWritten != pSigV4Params->serviceLen )
+        {
+            LogError( ( "Error in formatting provided service string for credential scope." ) );
+            returnVal = SigV4ISOFormattingError;
+        }
+    }
+    else
+    {
+        pCredScope->dataLen = ISO_DATE_SCOPE_LEN + pSigV4Params->regionLen + pSigV4Params->serviceLen;
+        returnVal = SigV4Success;
+    }
+
+    return returnVal;
+}
+
+/*-----------------------------------------------------------*/
+
+#if ( SIGV4_USE_CANONICAL_SUPPORT == 1 )
+
+    static void stringToSigV4Value( SigV4String_t * pSigV4Value,
+                                    const char * pInput,
+                                    size_t lenInput )
+    {
+        assert( pSigV4Value != NULL );
+        assert( pInput != NULL );
+        assert( lenInput > 0U );
+
+        pSigV4Value->pData = ( char * ) pInput;
+        pSigV4Value->dataLen = ( size_t ) lenInput;
+    }
+
+/*-----------------------------------------------------------*/
+
+    static bool emptySigV4String( SigV4String_t * pInput )
+    {
+        bool returnVal = true;
+
+        assert( pInput != NULL );
+
+        return ( pInput->pData == NULL || pInput->dataLen == 0 ) ? returnVal : !returnVal;
+    }
+
+/*-----------------------------------------------------------*/
+
+    static int cmpKeyValue( const void * pFirstVal,
+                            const void * pSecondVal )
+    {
+        SigV4KeyValuePair_t * pFirst, * pSecond = NULL;
+        size_t lenSmall = 0U;
+
+        assert( pFirstVal != NULL );
+        assert( pSecondVal != NULL );
+
+        pFirst = ( SigV4KeyValuePair_t * ) pFirstVal;
+        pSecond = ( SigV4KeyValuePair_t * ) pSecondVal;
+
+        assert( !emptySigV4String( &pFirst->key ) );
+        assert( !emptySigV4String( &pSecond->key ) );
+
+        if( pFirst->key.dataLen <= pSecond->key.dataLen )
+        {
+            lenSmall = pFirst->key.dataLen;
+        }
+        else
+        {
+            lenSmall = pSecond->key.dataLen;
+        }
+
+        return strncmp( ( char * ) pFirst->key.pData,
+                        ( char * ) pSecond->key.pData,
+                        lenSmall );
+    }
+
+/*-----------------------------------------------------------*/
+
+    static void encodeURI( const char * pURI,
+                           size_t uriLen,
+                           char * pCanonicalURI,
+                           size_t * canonicalURILen,
+                           bool encodeSlash,
+                           bool nullTerminate )
+    {
+        const char * pURILoc = NULL;
+        char * pBufLoc = NULL;
+        size_t index = 0U;
+
+        assert( pURI != NULL );
+        assert( pCanonicalURI != NULL );
+        assert( canonicalURILen != NULL );
+        assert( *canonicalURILen > 0U );
+
+        pURILoc = ( const char * ) pURI;
+        pBufLoc = ( char * ) pCanonicalURI;
+
+        while( index < uriLen && *pURILoc )
+        {
+            if( isalnum( *pURILoc ) || ( *pURILoc == '-' ) || ( *pURILoc == '_' ) || ( *pURILoc == '.' ) || ( *pURILoc == '~' ) )
+            {
+                *pBufLoc++ = *pURILoc;
+                index++;
+            }
+            else if( ( *pURILoc == '/' ) && !encodeSlash )
+            {
+                *pBufLoc++ = *pURILoc;
+                index++;
+            }
+            else
+            {
+                *pBufLoc++ = '%';
+                *pBufLoc++ = *pURILoc >> 4;
+                *pBufLoc++ = *pURILoc & 15;
+
+                index += 3;
+            }
+
+            pURILoc++;
+        }
+
+        if( nullTerminate )
+        {
+            *pBufLoc++ = '\0';
+            index++;
+        }
+
+        *canonicalURILen = index;
+    }
+
+/*-----------------------------------------------------------*/
+
+    static void generateCanonicalURI( const char * pURI,
+                                      size_t uriLen,
+                                      bool encodeOnce,
+                                      canonicalContext_t * canonicalRequest )
+    {
+        char * pBufLoc = NULL;
+        size_t encodedLen, remainingLen = 0U;
+
+        assert( pURI != NULL );
+        assert( canonicalRequest != NULL );
+        assert( canonicalRequest->pBufCur != NULL );
+
+        pBufLoc = ( char * ) canonicalRequest->pBufCur;
+        encodedLen, remainingLen = canonicalRequest->bufRemaining;
+        encodeURI( pURI, uriLen, pBufLoc, &encodedLen, false, true );
+
+        remainingLen -= encodedLen;
+
+        if( !encodeOnce )
+        {
+            encodeURI( pBufLoc, encodedLen, pBufLoc + encodedLen, &remainingLen, false, true );
+            memmove( canonicalRequest->pBufCur + encodedLen, canonicalRequest->pBufCur, remainingLen );
+        }
+
+        canonicalRequest->pBufCur += remainingLen;
+        *( canonicalRequest->pBufCur++ ) = '\n';
+
+        canonicalRequest->bufRemaining -= remainingLen + 1;
+    }
+
+/*-----------------------------------------------------------*/
+
+    static void generateCanonicalQuery( const char * pQuery,
+                                        size_t queryLen,
+                                        canonicalContext_t * canonicalRequest )
+    {
+        size_t index, remainingLen, i = 0U;
+        char * pBufLoc, * tokenQueries, * tokenParams = NULL;
+
+        assert( pQuery != NULL );
+        assert( queryLen > 0U );
+        assert( canonicalRequest != NULL );
+        assert( canonicalRequest->pBufCur != NULL );
+
+        remainingLen = canonicalRequest->bufRemaining;
+        pBufLoc = ( char * ) canonicalRequest->pBufCur;
+
+        tokenQueries = strtok( ( char * ) pQuery, "&" );
+
+        while( tokenQueries != NULL )
+        {
+            canonicalRequest->pQueryLoc[ index ] = &tokenQueries[ 0 ];
+            tokenQueries = strtok( NULL, "&" );
+
+            index++;
+        }
+
+        qsort( canonicalRequest->pQueryLoc, index, sizeof( char * ), cmpKeyValue );
+
+        for( i = 0U; i < index; i++ )
+        {
+            tokenParams = strtok( canonicalRequest->pQueryLoc[ i ], "=" );
+
+            if( tokenParams != NULL )
+            {
+                encodeURI( tokenParams, strlen( tokenParams ), pBufLoc, &remainingLen, true, false );
+                pBufLoc += remainingLen;
+                *pBufLoc = '='; /* Overwrite null character. */
+
+                canonicalRequest->bufRemaining -= remainingLen;
+                remainingLen = canonicalRequest->bufRemaining;
+            }
+
+            tokenParams = strtok( NULL, "=" );
+
+            if( tokenParams != NULL )
+            {
+                encodeURI( tokenParams, strlen( tokenParams ), pBufLoc, &remainingLen, true, false );
+                pBufLoc += remainingLen;
+
+                canonicalRequest->bufRemaining -= remainingLen;
+                remainingLen = canonicalRequest->bufRemaining;
+            }
+
+            if( index != i + 1 )
+            {
+                *pBufLoc++ = '&';
+                *pBufLoc++ = '\0';
+                *pBufLoc++ = '\n';
+                canonicalRequest->bufRemaining -= 3;
+            }
+        }
+
+        canonicalRequest->pBufCur = pBufLoc;
+    }
+
+#endif /* #if ( SIGV4_USE_CANONICAL_SUPPORT == 1 ) */
+
+/*-----------------------------------------------------------*/
+
+static SigV4Status_t verifySigV4Parameters( const SigV4Parameters_t * pParams )
+{
+    SigV4Status_t returnStatus = SigV4Success;
+
+    /* Check for NULL members of struct pParams */
+    if( pParams == NULL )
+    {
+        LogError( ( "Parameter check failed: pParams is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( pParams->pCredentials == NULL )
+    {
+        LogError( ( "Parameter check failed: pParams->pCredentials is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( pParams->pCredentials->pAccessKeyId == NULL )
+    {
+        LogError( ( "Parameter check failed: pParams->pCredentials->pAccessKeyId is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( pParams->pCredentials->pSecretAccessKey == NULL )
+    {
+        LogError( ( "Parameter check failed: pParams->pCredentials->pSecretAccessKey is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( pParams->pCredentials->pSecurityToken == NULL )
+    {
+        LogError( ( "Parameter check failed: pParams->pCredentials->pSecurityToken is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( pParams->pCredentials->pExpiration == NULL )
+    {
+        LogError( ( "Parameter check failed: pParams->pCredentials->pExpiration is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( pParams->pDateIso8601 == NULL )
+    {
+        LogError( ( "Parameter check failed: pParams->pDateIso8601 is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( pParams->pRegion == NULL )
+    {
+        LogError( ( "Parameter check failed: pParams->pRegion is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( pParams->pService == NULL )
+    {
+        LogError( ( "Parameter check failed: pParams->pService is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( pParams->pCryptoInterface == NULL )
+    {
+        LogError( ( "Parameter check failed: pParams->pCryptoInterface is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( pParams->pCryptoInterface->pHashContext == NULL )
+    {
+        LogError( ( "Parameter check failed: pParams->pCryptoInterface->pHashContext is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( pParams->pHttpParameters == NULL )
+    {
+        LogError( ( "Parameter check failed: pParams->pHttpParameters is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( pParams->pHttpParameters->pHttpMethod == NULL )
+    {
+        LogError( ( "Parameter check failed: pParams->pHttpParameters->pHttpMethod is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( pParams->pHttpParameters->pPath == NULL )
+    {
+        LogError( ( "Parameter check failed: pParams->pHttpParameters->pPath is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( pParams->pHttpParameters->pQuery == NULL )
+    {
+        LogError( ( "Parameter check failed: pParams->pHttpParameters->pQuery is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( pParams->pHttpParameters->pHeaders == NULL )
+    {
+        LogError( ( "Parameter check failed: pParams->pHttpParameters->pHeaders is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( pParams->pHttpParameters->pPayload == NULL )
+    {
+        LogError( ( "Parameter check failed: pParams->pHttpParameters->pPayload is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+
+    return returnStatus;
+}
+
+/*-----------------------------------------------------------*/
 
 SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
                                          size_t dateLen,
