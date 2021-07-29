@@ -5,7 +5,7 @@
 
 <p>
 The AWS IoT SigV4 Library is a standalone utility for generating a signature and
-authorization header according to the specifications of the Signature Version 4
+authorization header according to the specifications of the AWS Signature Version 4
 signing process. This utility is an optional addition to applications sending direct
 HTTP requests to AWS services requiring SigV4 authentication. The library is written in C and designed to be compliant with ISO C90 and MISRA C. It has proven safe memory use.
 </p>
