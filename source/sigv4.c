@@ -602,7 +602,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
     /* Use only the first 8 characters from the provided ISO 8601 string (YYYYMMDD). */
     bytesWritten = snprintf( ( char * ) pBufWrite,
-                             pCredScope->dateLen + 1U,
+                             pCredScope->dataLen + 1U,
                              "%*s",
                              ISO_DATE_SCOPE_LEN,
                              pSigV4Params->pDateIso8601 );
