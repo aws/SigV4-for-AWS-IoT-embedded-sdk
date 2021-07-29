@@ -3,6 +3,14 @@
 @anchor sigv4
 @brief AWS Iot SigV4 Utility
 
+<p>
+The AWS IoT SigV4 Library is a standalone utility for generating a signature and 
+authorization header according to the specifications of the Signature Version 4 
+signing process. This utility is an optional addition to applications sending direct 
+HTTP requests to AWS services requiring SigV4 authentication. The library is written 
+in C and designed to be compliant with ISO C90 and MISRA C. It has proven safe memory use.
+</p>
+
 @section sigv4_memory_requirements Memory Requirements
 @brief Memory requirements of the SigV4 Utility library.
 
@@ -15,6 +23,16 @@
 <p>
 All functions in the SigV4 library operate only on the buffers provided and use only
 local variables on the stack.
+</p>
+
+<h3>Compliance & Coverage</h3>
+
+<p>
+
+The JSON library is designed to be compliant with ISO C90 and MISRA C:2012.
+All functions are written to have minimal complexity. Unit tests and CBMC proofs
+are written to cover every path of execution and achieve 100% branch coverage.
+
 </p>
 */
 
