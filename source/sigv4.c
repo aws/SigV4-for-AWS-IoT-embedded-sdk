@@ -97,7 +97,7 @@
     static void generateCanonicalURI( const char * pURI,
                                       size_t uriLen,
                                       bool encodeOnce,
-                                      canonicalContext_t * canonicalRequest );
+                                      CanonicalContext_t * canonicalRequest );
 
 /**
  * @brief Canonicalize the query string HTTP URL, beginning (but not
@@ -110,7 +110,7 @@
  */
     static void generateCanonicalQuery( const char * pQuery,
                                         size_t queryLen,
-                                        canonicalContext_t * canonicalRequest );
+                                        CanonicalContext_t * canonicalRequest );
 
 /**
  * @brief Compare two SigV4 data structures lexicographically, without case-sensitivity.
@@ -602,7 +602,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
     /* Use only the first 8 characters from the provided ISO 8601 string (YYYYMMDD). */
     bytesWritten = snprintf( ( char * ) pBufWrite,
-                             ISO_DATE_SCOPE_LEN + 1,
+                             pCredScope->dateLen + 1U,
                              "%*s",
                              ISO_DATE_SCOPE_LEN,
                              pSigV4Params->pDateIso8601 );
@@ -743,7 +743,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
             {
                 *( pBufLoc++ ) = '%';
                 *( pBufLoc++ ) = *pURILoc >> 4;
-                *( pBufLoc++ ) = *pURILoc & 15;
+                *( pBufLoc++ ) = *pURILoc & 0x0F;
 
                 index += 3;
             }
@@ -765,7 +765,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
     static void generateCanonicalURI( const char * pURI,
                                       size_t uriLen,
                                       bool encodeOnce,
-                                      canonicalContext_t * canonicalRequest )
+                                      CanonicalContext_t * canonicalRequest )
     {
         char * pBufLoc = NULL;
         size_t encodedLen, remainingLen = 0U;
@@ -796,7 +796,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
     static void generateCanonicalQuery( const char * pQuery,
                                         size_t queryLen,
-                                        canonicalContext_t * canonicalRequest )
+                                        CanonicalContext_t * canonicalRequest )
     {
         size_t index, remainingLen, i = 0U;
         char * pBufLoc, * tokenQueries, * tokenParams = NULL;

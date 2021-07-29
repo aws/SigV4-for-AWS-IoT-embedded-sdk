@@ -96,7 +96,7 @@ typedef SigV4KeyValuePair_t SigV4Header_t; /**< SigV4 header representation */
  * @brief An aggregator to maintain the internal state of canonicalization
  * during intermediate calculations.
  */
-typedef struct canonicalContext
+typedef struct CanonicalContext
 {
     char * pQueryLoc[ SIGV4_MAX_QUERY_PAIR_COUNT ];           /**< Query pointers used during sorting. */
     char * pHeadersLoc[ SIGV4_MAX_HTTP_HEADER_COUNT ];        /**< Header pointers used during sorting. */
@@ -104,6 +104,6 @@ typedef struct canonicalContext
     uint8_t pBufProcessing[ SIGV4_PROCESSING_BUFFER_LENGTH ]; /**< Internal calculation buffer used during canonicalization. */
     char * pBufCur;                                           /**< pBufProcessing cursor */
     size_t bufRemaining;                                      /**< pBufProcessing value used during internal calculation. */
-} canonicalContext_t;
+} CanonicalContext_t;
 
 #endif /* ifndef SIGV4_INTERNAL_H_ */
