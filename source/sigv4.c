@@ -893,14 +893,12 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
         for( noOfHeaders = 0; noOfHeaders < headerCount; noOfHeaders++ )
         {
-            if( canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData != NULL )
-            {
-                sigV4Status = writeSignedHeaderToString( noOfHeaders, canonicalRequest );
+            assert( ( canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData ) != NULL )
+            sigV4Status = writeSignedHeaderToString( noOfHeaders, canonicalRequest );
 
-                if( sigV4Status != SigV4Success )
-                {
-                    break;
-                }
+            if( sigV4Status != SigV4Success )
+            {
+                break;
             }
         }
 
