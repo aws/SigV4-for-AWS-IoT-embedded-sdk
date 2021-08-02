@@ -882,6 +882,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         SigV4Status_t sigV4Status = SigV4Success;
 
         assert( canonicalRequest != NULL );
+        assert( canonicalRequest->pBufCur != NULL );
 
         pBufLoc = canonicalRequest->pBufCur;
         buffRemaining = canonicalRequest->bufRemaining;
@@ -899,8 +900,11 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
             }
         }
 
-        pBufLoc--;
-        *pBufLoc = '\n';
+        if( sigV4Status == SigV4Success )
+        {
+            pBufLoc--;
+            *pBufLoc = '\n';
+        }
 
         return sigV4Status;
     }
@@ -913,6 +917,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         SigV4Status_t sigV4Status = SigV4Success;
 
         assert( canonicalRequest != NULL );
+        assert( canonicalRequest->pBufCur != NULL );
 
         pBufLoc = canonicalRequest->pBufCur;
         buffRemaining = canonicalRequest->bufRemaining;
@@ -968,6 +973,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         SigV4Status_t sigV4Status = SigV4Success;
 
         assert( canonicalRequest != NULL );
+        assert( canonicalRequest->pBufCur != NULL );
 
         pBufLoc = canonicalRequest->pBufCur;
         buffRemaining = canonicalRequest->bufRemaining;
@@ -997,10 +1003,11 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         size_t fieldFlag = 1, noOfHeaders = 0, i = 0;
         SigV4Status_t sigV4Status = SigV4Success;
 
-        start = end = pHeaders;
-
         assert( pHeaders != NULL );
         assert( canonicalRequest != NULL );
+        assert( canonicalRequest->pBufCur != NULL );
+
+        start = end = pHeaders;
 
         for( i = 0; i < headersLen; i++ )
         {
@@ -1046,8 +1053,15 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         /* Sorting headers based on keys. */
         qsort( canonicalRequest->pHeadersLoc, 5, sizeof( SigV4KeyValuePair_t ), cmpKeyValue );
 
-        sigV4Status = appendCanonicalizedHeaders( canonicalRequest );
-        sigV4Status = appendSignedHeaders( canonicalRequest );
+        if( sigV4Status == SigV4Success )
+        {
+            sigV4Status = appendCanonicalizedHeaders( canonicalRequest );
+        }
+
+        if( sigV4Status == SigV4Success )
+        {
+            sigV4Status = appendSignedHeaders( canonicalRequest );
+        }
 
         return sigV4Status;
     }
