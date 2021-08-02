@@ -824,14 +824,13 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
     static SigV4Status_t appendSignedHeaders( CanonicalContext_t * canonicalRequest )
     {
         size_t noOfHeaders = 0, buffRemaining, keyLen = 0, i = 0;
-        char * pBufLoc = canonicalRequest->pBufCur;
-        /*char * pBufLoc=malloc(canonicalRequest->bufRemaining); */
-        /*char * original=pBufLoc; */
+        char * pBufLoc;
         SigV4Status_t sigV4Status = SigV4Success;
 
-        buffRemaining = canonicalRequest->bufRemaining;
-
         assert( canonicalRequest != NULL );
+
+        pBufLoc = canonicalRequest->pBufCur;
+        buffRemaining = canonicalRequest->bufRemaining;
 
         for( noOfHeaders = 0; noOfHeaders < SIGV4_MAX_HTTP_HEADER_COUNT; noOfHeaders++ )
         {
@@ -862,29 +861,25 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         pBufLoc--;
         *pBufLoc = '\n';
 
-        /*printf("Buffer= %s\n",original); */
         return sigV4Status;
     }
 
     static SigV4Status_t appendCanonicalizedHeaders( CanonicalContext_t * canonicalRequest )
     {
         size_t noOfHeaders = 0, buffRemaining = 0, keyLen = 0, valLen = 0, i = 0, trimValueLen = 0;
-        char * pBufLoc = canonicalRequest->pBufCur;
-
-        /*char * pBufLoc=malloc(canonicalRequest->bufRemaining); */
-        /*char * original=pBufLoc; */
-        buffRemaining = canonicalRequest->bufRemaining;
+        char * pBufLoc;
         const char * value;
         SigV4Status_t sigV4Status = SigV4Success;
 
         assert( canonicalRequest != NULL );
 
+        pBufLoc = canonicalRequest->pBufCur;
+        buffRemaining = canonicalRequest->bufRemaining;
+
         for( noOfHeaders = 0; noOfHeaders < SIGV4_MAX_HTTP_HEADER_COUNT; noOfHeaders++ )
         {
             if( canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData != NULL )
             {
-                /*printf("Inside First Header= %s-%d\n",canonicalRequest->pHeadersLoc[noOfHeaders].key.pData,buffRemaining); */
-
                 keyLen = canonicalRequest->pHeadersLoc[ noOfHeaders ].key.dataLen;
                 valLen = canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen;
 
@@ -936,7 +931,6 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
             }
         }
 
-        /*printf("Buffer= %s\n",original); */
         return sigV4Status;
     }
     static SigV4Status_t generateCanonicalHeaders( const char * pHeaders,
@@ -985,8 +979,6 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                     end++;
                     start = end;
                     fieldFlag = 1;
-
-                    /*printf("Header %zu -%zu KEY -%s VALUE %s\n",canonicalRequest->pHeadersLoc[noOfHeaders].key.dataLen,canonicalRequest->pHeadersLoc[noOfHeaders].value.dataLen,(canonicalRequest->pHeadersLoc[noOfHeaders].key.pData),(canonicalRequest->pHeadersLoc[noOfHeaders].value.pData)); */
                     noOfHeaders++;
                 }
                 else
@@ -1004,6 +996,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
         return sigV4Status;
     }
+
     static void generateCanonicalQuery( const char * pQuery,
                                         size_t queryLen,
                                         CanonicalContext_t * canonicalRequest )
