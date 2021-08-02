@@ -902,18 +902,9 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
                     for( i = 0; i < valLen; i++ )
                     {
-                        if( isspace( value[ i ] ) && ( i + 1 <= valLen ) )
+                        if( isspace( value[ i ] ) && ( i + 1 <= valLen ) && ( ( i + 1 == valLen ) || isspace( value[ i + 1 ] ) || ( trimValueLen == 0 ) ) )
                         {
-                            if( ( i + 1 == valLen ) || isspace( value[ i + 1 ] ) || ( trimValueLen == 0 ) )
-                            {
-                                continue;
-                            }
-                            else
-                            {
-                                *pBufLoc = canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData[ i ];
-                                pBufLoc++;
-                                trimValueLen++;
-                            }
+                            continue;
                         }
                         else
                         {
@@ -933,6 +924,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
         return sigV4Status;
     }
+
     static SigV4Status_t generateCanonicalHeaders( const char * pHeaders,
                                                    size_t headersLen,
                                                    CanonicalContext_t * canonicalRequest )
