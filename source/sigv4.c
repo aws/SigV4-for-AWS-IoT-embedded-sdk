@@ -946,11 +946,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
             for( i = 0; i < valLen; i++ )
             {
-                if( isspace( value[ i ] ) && ( i + 1 <= valLen ) && ( ( i + 1 == valLen ) || isspace( value[ i + 1 ] ) || ( trimValueLen == 0 ) ) )
-                {
-                    continue;
-                }
-                else
+                if( !( isspace( value[ i ] ) && ( i + 1 <= valLen ) && ( ( i + 1 == valLen ) || isspace( value[ i + 1 ] ) || ( trimValueLen == 0 ) ) ) )
                 {
                     *pBufLoc = canonicalRequest->pHeadersLoc[ headerNum ].value.pData[ i ];
                     pBufLoc++;
