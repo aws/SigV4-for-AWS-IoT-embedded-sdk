@@ -849,6 +849,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         SigV4Status_t sigV4Status = SigV4Success;
 
         assert( canonicalRequest != NULL );
+        assert( canonicalRequest->pBufCur != NULL );
 
         pBufLoc = canonicalRequest->pBufCur;
         buffRemaining = canonicalRequest->bufRemaining;
