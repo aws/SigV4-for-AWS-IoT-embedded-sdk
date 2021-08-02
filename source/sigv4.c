@@ -951,7 +951,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         {
             if( noOfHeaders == SIGV4_MAX_HTTP_HEADER_COUNT )
             {
-                return SigV4InsufficientMemory;
+                return SigV4MaxHeaderPairCountExceeded;
             }
 
             /* Extracting each header key and value from the headers string. */
