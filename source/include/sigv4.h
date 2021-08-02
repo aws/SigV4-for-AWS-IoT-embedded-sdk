@@ -150,7 +150,7 @@ typedef enum SigV4Status
      * Functions that may return this value:
      * - #SigV4_AwsIotDateToIso8601
      */
-    SigV4ISOFormattingError
+    SigV4ISOFormattingError,
 
      /**
       * @brief The maximum number of header parameters was exceeded while parsing
@@ -159,7 +159,7 @@ typedef enum SigV4Status
       * Functions that may return this value:
       * - #SigV4_GenerateHTTPAuthorization
       */
-     SigV4MaxHeaderPairCountExceeded,
+     SigV4MaxHeaderPairCountExceeded
 } SigV4Status_t;
 
 /**
