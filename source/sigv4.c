@@ -821,6 +821,36 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
     }
 
 /*-----------------------------------------------------------*/
+    static SigV4Status_t writeHeaderKeyToString(CanonicalContext_t * canonicalRequest,size_t headerNum)
+    {
+        char * pBufLoc;
+        size_t  buffRemaining, keyLen = 0, i = 0;
+        SigV4Status_t sigV4Status = SigV4Success;
+
+        assert( canonicalRequest != NULL );
+
+        pBufLoc = canonicalRequest->pBufCur;
+        buffRemaining = canonicalRequest->bufRemaining;
+
+        keyLen = canonicalRequest->pHeadersLoc[ headerNum ].key.dataLen;
+
+                if( keyLen + 1 > buffRemaining )
+                {
+                    return SigV4InsufficientMemory;
+                }
+                else
+                {
+                    for( i = 0; i < keyLen; i++ )
+                    {
+                        *pBufLoc = tolower( canonicalRequest->pHeadersLoc[ headerNum ].key.pData[ i ] );
+                        pBufLoc++;
+                    }
+
+                    *pBufLoc = ';';
+                    pBufLoc++;
+                }
+    }
+
     static SigV4Status_t appendSignedHeaders( CanonicalContext_t * canonicalRequest )
     {
         size_t noOfHeaders = 0, buffRemaining, keyLen = 0, i = 0;
@@ -836,26 +866,33 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         {
             if( canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData != NULL )
             {
-                keyLen = canonicalRequest->pHeadersLoc[ noOfHeaders ].key.dataLen;
+                // keyLen = canonicalRequest->pHeadersLoc[ noOfHeaders ].key.dataLen;
 
-                if( keyLen + 1 > buffRemaining )
+                // if( keyLen + 1 > buffRemaining )
+                // {
+                //     return SigV4InsufficientMemory;
+                // }
+                // else
+                // {
+                //     for( i = 0; i < keyLen; i++ )
+                //     {
+                //         *pBufLoc = tolower( canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData[ i ] );
+                //         pBufLoc++;
+                //     }
+
+                //     *pBufLoc = ';';
+                //     pBufLoc++;
+                // }
+                sigV4Status=writeHeaderKeyToString(CanonicalContext_t * canonicalRequest, noOfHeaders);
+                if(sigV4Status == SigV4Success)
                 {
-                    return SigV4InsufficientMemory;
+                    buffRemaining -= ( keyLen + 1 );
                 }
-                else
-                {
-                    for( i = 0; i < keyLen; i++ )
-                    {
-                        *pBufLoc = tolower( canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData[ i ] );
-                        pBufLoc++;
-                    }
-
-                    *pBufLoc = ';';
-                    pBufLoc++;
+                else{
+                    break;
                 }
             }
-
-            buffRemaining -= ( keyLen + 1 );
+            
         }
 
         pBufLoc--;
