@@ -39,6 +39,7 @@ gr
 hashfinal
 hashinit
 hashupdate
+headercount
 headerindex
 headerlen
 headerslen
