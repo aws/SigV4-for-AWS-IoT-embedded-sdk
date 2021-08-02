@@ -729,8 +729,8 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
 /*-----------------------------------------------------------*/
 
-    static int cmpKeyValue( const void * pFirstVal,
-                            const void * pSecondVal )
+    static int cmpField( const void * pFirstVal,
+                         const void * pSecondVal )
     {
         SigV4KeyValuePair_t * pFirst, * pSecond = NULL;
         size_t lenSmall = 0U;
@@ -1056,7 +1056,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         /* Sorting headers based on keys. */
         if( sigV4Status == SigV4Success )
         {
-            qsort( canonicalRequest->pHeadersLoc, noOfHeaders, sizeof( SigV4KeyValuePair_t ), cmpKeyValue );
+            qsort( canonicalRequest->pHeadersLoc, noOfHeaders, sizeof( SigV4KeyValuePair_t ), cmpField );
         }
 
         if( sigV4Status == SigV4Success )
