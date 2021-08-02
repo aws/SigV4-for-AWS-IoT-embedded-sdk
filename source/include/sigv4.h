@@ -152,14 +152,14 @@ typedef enum SigV4Status
      */
     SigV4ISOFormattingError,
 
-     /**
-      * @brief The maximum number of header parameters was exceeded while parsing
-      * the http header string input parameter.
-      *
-      * Functions that may return this value:
-      * - #SigV4_GenerateHTTPAuthorization
-      */
-     SigV4MaxHeaderPairCountExceeded
+    /**
+     * @brief The maximum number of header parameters was exceeded while parsing
+     * the http header string input parameter.
+     *
+     * Functions that may return this value:
+     * - #SigV4_GenerateHTTPAuthorization
+     */
+    SigV4MaxHeaderPairCountExceeded
 } SigV4Status_t;
 
 /**
