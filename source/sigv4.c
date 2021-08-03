@@ -950,7 +950,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                 {
                     *pBufLoc = canonicalRequest->pHeadersLoc[ headerNum ].value.pData[ i ];
                     pBufLoc++;
-                    trimValueLen++;
+                    trimValueLen + 1U;
                 }
             }
 
@@ -1020,30 +1020,24 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                 {
                     canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData = start;
                     canonicalRequest->pHeadersLoc[ noOfHeaders ].key.dataLen = ( end - start );
-                    end++;
-                    start = end;
+                    start = end + 1;
                     fieldFlag = 0;
                 }
-                else
-                {
-                    end++;
-                }
+
+                end + 1U;
             }
             else
             {
-                if( pHeaders[ i ] == '\n' )
+                if( ( pHeaders[ i ] == '\r' ) && ( ( i + 1 ) < headersLen ) && ( pHeaders[ i + 1 ] == '\n' ) )
                 {
                     canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = start;
                     canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( end - start );
-                    end++;
-                    start = end;
+                    start = end + 1;
                     fieldFlag = 1;
-                    noOfHeaders++;
+                    noOfHeaders + 1U;
                 }
-                else
-                {
-                    end++;
-                }
+
+                end + 1U;
             }
         }
 
