@@ -1047,7 +1047,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
             }
             else
             {
-                if( ( pHeaders[ i ] == '\r' ) && ( ( i + 1 ) < headersLen ) && ( pHeaders[ i + 1 ] == '\n' ) )
+                if( ( ( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) && ( pHeaders[ i ] == '\n' ) ) || ( !( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) && ( pHeaders[ i ] == '\r' ) && ( ( i + 1 ) < headersLen ) && ( pHeaders[ i + 1 ] == '\n' ) ) )
                 {
                     canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = start;
                     canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( end - start );
