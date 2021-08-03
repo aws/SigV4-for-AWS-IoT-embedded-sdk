@@ -912,7 +912,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
         for( noOfHeaders = 0; noOfHeaders < headerCount; noOfHeaders++ )
         {
-            assert( ( canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData ) != NULL )
+            assert( ( canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData ) != NULL );
             sigV4Status = writeSignedHeaderToString( noOfHeaders, flags, canonicalRequest );
 
             if( sigV4Status != SigV4Success )
@@ -997,14 +997,12 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
         for( noOfHeaders = 0; noOfHeaders < headerCount; noOfHeaders++ )
         {
-            if( canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData != NULL )
-            {
-                sigV4Status = writeCanonicalHeaderToString( noOfHeaders, canonicalRequest );
+            assert( canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData != NULL );
+            sigV4Status = writeCanonicalHeaderToString( noOfHeaders, canonicalRequest );
 
-                if( sigV4Status != SigV4Success )
-                {
-                    break;
-                }
+            if( sigV4Status != SigV4Success )
+            {
+                break;
             }
         }
 
@@ -1047,13 +1045,21 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
             }
             else
             {
-                if( ( ( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) && ( pHeaders[ i ] == '\n' ) ) || ( !( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) && ( pHeaders[ i ] == '\r' ) && ( ( i + 1 ) < headersLen ) && ( pHeaders[ i + 1 ] == '\n' ) ) )
+                if( ( !( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) && ( pHeaders[ i ] == '\r' ) && ( ( i + 1 ) < headersLen ) && ( pHeaders[ i + 1 ] == '\n' ) ) )
                 {
                     canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = start;
                     canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( end - start );
                     start = end + 1U;
                     fieldFlag = 1;
-                    noOfHeaders + 1U;
+                    noOfHeaders++;
+                }
+                else if( ( ( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) && ( pHeaders[ i ] == '\n' ) ) )
+                {
+                    canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = start;
+                    canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( end - start );
+                    start = end + 1U;
+                    fieldFlag = 1;
+                    noOfHeaders++;
                 }
             }
 
