@@ -122,8 +122,8 @@
  * a value greater than 0 if @pSecondVal < @pFirstVal. 0 is never returned in
  * order to provide stability to qSort() calls.
  */
-    static int cmpKeyValue( const void * pFirstVal,
-                            const void * pSecondVal );
+    static int32_t cmpKeyValue( const void * pFirstVal,
+                                const void * pSecondVal );
 
 #endif /* #if (SIGV4_USE_CANONICAL_SUPPORT == 1) */
 
@@ -738,8 +738,8 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
 /*-----------------------------------------------------------*/
 
-    static int cmpField( const void * pFirstVal,
-                         const void * pSecondVal )
+    static int32_t cmpField( const void * pFirstVal,
+                             const void * pSecondVal )
     {
         SigV4KeyValuePair_t * pFirst, * pSecond = NULL;
         size_t lenSmall = 0U;
@@ -872,7 +872,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
         if( keyLen + 1 > buffRemaining )
         {
-            return SigV4InsufficientMemory;
+            sigV4Status = SigV4InsufficientMemory;
         }
         else
         {
@@ -949,7 +949,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
         if( keyLen + valLen + 2 > buffRemaining )
         {
-            return SigV4InsufficientMemory;
+            sigV4Status = SigV4InsufficientMemory;
         }
         else
         {
@@ -1031,7 +1031,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         {
             if( noOfHeaders == SIGV4_MAX_HTTP_HEADER_COUNT )
             {
-                return SigV4MaxHeaderPairCountExceeded;
+                sigV4Status = SigV4MaxHeaderPairCountExceeded;
             }
 
             /* Extracting each header key and value from the headers string. */
@@ -1041,11 +1041,9 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                 {
                     canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData = start;
                     canonicalRequest->pHeadersLoc[ noOfHeaders ].key.dataLen = ( end - start );
-                    start = end + 1;
+                    start = end + 1U;
                     fieldFlag = 0;
                 }
-
-                end + 1U;
             }
             else
             {
@@ -1053,13 +1051,13 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                 {
                     canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = start;
                     canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( end - start );
-                    start = end + 1;
+                    start = end + 1U;
                     fieldFlag = 1;
                     noOfHeaders + 1U;
                 }
-
-                end + 1U;
             }
+
+            end++;
         }
 
         /* Sorting headers based on keys. */
