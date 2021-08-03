@@ -21,6 +21,7 @@
  */
 
 #include <string.h>
+#include <openssl/sha.h>
 
 #include "unity.h"
 
@@ -31,8 +32,26 @@
  * test_SigV4_AwsIotDateToIso8601_Formatting_Error() */
 #define SIGV4_TEST_INVALID_DATE_COUNT    24U
 
+#define SUPER_BIG        1000U
+#define PATH             "/"
+#define QUERY            "Action=ListUsers&Version=2010-05-08"
+#define QUERY_LENGTH     ( sizeof( QUERY ) - 1U )
+#define ACCESS_KEY_ID    "AKIAIOSFODNN7EXAMPLE"
+#define DATE             "20150830T123600Z"
+#define REGION           "us-east-1"
+#define SERVICE          "iam"
+#define HEADERS          "Host: iam.amazonaws.com\r\nContent-Type:       application/x-www-form-urlencoded;         charset=utf-8\r\nX-Amz-Date: 20150830T123600Z\r\n\r\n"
+#define HEADERS_LENGTH     ( sizeof( HEADERS ) - 1U )
+
 /* File-scoped global variables */
 static char pTestBufferValid[ SIGV4_ISO_STRING_LEN ] = { 0 };
+
+static SigV4Parameters_t params;
+static SigV4HttpParameters_t httpParams;
+static SigV4CryptoInterface_t cryptoInterface;
+static SigV4Credentials_t creds;
+static SHA256_CTX sha256;
+
 
 /* ============================ HELPER FUNCTIONS ============================ */
 
@@ -64,11 +83,80 @@ void formatAndVerifyInputDate( const char * pInputDate,
     tearDown();
 }
 
+static int32_t sha256_init( void * pHashContext )
+{
+    if( SHA256_Init( ( SHA256_CTX * ) pHashContext ) == 1 )
+    {
+        return 0;
+    }
+
+    return -1;
+}
+
+static int32_t sha256_update( void * pHashContext,
+                           const char * pInput,
+                           size_t inputLen )
+{
+    if( SHA256_Update( ( SHA256_CTX * ) pHashContext, pInput, inputLen ) )
+    {
+        return 0;
+    }
+
+    return -1;
+}
+
+static int32_t sha256_final( void * pHashContext,
+                          char * pOutput,
+                          size_t outputLen )
+{
+    if( SHA256_Final( pOutput, ( SHA256_CTX * ) pHashContext ) )
+    {
+        return 0;
+    }
+
+    return -1;
+}
+
 /* ============================ UNITY FIXTURES ============================== */
 
 /* Called before each test method. */
 void setUp()
 {
+    memset(&params, 0, sizeof(params));
+    memset(&httpParams, 0, sizeof(httpParams));
+    memset(&cryptoInterface, 0, sizeof(cryptoInterface));
+    memset(&creds, 0, sizeof(creds));
+    memset(&sha256, 0, sizeof(sha256));
+    httpParams.pHttpMethod = "GET";
+    httpParams.httpMethodLen = 3;
+    httpParams.pPath = PATH;
+    httpParams.pathLen = sizeof( PATH ) - 1U;
+    httpParams.pQuery = QUERY;
+    httpParams.queryLen = QUERY_LENGTH;
+    httpParams.flags = 0;
+    httpParams.pHeaders = HEADERS;
+    httpParams.headersLen = HEADERS_LENGTH;
+    httpParams.pPayload = NULL;
+    httpParams.payloadLen = 0U;
+    params.pHttpParameters = &httpParams;
+    creds.pAccessKeyId = ACCESS_KEY_ID;
+    creds.accessKeyIdLen = sizeof( ACCESS_KEY_ID ) - 1U;
+    creds.pSecretAccessKey = "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY";
+    creds.secretAccessKeyLen = sizeof("wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY") - 1U;
+    params.pAlgorithm = NULL;
+    params.pCredentials = &creds;
+    params.pDateIso8601 = DATE;
+    params.pRegion = REGION;
+    params.regionLen = sizeof( REGION ) - 1U;
+    params.pService = SERVICE;
+    params.serviceLen = sizeof( SERVICE ) - 1U;
+    cryptoInterface.pHashContext = &sha256;
+    cryptoInterface.hashInit = sha256_init;
+    cryptoInterface.hashUpdate = sha256_update;
+    cryptoInterface.hashFinal = sha256_final;
+    cryptoInterface.hashBlockLen = SIGV4_HASH_MAX_BLOCK_LENGTH;
+    cryptoInterface.hashDigestLen = SIGV4_HASH_MAX_DIGEST_LENGTH;
+    params.pCryptoInterface = &cryptoInterface;
 }
 
 /* Called after each test method. */
@@ -213,4 +301,15 @@ void test_SigV4_AwsIotDateToIso8601_Formatting_Error()
         formatAndVerifyInputDate( pInvalidDateInputs[ index ], SigV4ISOFormattingError, NULL );
         formatAndVerifyInputDate( pInvalidDateInputs[ index + 1 ], SigV4ISOFormattingError, NULL );
     }
+}
+
+void test_generateCanonicalQuery()
+{
+    SigV4Status_t returnStatus;
+    char authBuf[ SUPER_BIG ];
+    size_t authBufLen = SUPER_BIG;
+    char * signature = NULL;
+    size_t signatureLen;
+    returnStatus = SigV4_GenerateHTTPAuthorization(&params, authBuf, &authBufLen, &signature, &signatureLen);
+    TEST_ASSERT_EQUAL(SigV4Success, returnStatus);
 }
