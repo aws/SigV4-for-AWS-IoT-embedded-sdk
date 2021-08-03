@@ -868,7 +868,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         pBufLoc = canonicalRequest->pBufCur;
         buffRemaining = canonicalRequest->bufRemaining;
 
-        keyLen = canonicalRequest->pHeadersLoc[ headerNum ].key.dataLen;
+        keyLen = canonicalRequest->pHeadersLoc[ headerIndex ].key.dataLen;
 
         if( keyLen + 1 > buffRemaining )
         {
@@ -880,11 +880,11 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
             {
                 if( !( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) )
                 {
-                    *pBufLoc = tolower( canonicalRequest->pHeadersLoc[ headerNum ].key.pData[ i ] );
+                    *pBufLoc = tolower( canonicalRequest->pHeadersLoc[ headerIndex ].key.pData[ i ] );
                 }
                 else
                 {
-                    *pBufLoc = canonicalRequest->pHeadersLoc[ headerNum ].key.pData[ i ];
+                    *pBufLoc = canonicalRequest->pHeadersLoc[ headerIndex ].key.pData[ i ];
                 }
 
                 pBufLoc++;
@@ -944,8 +944,8 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         pBufLoc = canonicalRequest->pBufCur;
         buffRemaining = canonicalRequest->bufRemaining;
 
-        keyLen = canonicalRequest->pHeadersLoc[ headerNum ].key.dataLen;
-        valLen = canonicalRequest->pHeadersLoc[ headerNum ].value.dataLen;
+        keyLen = canonicalRequest->pHeadersLoc[ headerIndex ].key.dataLen;
+        valLen = canonicalRequest->pHeadersLoc[ headerIndex ].value.dataLen;
 
         if( keyLen + valLen + 2 > buffRemaining )
         {
@@ -955,22 +955,22 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         {
             for( i = 0; i < keyLen; i++ )
             {
-                *pBufLoc = tolower( canonicalRequest->pHeadersLoc[ headerNum ].key.pData[ i ] );
+                *pBufLoc = tolower( canonicalRequest->pHeadersLoc[ headerIndex ].key.pData[ i ] );
                 pBufLoc++;
             }
 
             *pBufLoc = ':';
             pBufLoc++;
-            value = canonicalRequest->pHeadersLoc[ headerNum ].value.pData;
+            value = canonicalRequest->pHeadersLoc[ headerIndex ].value.pData;
             trimValueLen = 0;
 
             for( i = 0; i < valLen; i++ )
             {
                 if( !( isspace( value[ i ] ) && ( i + 1 <= valLen ) && ( ( i + 1 == valLen ) || isspace( value[ i + 1 ] ) || ( trimValueLen == 0 ) ) ) )
                 {
-                    *pBufLoc = canonicalRequest->pHeadersLoc[ headerNum ].value.pData[ i ];
+                    *pBufLoc = canonicalRequest->pHeadersLoc[ headerIndex ].value.pData[ i ];
                     pBufLoc++;
-                    trimValueLen + 1U;
+                    trimValueLen++;
                 }
             }
 
@@ -1049,7 +1049,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                 {
                     canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = start;
                     canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( end - start );
-                    start = end + 1U;
+                    start = end + 2U;
                     fieldFlag = 1;
                     noOfHeaders++;
                 }
@@ -1079,7 +1079,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
         if( sigV4Status == SigV4Success )
         {
-            sigV4Status = appendSignedHeaders( noOfHeaders, canonicalRequest );
+            sigV4Status = appendSignedHeaders( noOfHeaders, flags, canonicalRequest );
         }
 
         return sigV4Status;
