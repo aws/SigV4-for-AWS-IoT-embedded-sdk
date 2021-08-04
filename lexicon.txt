@@ -70,6 +70,7 @@ mon
 monthsperday
 noninfringement
 nullterminate
+occurences
 ored
 org
 outputlen
@@ -142,6 +143,7 @@ sts
 subfolder
 sublicense
 thu
+trimmedlength
 tm
 tue
 txt
@@ -150,5 +152,6 @@ uri
 urilen
 url
 utc
+vallen
 yyyy
 yyyymmdd
