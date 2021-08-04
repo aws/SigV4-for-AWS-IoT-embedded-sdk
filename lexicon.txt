@@ -1,6 +1,7 @@
 
 accesskeyid
 accesskeylen
+accommodate
 addtodate
 addtogroup
 aggregator
@@ -70,7 +71,7 @@ mon
 monthsperday
 noninfringement
 nullterminate
-occurences
+occurrences
 ored
 org
 outputlen

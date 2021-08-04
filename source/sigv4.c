@@ -258,7 +258,7 @@ static void hexEncode( SigV4String_t * pInputStr,
  *
  * @return Following statuses will be returned by the function:
  * #SigV4Success if headers are successfully added to the canonical request.
- * #SigV4InsufficientMemory if buffer remaining cannot accomodate all the provided headers.
+ * #SigV4InsufficientMemory if buffer remaining cannot accommodate all the provided headers.
  * #SigV4MaxHeaderPairCountExceeded if number of headers that needs to be canonicalized
  * exceed the SIGV4_MAX_HTTP_HEADER_COUNT macro defined in the config file.
  */
@@ -278,7 +278,7 @@ static SigV4Status_t appendAllHeadersToCanonicalRequest( const char * pHeaders,
  *
  * @return Following statuses will be returned by the function:
  * #SigV4Success if headers are successfully added to the canonical request.
- * #SigV4InsufficientMemory if buffer remaining cannot accomodate all the provided headers.
+ * #SigV4InsufficientMemory if buffer remaining cannot accommodate all the provided headers.
  */
 static SigV4Status_t appendSignedHeaders( size_t headerCount,
                                           uint32_t flags,
@@ -293,7 +293,7 @@ static SigV4Status_t appendSignedHeaders( size_t headerCount,
  *
  * @return Following statuses will be returned by the function:
  * #SigV4Success if headers are successfully added to the canonical request.
- * #SigV4InsufficientMemory if buffer remaining cannot accomodate all the provided headers.
+ * #SigV4InsufficientMemory if buffer remaining cannot accommodate all the provided headers.
  */
 static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
                                                  CanonicalContext_t * canonicalRequest );
@@ -309,7 +309,7 @@ static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
  *
  * @return Following statuses will be returned by the function:
  * #SigV4Success if headers are successfully added to the canonical request.
- * #SigV4InsufficientMemory if buffer remaining cannot accomodate all the provided headers.
+ * #SigV4InsufficientMemory if buffer remaining cannot accommodate all the provided headers.
  */
 static SigV4Status_t writeSignedHeaderToCanonicalRequest( size_t headerIndex,
                                                           uint32_t flags,
@@ -324,7 +324,7 @@ static SigV4Status_t writeSignedHeaderToCanonicalRequest( size_t headerIndex,
  *
  * @return Following statuses will be returned by the function:
  * #SigV4Success if headers are successfully added to the canonical request.
- * #SigV4InsufficientMemory if buffer remaining cannot accomodate all the provided headers.
+ * #SigV4InsufficientMemory if buffer remaining cannot accommodate all the provided headers.
  */
 static SigV4Status_t writeCanonicalHeaderToCanonicalRequest( size_t headerIndex,
                                                              CanonicalContext_t * canonicalRequest );
