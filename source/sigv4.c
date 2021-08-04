@@ -256,10 +256,10 @@ static void hexEncode( SigV4String_t * pInputStr,
  * @param[out] canonicalRequest Struct to maintain intermediary buffer
  * and state of canonicalization.
  */
-static SigV4Status_t generateCanonicalHeaders( const char * pHeaders,
-                                               size_t headersLen,
-                                               uint32_t flags,
-                                               CanonicalContext_t * canonicalRequest );
+static SigV4Status_t appendCanonicalAndSignedHeadersToCanonicalRequest( const char * pHeaders,
+                                                                        size_t headersLen,
+                                                                        uint32_t flags,
+                                                                        CanonicalContext_t * canonicalRequest );
 
 /**
  * @brief Append Signed Headers to the string which needs to be signed.
@@ -293,9 +293,9 @@ static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
  * @param[in,out] canonicalRequest Struct to maintain intermediary buffer
  * and state of canonicalization.
  */
-static SigV4Status_t writeSignedHeaderToString( size_t headerIndex,
-                                                uint32_t flags,
-                                                CanonicalContext_t * canonicalRequest );
+static SigV4Status_t writeSignedHeaderToCanonicalRequest( size_t headerIndex,
+                                                          uint32_t flags,
+                                                          CanonicalContext_t * canonicalRequest );
 
 /**
  * @brief Write canonical headers to the buffer provided.
@@ -304,8 +304,8 @@ static SigV4Status_t writeSignedHeaderToString( size_t headerIndex,
  * @param[in,out] canonicalRequest Struct to maintain intermediary buffer
  * and state of canonicalization.
  */
-static SigV4Status_t writeCanonicalHeaderToString( size_t headerIndex,
-                                                   CanonicalContext_t * canonicalRequest );
+static SigV4Status_t writeCanonicalHeaderToCanonicalRequest( size_t headerIndex,
+                                                             CanonicalContext_t * canonicalRequest );
 
 /*-----------------------------------------------------------*/
 
@@ -854,12 +854,13 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
     }
 
 /*-----------------------------------------------------------*/
-    static SigV4Status_t writeSignedHeaderToString( size_t headerIndex,
-                                                    uint32_t flags,
-                                                    CanonicalContext_t * canonicalRequest )
+    static SigV4Status_t writeSignedHeaderToCanonicalRequest( size_t headerIndex,
+                                                              uint32_t flags,
+                                                              CanonicalContext_t * canonicalRequest )
     {
         char * pBufLoc;
-        size_t buffRemaining, keyLen = 0, i = 0;
+        size_t buffRemaining, keyLen = 0, i = 0, trimKeyLen = 0;
+        const char * headerKey;
         SigV4Status_t sigV4Status = SigV4Success;
 
         assert( canonicalRequest != NULL );
@@ -870,28 +871,37 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
         keyLen = canonicalRequest->pHeadersLoc[ headerIndex ].key.dataLen;
 
+        /* Check buffer remaining is enough to hold the signed header in this form (key;). */
         if( keyLen + 1 > buffRemaining )
         {
             sigV4Status = SigV4InsufficientMemory;
         }
         else
         {
+            headerKey = canonicalRequest->pHeadersLoc[ headerIndex ].key.pData;
+
             for( i = 0; i < keyLen; i++ )
             {
                 if( !( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) )
                 {
-                    *pBufLoc = tolower( canonicalRequest->pHeadersLoc[ headerIndex ].key.pData[ i ] );
+                    if( !( isspace( headerKey[ i ] ) && ( i + 1 <= keyLen ) && ( ( i + 1 == keyLen ) || isspace( headerKey[ i + 1 ] ) || ( trimKeyLen == 0 ) ) ) )
+                    {
+                        *pBufLoc = tolower( headerKey[ i ] );
+                        pBufLoc++;
+                        trimKeyLen++;
+                    }
                 }
                 else
                 {
                     *pBufLoc = canonicalRequest->pHeadersLoc[ headerIndex ].key.pData[ i ];
+                    pBufLoc++;
+                    trimKeyLen++;
                 }
-
-                pBufLoc++;
             }
 
             *pBufLoc = ';';
             pBufLoc++;
+            /* Calculate the remaining buffer. 1 is added for ';' character. */
             buffRemaining -= ( keyLen + 1 );
             canonicalRequest->pBufCur = pBufLoc;
             canonicalRequest->bufRemaining = buffRemaining;
@@ -913,7 +923,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         for( noOfHeaders = 0; noOfHeaders < headerCount; noOfHeaders++ )
         {
             assert( ( canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData ) != NULL );
-            sigV4Status = writeSignedHeaderToString( noOfHeaders, flags, canonicalRequest );
+            sigV4Status = writeSignedHeaderToCanonicalRequest( noOfHeaders, flags, canonicalRequest );
 
             if( sigV4Status != SigV4Success )
             {
@@ -923,6 +933,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
         if( sigV4Status == SigV4Success )
         {
+            /* Replacing the last ';' with '\n' as last header does need to have ';'. */
             canonicalRequest->pBufCur--;
             *canonicalRequest->pBufCur = '\n';
         }
@@ -930,12 +941,13 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         return sigV4Status;
     }
 
-    static SigV4Status_t writeCanonicalHeaderToString( size_t headerIndex,
-                                                       CanonicalContext_t * canonicalRequest )
+    static SigV4Status_t writeCanonicalHeaderToCanonicalRequest( size_t headerIndex,
+                                                                 CanonicalContext_t * canonicalRequest )
     {
-        size_t buffRemaining, keyLen = 0, valLen = 0, i = 0, trimValueLen = 0;
+        size_t buffRemaining, keyLen = 0, valLen = 0, i = 0, trimValueLen = 0, trimKeyLen = 0;
         char * pBufLoc;
         const char * value;
+        const char * headerKey;
         SigV4Status_t sigV4Status = SigV4Success;
 
         assert( canonicalRequest != NULL );
@@ -947,16 +959,23 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         keyLen = canonicalRequest->pHeadersLoc[ headerIndex ].key.dataLen;
         valLen = canonicalRequest->pHeadersLoc[ headerIndex ].value.dataLen;
 
+        /* Check buffer remaining is enough to hold the header in this form (key:value\n). */
         if( keyLen + valLen + 2 > buffRemaining )
         {
             sigV4Status = SigV4InsufficientMemory;
         }
         else
         {
+            headerKey = canonicalRequest->pHeadersLoc[ headerIndex ].key.pData;
+
             for( i = 0; i < keyLen; i++ )
             {
-                *pBufLoc = tolower( canonicalRequest->pHeadersLoc[ headerIndex ].key.pData[ i ] );
-                pBufLoc++;
+                if( !( isspace( headerKey[ i ] ) && ( i + 1 <= keyLen ) && ( ( i + 1 == keyLen ) || isspace( headerKey[ i + 1 ] ) || ( trimKeyLen == 0 ) ) ) )
+                {
+                    *pBufLoc = tolower( headerKey[ i ] );
+                    pBufLoc++;
+                    trimKeyLen++;
+                }
             }
 
             *pBufLoc = ':';
@@ -977,7 +996,8 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
             *pBufLoc = '\n';
             pBufLoc++;
 
-            buffRemaining -= ( keyLen + trimValueLen + 2 );
+            /* Calculate the remaining buffer. 2 is added for ':' and '\n' character. */
+            buffRemaining -= ( trimKeyLen + trimValueLen + 2 );
 
             canonicalRequest->pBufCur = pBufLoc;
             canonicalRequest->bufRemaining = buffRemaining;
@@ -998,7 +1018,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         for( noOfHeaders = 0; noOfHeaders < headerCount; noOfHeaders++ )
         {
             assert( canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData != NULL );
-            sigV4Status = writeCanonicalHeaderToString( noOfHeaders, canonicalRequest );
+            sigV4Status = writeCanonicalHeaderToCanonicalRequest( noOfHeaders, canonicalRequest );
 
             if( sigV4Status != SigV4Success )
             {
@@ -1009,10 +1029,10 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         return sigV4Status;
     }
 
-    static SigV4Status_t generateCanonicalHeaders( const char * pHeaders,
-                                                   size_t headersLen,
-                                                   uint32_t flags,
-                                                   CanonicalContext_t * canonicalRequest )
+    static SigV4Status_t appendCanonicalAndSignedHeadersToCanonicalRequest( const char * pHeaders,
+                                                                            size_t headersLen,
+                                                                            uint32_t flags,
+                                                                            CanonicalContext_t * canonicalRequest )
     {
         const char * start;
         const char * end;
