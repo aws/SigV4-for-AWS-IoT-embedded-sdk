@@ -49,42 +49,20 @@
 /** @addtogroup sigv4_constants
  *  @{
  */
-<<<<<<< HEAD
 #define SIGV4_AWS4_HMAC_SHA256                      "AWS4-HMAC-SHA256"                   /**< AWS identifier for SHA256 signing algorithm. */
 #define SIGV4_HTTP_X_AMZ_DATE_HEADER                "x-amz-date"                         /**< AWS identifier for HTTP date header. */
 #define SIGV4_HTTP_X_AMZ_SECURITY_TOKEN_HEADER      "x-amz-security-token"               /**< AWS identifier for security token. */
-=======
-#define SIGV4_AWS4_HMAC_SHA256                      "AWS4-HMAC-SHA256"                        /**< AWS identifier for SHA256 signing algorithm. */
-#define SIGV4_AWS4_HMAC_SHA256_LENGTH               ( sizeof( SIGV4_AWS4_HMAC_SHA256 ) - 1U ) /**< AWS identifier for SHA256 signing algorithm. */
-#define SIGV4_HTTP_X_AMZ_DATE_HEADER                "x-amz-date"                              /**< AWS identifier for HTTP date header. */
-#define SIGV4_HTTP_X_AMZ_SECURITY_TOKEN_HEADER      "x-amz-security-token"                    /**< AWS identifier for security token. */
->>>>>>> 9a7f2d4 (Fix test case)
 
-#define SIGV4_STREAMING_AWS4_HMAC_SHA256_PAYLOAD    "STREAMING-AWS4-HMAC-SHA256-PAYLOAD"      /**< S3 identifier for chunked payloads. */
-#define SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER      "x-amz-content-sha256"                    /**< S3 identifier for streaming requests. */
-#define SIGV4_HTTP_X_AMZ_STORAGE_CLASS_HEADER       "x-amz-storage-class"                     /**< S3 identifier for reduced streaming redundancy. */
+#define SIGV4_STREAMING_AWS4_HMAC_SHA256_PAYLOAD    "STREAMING-AWS4-HMAC-SHA256-PAYLOAD" /**< S3 identifier for chunked payloads. */
+#define SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER      "x-amz-content-sha256"               /**< S3 identifier for streaming requests. */
+#define SIGV4_HTTP_X_AMZ_STORAGE_CLASS_HEADER       "x-amz-storage-class"                /**< S3 identifier for reduced streaming redundancy. */
 
-#define SIGV4_ACCESS_KEY_ID_LENGTH                  20U                                       /**< Length of access key ID. */
-#define SIGV4_SECRET_ACCESS_KEY_LENGTH              40U                                       /**< Length of secret access key. */
+#define SIGV4_ACCESS_KEY_ID_LENGTH                  20U                                  /**< Length of access key ID. */
+#define SIGV4_SECRET_ACCESS_KEY_LENGTH              40U                                  /**< Length of secret access key. */
 
-<<<<<<< HEAD
 #define SIGV4_ISO_STRING_LEN                        16U                                  /**< Length of ISO 8601 date string. */
 #define SIGV4_EXPECTED_LEN_RFC_3339                 20U                                  /**< Length of RFC 3339 date input. */
-<<<<<<< HEAD
 #define SIGV4_EXPECTED_LEN_RFC_5322                 29U                                  /**< Length of RFC 5322 date input. */
-=======
-=======
-#define SIGV4_ISO_STRING_LEN                        16U                                       /**< Length of ISO 8601 date string. */
-#define SIGV4_EXPECTED_LEN_RFC_3339                 20U                                       /**< Length of RFC 3339 date input. */
->>>>>>> 9a7f2d4 (Fix test case)
-#define SIGV4_EXPECTED_LEN_RFC_5322                 29U
-/**< Length of RFC 5322 date input. */
-
-/* SHA256 definitions for block and digest length. */
-#define SIGV4_SHA256_DIGEST_LENGTH    32U
-#define SIGV4_SHA256_BLOCK_LENGTH     64U
-
->>>>>>> 20f32c7 (Add unit tests attaining branch coverage of 71%)
 /** @}*/
 
 /**
@@ -446,25 +424,4 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
                                          char * pDateISO8601,
                                          size_t dateISO8601Len );
 /* @[declare_sigV4_awsIotDateToIso8601_function] */
-<<<<<<< HEAD
-=======
-
-/**
- * Generates the HTTP Authorization header value.
- *
- * @param[in] pParams Parameters for generating the Sigv4 signature.
- * @param[out] pAuthBuf Buffer for outputting the Authorization header
- * value.
- * @param[in, out] authBufLen the length of pAuthBuf, output the length
- * of authorization written to the buffer.
- * @param[out] pSignature Location of the signature in the authorization stirng.
- * @param[out] signatureLen The length of pSignature.
- * @return SUCCESS code if successful, error code otherwise.
- */
-SigV4Status_t Sigv4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams,
-                                               char * pAuthBuf,
-                                               size_t * authBufLen,
-                                               char ** pSignature,
-                                               size_t * signatureLen );
->>>>>>> 9a7f2d4 (Fix test case)
 #endif /* SIGV4_H_ */

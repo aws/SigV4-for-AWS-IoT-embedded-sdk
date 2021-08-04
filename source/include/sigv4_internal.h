@@ -51,44 +51,7 @@
 #define ISO_YEAR_LEN           4U                                 /**< Length of year value in ISO 8601 date. */
 #define ISO_NON_YEAR_LEN       2U                                 /**< Length of non-year values in ISO 8601 date. */
 
-<<<<<<< HEAD
 #define ISO_DATE_SCOPE_LEN     8U                                 /**< Length of date substring used in credential scope. */
-=======
-#define ISO_DATE_SCOPE_LEN                   8U                                 /**< Length of date substring used in credential scope. */
-
-/* SigV4 related string literals and lengths. */
-#define CREDENTIAL_SCOPE_SEPARATOR           '/'
-#define CREDENTIAL_SCOPE_SEPARATOR_LEN       1U
-#define CREDENTIAL_SCOPE_TERMINATOR          "aws4_request"
-#define CREDENTIAL_SCOPE_TERMINATOR_LEN      ( sizeof( CREDENTIAL_SCOPE_TERMINATOR ) - 1U )
-
-/**
- * @brief Default value when HttpParameters_t.pPath == NULL.
- */
-#define HTTP_EMPTY_PATH                      "/"
-#define HTTP_EMPTY_PATH_LEN                  ( sizeof( HTTP_EMPTY_PATH ) - 1U ) /**< The length of #HTTP_EMPTY_PATH. */
-
-#define LINEFEED_CHAR                        '\n'                               /**< A linefeed character used to build the canonical request. */
-#define LINEFEED_CHAR_LEN                    1U                                 /**< The length of #LINEFEED_CHAR. */
-
-#define SPACE_CHAR                           ' '                                /**< A linefeed character used to build the Authorization header value. */
-#define SPACE_CHAR_LEN                       1U                                 /**< The length of #SPACE_CHAR. */
-
-#define S3_SERVICE_NAME                      "s3"                               /**< S3 is the only service where the URI must only be encoded once. */
-#define S3_SERVICE_NAME_LEN                  ( sizeof( S3_SERVICE_NAME ) - 1U ) /**< The length of #S3_SERVICE_NAME. */
-
-#define SIGV4_HMAC_SIGNING_KEY_PREFIX        "AWS4"                             /**< HMAC signing key prefix. */
-#define SIGV4_HMAC_SIGNING_KEY_PREFIX_LEN    ( sizeof( SIGV4_HMAC_SIGNING_KEY_PREFIX ) - 1U )
-
-#define AUTH_CREDENTIAL_PREFIX               "Credential="                                 /**< The prefix that goes before the credential value in the Authorization header value. */
-#define AUTH_CREDENTIAL_PREFIX_LEN           ( sizeof( AUTH_CREDENTIAL_PREFIX ) - 1U )     /**< The length of #AUTH_CREDENTIAL_PREFIX. */
-#define AUTH_SEPARATOR                       ", "                                          /**< The separator between each component in the Authorization header value. */
-#define AUTH_SEPARATOR_LEN                   ( sizeof( AUTH_SEPARATOR ) - 1U )             /**< The length of #AUTH_SEPARATOR. */
-#define AUTH_SIGNED_HEADERS_PREFIX           "SignedHeaders="                              /**< The prefix that goes before the signed headers in the Authorization header value. */
-#define AUTH_SIGNED_HEADERS_PREFIX_LEN       ( sizeof( AUTH_SIGNED_HEADERS_PREFIX ) - 1U ) /**< The length of #AUTH_SIGNED_HEADERS_PREFIX. */
-#define AUTH_SIGNATURE_PREFIX                "Signature="                                  /**< The prefix that goes before the signature in the Authorization header value. */
-#define AUTH_SIGNATURE_PREFIX_LEN            ( sizeof( AUTH_SIGNATURE_PREFIX ) - 1U )      /**< The length of #AUTH_SIGNATURE_PREFIX. */
->>>>>>> 9a7f2d4 (Fix test case)
 
 /**
  * @brief An aggregator representing the individually parsed elements of the
@@ -138,27 +101,9 @@ typedef struct CanonicalContext
     char * pQueryLoc[ SIGV4_MAX_QUERY_PAIR_COUNT ];           /**< Query pointers used during sorting. */
     char * pHeadersLoc[ SIGV4_MAX_HTTP_HEADER_COUNT ];        /**< Header pointers used during sorting. */
 
-<<<<<<< HEAD
     uint8_t pBufProcessing[ SIGV4_PROCESSING_BUFFER_LENGTH ]; /**< Internal calculation buffer used during canonicalization. */
     char * pBufCur;                                           /**< pBufProcessing cursor */
     size_t bufRemaining;                                      /**< pBufProcessing value used during internal calculation. */
-=======
-    uint8_t pBufProcessing[ SIGV4_PROCESSING_BUFFER_LENGTH ];       /**< Internal calculation buffer used during canonicalization. */
-    char * pBufCur;                                                 /**< pBufProcessing cursor. */
-    size_t bufRemaining;                                            /**< pBufProcessing value used during internal calculation. */
->>>>>>> 9a7f2d4 (Fix test case)
 } CanonicalContext_t;
 
-<<<<<<< HEAD
-=======
-typedef struct HmacContext
-{
-    const SigV4CryptoInterface_t * pCryptoInterface;
-    char key[ SIGV4_HASH_MAX_BLOCK_LENGTH ];
-    size_t keyLen;
-    uint8_t hashInitialized;
-} HmacContext_t;
-
-
->>>>>>> 20f32c7 (Add unit tests attaining branch coverage of 71%)
 #endif /* ifndef SIGV4_INTERNAL_H_ */
