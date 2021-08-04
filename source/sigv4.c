@@ -1043,29 +1043,44 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
         for( i = 0; i < keyLen; i++ )
         {
-            if( !( isTrimmableSpace( headerKey, i, keyLen, trimKeyLen ) ) )
+            if( isTrimmableSpace( headerKey, i, keyLen, trimKeyLen ) )
             {
-                if( buffRemaining < 1 )
-                {
-                    sigV4Status = SigV4InsufficientMemory;
-                    break;
-                }
-                else
-                {
-                    *pBufLoc = tolower( headerKey[ i ] );
-                    pBufLoc++;
-                    trimKeyLen++;
-                    buffRemaining -= 1;
-                }
+                /* Cannot copy trimmable space into canonical request buffer. */
             }
+            /* Remaining buffer space should at least accommodate the character to copy and the trailing ":" */
+            else if( buffRemaining <= 1 )
+            {
+                sigV4Status = SigV4InsufficientMemory;
+                break;
+            }
+            else
+            {
+                *pBufLoc = tolower( headerKey[ i ] );
+                pBufLoc++;
+                trimKeyLen++;
+                buffRemaining -= 1;
+            }
+
+            /* if( !( isTrimmableSpace( headerKey, i, keyLen, trimKeyLen ) ) ) */
+            /* { */
+            /*     if( buffRemaining < 1 ) */
+            /*     { */
+            /*         sigV4Status = SigV4InsufficientMemory; */
+            /*         break; */
+            /*     } */
+            /*     else */
+            /*     { */
+            /*         *pBufLoc = tolower( headerKey[ i ] ); */
+            /*         pBufLoc++; */
+            /*         trimKeyLen++; */
+            /*         buffRemaining -= 1; */
+            /*     } */
+            /* } */
         }
 
-        if( buffRemaining < 1 )
+        if( sigV4Status == SigV4Success )
         {
-            sigV4Status = SigV4InsufficientMemory;
-        }
-        else
-        {
+            assert( buffRemaining >= 1 );
             *pBufLoc = ':';
             pBufLoc++;
             buffRemaining -= 1;
@@ -1078,29 +1093,44 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
             for( i = 0; i < valLen; i++ )
             {
-                if( !( isTrimmableSpace( value, i, valLen, trimValueLen ) ) )
+                if( ( isTrimmableSpace( value, i, valLen, trimValueLen ) ) )
                 {
-                    if( buffRemaining < 1 )
-                    {
-                        sigV4Status = SigV4InsufficientMemory;
-                        break;
-                    }
-                    else
-                    {
-                        *pBufLoc = value[ i ];
-                        pBufLoc++;
-                        trimValueLen++;
-                        buffRemaining -= 1;
-                    }
+                    /* Cannot copy trimmable space into canonical request buffer. */
                 }
+                /* Remaining buffer space should at least accommodate the character to copy and the trailing "\n" */
+                else if( ( buffRemaining <= 1 ) )
+                {
+                    sigV4Status = SigV4InsufficientMemory;
+                    break;
+                }
+                else
+                {
+                    *pBufLoc = value[ i ];
+                    pBufLoc++;
+                    trimValueLen++;
+                    buffRemaining -= 1;
+                }
+
+                /* if( !( isTrimmableSpace( value, i, valLen, trimValueLen ) ) ) */
+                /* { */
+                /*     if( buffRemaining < 1 ) */
+                /*     { */
+                /*         sigV4Status = SigV4InsufficientMemory; */
+                /*         break; */
+                /*     } */
+                /*     else */
+                /*     { */
+                /*         *pBufLoc = value[ i ]; */
+                /*         pBufLoc++; */
+                /*         trimValueLen++; */
+                /*         buffRemaining -= 1; */
+                /*     } */
+                /* } */
             }
 
-            if( buffRemaining < 1 )
+            if( sigV4Status == SigV4Success )
             {
-                sigV4Status = SigV4InsufficientMemory;
-            }
-            else
-            {
+                assert( buffRemaining >= 1 );
                 *pBufLoc = '\n';
                 pBufLoc++;
 
@@ -1169,16 +1199,11 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
             /* Extracting each header key and value from the headers string. */
             if( ( keyFlag == 1 ) && ( pHeaders[ i ] == ':' ) )
             {
-                /* if(  ) */
-                /* { */
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData = start;
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].key.dataLen = ( end - start );
                 start = end + 1U;
                 keyFlag = 0;
-                /* } */
             }
-            /* else */
-            /* { */
             else if( ( keyFlag == 0 ) && ( !( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) && ( pHeaders[ i ] == '\r' ) && ( ( i + 1 ) < headersLen ) && ( pHeaders[ i + 1 ] == '\n' ) ) )
             {
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = start;
@@ -1195,8 +1220,6 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                 keyFlag = 1;
                 noOfHeaders++;
             }
-
-            /* } */
 
             end++;
         }
