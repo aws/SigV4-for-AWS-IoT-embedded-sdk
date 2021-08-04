@@ -142,6 +142,7 @@ sts
 subfolder
 sublicense
 thu
+trimmable
 trimmedlength
 tm
 tue

@@ -1167,35 +1167,36 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
             }
 
             /* Extracting each header key and value from the headers string. */
-            if( keyFlag == 1 )
+            if( ( keyFlag == 1 ) && ( pHeaders[ i ] == ':' ) )
             {
-                if( pHeaders[ i ] == ':' )
-                {
-                    canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData = start;
-                    canonicalRequest->pHeadersLoc[ noOfHeaders ].key.dataLen = ( end - start );
-                    start = end + 1U;
-                    keyFlag = 0;
-                }
+                /* if(  ) */
+                /* { */
+                canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData = start;
+                canonicalRequest->pHeadersLoc[ noOfHeaders ].key.dataLen = ( end - start );
+                start = end + 1U;
+                keyFlag = 0;
+                /* } */
             }
-            else
+            /* else */
+            /* { */
+            else if( ( keyFlag == 0 ) && ( !( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) && ( pHeaders[ i ] == '\r' ) && ( ( i + 1 ) < headersLen ) && ( pHeaders[ i + 1 ] == '\n' ) ) )
             {
-                if( ( !( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) && ( pHeaders[ i ] == '\r' ) && ( ( i + 1 ) < headersLen ) && ( pHeaders[ i + 1 ] == '\n' ) ) )
-                {
-                    canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = start;
-                    canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( end - start );
-                    start = end + 2U;
-                    keyFlag = 1;
-                    noOfHeaders++;
-                }
-                else if( ( ( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) && ( pHeaders[ i ] == '\n' ) ) )
-                {
-                    canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = start;
-                    canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( end - start );
-                    start = end + 1U;
-                    keyFlag = 1;
-                    noOfHeaders++;
-                }
+                canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = start;
+                canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( end - start );
+                start = end + 2U;
+                keyFlag = 1;
+                noOfHeaders++;
             }
+            else if( ( keyFlag == 0 ) && ( ( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) && ( pHeaders[ i ] == '\n' ) ) )
+            {
+                canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = start;
+                canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( end - start );
+                start = end + 1U;
+                keyFlag = 1;
+                noOfHeaders++;
+            }
+
+            /* } */
 
             end++;
         }
