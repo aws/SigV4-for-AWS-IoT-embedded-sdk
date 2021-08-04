@@ -307,6 +307,21 @@ static SigV4Status_t writeSignedHeaderToCanonicalRequest( size_t headerIndex,
 static SigV4Status_t writeCanonicalHeaderToCanonicalRequest( size_t headerIndex,
                                                              CanonicalContext_t * canonicalRequest );
 
+/**
+ * @brief Helper function to check whether the current character is a
+ * trailing,leading or having multiple occurences between characters in a string.
+ *
+ * @param[in] value String to be trimmed.
+ * @param[in] index Index of current character.
+ * @param[in] valLen Length of the string.
+ * @param[in] trimmedLength length of string after trimming.
+ * and state of canonicalization.
+ */
+static bool isTrimmableSpace( const char * value,
+                              size_t index,
+                              size_t valLen,
+                              size_t trimmedLength )
+
 /*-----------------------------------------------------------*/
 
 static void intToAscii( int32_t value,
@@ -854,6 +869,35 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
     }
 
 /*-----------------------------------------------------------*/
+    static bool isTrimmableSpace( const char * value,
+                                  size_t index,
+                                  size_t valLen,
+                                  size_t trimmedLength )
+    {
+        bool ret = false;
+
+        /* Only trim spaces. */
+        if( isspace( value[ index ] ) )
+        {
+            /* The last character is a trailing space. */
+            if( ( index + 1 ) == valLen )
+            {
+                ret = true;
+            }
+            /* Trim if the next character is also a space. */
+            else if( isspace( value[ index + 1 ] ) )
+            {
+                ret = true;
+            }
+            /* It is a leading space if no characters have been written yet. */
+            else if( trimmedLength == 0U )
+            {
+                ret = true;
+            }
+        }
+
+        return ret;
+    }
     static SigV4Status_t writeSignedHeaderToCanonicalRequest( size_t headerIndex,
                                                               uint32_t flags,
                                                               CanonicalContext_t * canonicalRequest )
@@ -871,38 +915,45 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
         keyLen = canonicalRequest->pHeadersLoc[ headerIndex ].key.dataLen;
 
-        /* Check buffer remaining is enough to hold the signed header in this form (key;). */
-        if( keyLen + 1 > buffRemaining )
-        {
-            sigV4Status = SigV4InsufficientMemory;
-        }
-        else
-        {
-            headerKey = canonicalRequest->pHeadersLoc[ headerIndex ].key.pData;
+        headerKey = canonicalRequest->pHeadersLoc[ headerIndex ].key.pData;
 
-            for( i = 0; i < keyLen; i++ )
+        for( i = 0; i < keyLen; i++ )
+        {
+            if( !( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) )
             {
-                if( !( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) )
+                if( !( isTrimmableSpace( headerKey, i, keyLen, trimKeyLen ) ) )
                 {
-                    if( !( isspace( headerKey[ i ] ) && ( i + 1 <= keyLen ) && ( ( i + 1 == keyLen ) || isspace( headerKey[ i + 1 ] ) || ( trimKeyLen == 0 ) ) ) )
+                    if( buffRemaining < 1 )
+                    {
+                        sigV4Status = SigV4InsufficientMemory;
+                        break;
+                    }
+                    else
                     {
                         *pBufLoc = tolower( headerKey[ i ] );
                         pBufLoc++;
                         trimKeyLen++;
                     }
                 }
-                else
-                {
-                    *pBufLoc = canonicalRequest->pHeadersLoc[ headerIndex ].key.pData[ i ];
-                    pBufLoc++;
-                    trimKeyLen++;
-                }
             }
+            else
+            {
+                *pBufLoc = canonicalRequest->pHeadersLoc[ headerIndex ].key.pData[ i ];
+                pBufLoc++;
+                trimKeyLen++;
+            }
+        }
 
+        if( buffRemaining < 1 )
+        {
+            sigV4Status = SigV4InsufficientMemory;
+        }
+        else
+        {
             *pBufLoc = ';';
             pBufLoc++;
             /* Calculate the remaining buffer. 1 is added for ';' character. */
-            buffRemaining -= ( keyLen + 1 );
+            buffRemaining -= ( trimKeyLen + 1 );
             canonicalRequest->pBufCur = pBufLoc;
             canonicalRequest->bufRemaining = buffRemaining;
         }
@@ -958,49 +1009,73 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
         keyLen = canonicalRequest->pHeadersLoc[ headerIndex ].key.dataLen;
         valLen = canonicalRequest->pHeadersLoc[ headerIndex ].value.dataLen;
+        headerKey = canonicalRequest->pHeadersLoc[ headerIndex ].key.pData;
 
-        /* Check buffer remaining is enough to hold the header in this form (key:value\n). */
-        if( keyLen + valLen + 2 > buffRemaining )
+        for( i = 0; i < keyLen; i++ )
         {
-            sigV4Status = SigV4InsufficientMemory;
-        }
-        else
-        {
-            headerKey = canonicalRequest->pHeadersLoc[ headerIndex ].key.pData;
-
-            for( i = 0; i < keyLen; i++ )
+            if( !( isTrimmableSpace( headerKey, i, keyLen, trimKeyLen ) ) )
             {
-                if( !( isspace( headerKey[ i ] ) && ( i + 1 <= keyLen ) && ( ( i + 1 == keyLen ) || isspace( headerKey[ i + 1 ] ) || ( trimKeyLen == 0 ) ) ) )
+                if( buffRemaining < 1 )
+                {
+                    sigV4Status = SigV4InsufficientMemory;
+                    break;
+                }
+                else
                 {
                     *pBufLoc = tolower( headerKey[ i ] );
                     pBufLoc++;
                     trimKeyLen++;
                 }
             }
+        }
 
+        if( buffRemaining < 1 )
+        {
+            sigV4Status = SigV4InsufficientMemory;
+        }
+        else
+        {
             *pBufLoc = ':';
             pBufLoc++;
+        }
+
+        if( sigV4Status == SigV4Success )
+        {
             value = canonicalRequest->pHeadersLoc[ headerIndex ].value.pData;
             trimValueLen = 0;
 
             for( i = 0; i < valLen; i++ )
             {
-                if( !( isspace( value[ i ] ) && ( i + 1 <= valLen ) && ( ( i + 1 == valLen ) || isspace( value[ i + 1 ] ) || ( trimValueLen == 0 ) ) ) )
+                if( !( isTrimmableSpace( value, i, valLen, trimValueLen ) ) )
                 {
-                    *pBufLoc = canonicalRequest->pHeadersLoc[ headerIndex ].value.pData[ i ];
-                    pBufLoc++;
-                    trimValueLen++;
+                    if( buffRemaining < 1 )
+                    {
+                        sigV4Status = SigV4InsufficientMemory;
+                        break;
+                    }
+                    else
+                    {
+                        *pBufLoc = tolower( value[ i ] );
+                        pBufLoc++;
+                        trimValueLen++;
+                    }
                 }
             }
 
-            *pBufLoc = '\n';
-            pBufLoc++;
+            if( buffRemaining < 1 )
+            {
+                sigV4Status = SigV4InsufficientMemory;
+            }
+            else
+            {
+                *pBufLoc = '\n';
+                pBufLoc++;
+                /* Calculate the remaining buffer. 2 is added for ':' and '\n' character. */
+                buffRemaining -= ( trimKeyLen + trimValueLen + 2 );
 
-            /* Calculate the remaining buffer. 2 is added for ':' and '\n' character. */
-            buffRemaining -= ( trimKeyLen + trimValueLen + 2 );
-
-            canonicalRequest->pBufCur = pBufLoc;
-            canonicalRequest->bufRemaining = buffRemaining;
+                canonicalRequest->pBufCur = pBufLoc;
+                canonicalRequest->bufRemaining = buffRemaining;
+            }
         }
 
         return sigV4Status;
