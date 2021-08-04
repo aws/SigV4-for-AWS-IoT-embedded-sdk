@@ -2,6 +2,10 @@
 include( ${MODULE_ROOT_DIR}/sigv4FilePaths.cmake )
 
 find_package(OpenSSL REQUIRED)
+set(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_C_FLAGS "-Wall -Wextra -O0 -ggdb")
+
+add_definitions(-DNDEBUG)
 
 # ====================  Define your project name (edit) ========================
 set(project_name "sigv4")

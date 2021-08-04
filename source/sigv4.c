@@ -40,18 +40,6 @@
 #if ( SIGV4_USE_CANONICAL_SUPPORT == 1 )
 
 /**
- * @brief Interpret string parameters into standardized SigV4String_t structs to
- * assist in sorting and canonicalization.
- *
- * @param[in, out] pSigV4Value The SigV4 standardized struct to populate.
- * @param[in] pInput String containing sorting parameters.
- * @param[in] lenInput Length of string @pInput.
- */
-    static void stringToSigV4Value( SigV4String_t * pSigV4Value,
-                                    const char * pInput,
-                                    size_t lenInput );
-
-/**
  * @brief Verifies if a SigV4 string value is empty.
  *
  * @param[in] pInput The SigV4 string value struct to verify.
@@ -651,20 +639,6 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 /*-----------------------------------------------------------*/
 
 #if ( SIGV4_USE_CANONICAL_SUPPORT == 1 )
-
-    static void stringToSigV4Value( SigV4String_t * pSigV4Value,
-                                    const char * pInput,
-                                    size_t lenInput )
-    {
-        assert( pSigV4Value != NULL );
-        assert( pInput != NULL );
-        assert( lenInput > 0U );
-
-        pSigV4Value->pData = ( char * ) pInput;
-        pSigV4Value->dataLen = ( size_t ) lenInput;
-    }
-
-/*-----------------------------------------------------------*/
 
     static bool emptySigV4String( SigV4String_t * pInput )
     {

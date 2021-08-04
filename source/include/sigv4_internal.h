@@ -106,4 +106,16 @@ typedef struct CanonicalContext
     size_t bufRemaining;                                      /**< pBufProcessing value used during internal calculation. */
 } CanonicalContext_t;
 
+<<<<<<< HEAD
+=======
+typedef struct HmacContext
+{
+    const SigV4CryptoInterface_t * pCryptoInterface;
+    char key[ SIGV4_HASH_MAX_BLOCK_LENGTH ];
+    size_t keyLen;
+    uint8_t hashInitialized;
+} HmacContext_t;
+
+
+>>>>>>> 20f32c7 (Add unit tests attaining branch coverage of 71%)
 #endif /* ifndef SIGV4_INTERNAL_H_ */

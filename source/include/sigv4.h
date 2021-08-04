@@ -62,7 +62,17 @@
 
 #define SIGV4_ISO_STRING_LEN                        16U                                  /**< Length of ISO 8601 date string. */
 #define SIGV4_EXPECTED_LEN_RFC_3339                 20U                                  /**< Length of RFC 3339 date input. */
+<<<<<<< HEAD
 #define SIGV4_EXPECTED_LEN_RFC_5322                 29U                                  /**< Length of RFC 5322 date input. */
+=======
+#define SIGV4_EXPECTED_LEN_RFC_5322                 29U
+/**< Length of RFC 5322 date input. */
+
+/* SHA256 definitions for block and digest length. */
+#define SIGV4_SHA256_DIGEST_LENGTH  32U
+#define SIGV4_SHA256_BLOCK_LENGTH   64U
+
+>>>>>>> 20f32c7 (Add unit tests attaining branch coverage of 71%)
 /** @}*/
 
 /**
