@@ -1002,7 +1002,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         assert( canonicalRequest != NULL );
         assert( canonicalRequest->pBufCur != NULL );
         assert( headerCount > 0 );
-        
+
         for( noOfHeaders = 0; noOfHeaders < headerCount; noOfHeaders++ )
         {
             assert( ( canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData ) != NULL );
@@ -1061,7 +1061,6 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                 trimKeyLen++;
                 buffRemaining -= 1;
             }
-
         }
 
         if( sigV4Status == SigV4Success )
@@ -1096,7 +1095,6 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                     trimValueLen++;
                     buffRemaining -= 1;
                 }
-
             }
 
             if( sigV4Status == SigV4Success )
@@ -1167,9 +1165,8 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                 sigV4Status = SigV4MaxHeaderPairCountExceeded;
                 break;
             }
-
             /* Extracting each header key and value from the headers string. */
-            if( ( keyFlag == 1 ) && ( pHeaders[ i ] == ':' ) )
+            else if( ( keyFlag == 1 ) && ( pHeaders[ i ] == ':' ) )
             {
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData = start;
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].key.dataLen = ( end - start );
