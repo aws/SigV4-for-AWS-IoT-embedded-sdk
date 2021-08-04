@@ -320,7 +320,7 @@ static SigV4Status_t writeCanonicalHeaderToCanonicalRequest( size_t headerIndex,
 static bool isTrimmableSpace( const char * value,
                               size_t index,
                               size_t valLen,
-                              size_t trimmedLength )
+                              size_t trimmedLength );
 
 /*-----------------------------------------------------------*/
 
