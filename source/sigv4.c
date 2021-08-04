@@ -1055,7 +1055,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                     }
                     else
                     {
-                        *pBufLoc = tolower( value[ i ] );
+                        *pBufLoc = value[ i ];
                         pBufLoc++;
                         trimValueLen++;
                     }
@@ -1170,6 +1170,20 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         if( ( sigV4Status == SigV4Success ) && !( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) )
         {
             sigV4Status = appendCanonicalizedHeaders( noOfHeaders, canonicalRequest );
+        }
+
+        if( ( sigV4Status == SigV4Success ) && !( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) )
+        {
+            if( canonicalRequest->bufRemaining < 1 )
+            {
+                sigV4Status = SigV4InsufficientMemory;
+            }
+            else
+            {
+                *canonicalRequest->pBufCur = '\n';
+                canonicalRequest->pBufCur++;
+                canonicalRequest->bufRemaining--;
+            }
         }
 
         if( sigV4Status == SigV4Success )
