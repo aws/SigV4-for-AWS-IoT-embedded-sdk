@@ -258,7 +258,7 @@ static void hexEncode( SigV4String_t * pInputStr,
  *
  * @return Following statuses will be returned by the function:
  * #SigV4Success if headers are successfully added to the canonical request.
- * #SigV4InsufficientMemory if buffer remaining cannot accommodate all the provided headers.
+ * #SigV4InsufficientMemory if canonical request buffer cannot accommodate the header.
  * #SigV4MaxHeaderPairCountExceeded if number of headers that needs to be canonicalized
  * exceed the SIGV4_MAX_HTTP_HEADER_COUNT macro defined in the config file.
  */
@@ -278,7 +278,7 @@ static SigV4Status_t appendAllHeadersToCanonicalRequest( const char * pHeaders,
  *
  * @return Following statuses will be returned by the function:
  * #SigV4Success if headers are successfully added to the canonical request.
- * #SigV4InsufficientMemory if buffer remaining cannot accommodate all the provided headers.
+ * #SigV4InsufficientMemory if canonical request buffer cannot accommodate the header.
  */
 static SigV4Status_t appendSignedHeaders( size_t headerCount,
                                           uint32_t flags,
@@ -293,7 +293,7 @@ static SigV4Status_t appendSignedHeaders( size_t headerCount,
  *
  * @return Following statuses will be returned by the function:
  * #SigV4Success if headers are successfully added to the canonical request.
- * #SigV4InsufficientMemory if buffer remaining cannot accommodate all the provided headers.
+ * #SigV4InsufficientMemory if canonical request buffer cannot accommodate the header.
  */
 static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
                                                  CanonicalContext_t * canonicalRequest );
@@ -308,8 +308,8 @@ static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
  * and state of canonicalization.
  *
  * @return Following statuses will be returned by the function:
- * #SigV4Success if headers are successfully added to the canonical request.
- * #SigV4InsufficientMemory if buffer remaining cannot accommodate all the provided headers.
+ * #SigV4Success if the signed headers are successfully added to the canonical request.
+ * #SigV4InsufficientMemory if canonical request buffer cannot accommodate the header.
  */
 static SigV4Status_t writeSignedHeaderToCanonicalRequest( size_t headerIndex,
                                                           uint32_t flags,
@@ -323,22 +323,26 @@ static SigV4Status_t writeSignedHeaderToCanonicalRequest( size_t headerIndex,
  * and state of canonicalization.
  *
  * @return Following statuses will be returned by the function:
- * #SigV4Success if headers are successfully added to the canonical request.
- * #SigV4InsufficientMemory if buffer remaining cannot accommodate all the provided headers.
+ * #SigV4Success if the canonical headers are successfully added to the canonical request.
+ * #SigV4InsufficientMemory if canonical request buffer cannot accommodate the header.
  */
 static SigV4Status_t writeCanonicalHeaderToCanonicalRequest( size_t headerIndex,
                                                              CanonicalContext_t * canonicalRequest );
 
 /**
- * @brief Helper function to check whether the current character is a
- * space that is either trailing, leading, or having multiple occurrences
- * between characters in a string.
+ * @brief Helper function to determine whether a header string character represents a space
+ * that can be trimmed when creating "CanonicalHeaders".
+ * All leading and trailing spaces in the header strings need to be trimmed. Also, sequential spaces
+ * in the header value need to be trimmed to a single space.
+ *
+ * Example of modifying header field for CanonicalHeaders:
+ * Actual header pair:                 |      Modifier header pair
+ * My-Header2:    "a   b   c"  \n      |      my-header2:"a b c"\n
  *
  * @param[in] value String to be trimmed.
  * @param[in] index Index of current character.
  * @param[in] valLen Length of the string.
- * @param[in] trimmedLength length of string after trimming.
- * and state of canonicalization.
+ * @param[in] trimmedLength Current length of trimmed string.
  *
  * @return `true` if the character needs to be trimmed, else `false`.
  */
@@ -902,6 +906,8 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
     {
         bool ret = false;
 
+        assert( ( value != NULL ) && ( index < valueLen ) );
+
         /* Only trim spaces. */
         if( isspace( value[ index ] ) )
         {
@@ -924,6 +930,8 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
         return ret;
     }
+
+/*-----------------------------------------------------------*/
 
     static SigV4Status_t writeSignedHeaderToCanonicalRequest( size_t headerIndex,
                                                               uint32_t flags,
@@ -989,6 +997,8 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         return sigV4Status;
     }
 
+/*-----------------------------------------------------------*/
+
     static SigV4Status_t appendSignedHeaders( size_t headerCount,
                                               uint32_t flags,
                                               CanonicalContext_t * canonicalRequest )
@@ -1013,9 +1023,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         if( sigV4Status == SigV4Success )
         {
             /* Replacing the last ';' with '\n' as last header does need to have ';'. */
-            canonicalRequest->pBufCur--;
-            *canonicalRequest->pBufCur = '\n';
-            canonicalRequest->pBufCur++;
+            *( canonicalRequest->pBufCur - 1 ) = '\n';
         }
 
         return sigV4Status;
@@ -1114,6 +1122,8 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         return sigV4Status;
     }
 
+/*-----------------------------------------------------------*/
+
     static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
                                                      CanonicalContext_t * canonicalRequest )
     {
@@ -1136,6 +1146,8 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
         return sigV4Status;
     }
+
+/*-----------------------------------------------------------*/
 
     static SigV4Status_t appendAllHeadersToCanonicalRequest( const char * pHeaders,
                                                              size_t headersLen,
@@ -1195,11 +1207,13 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
             end++;
         }
 
-        /* Sorting headers based on keys. */
         if( ( sigV4Status == SigV4Success ) && !( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) )
         {
+            /* Sorting headers based on keys. */
             qsort( canonicalRequest->pHeadersLoc, noOfHeaders, sizeof( SigV4KeyValuePair_t ), cmpField );
 
+            /* If the headers are canonicalized, we will copy them directly into the buffer as they do not
+             * need processing, else we need to call the following function. */
             sigV4Status = appendCanonicalizedHeaders( noOfHeaders, canonicalRequest );
         }
 
