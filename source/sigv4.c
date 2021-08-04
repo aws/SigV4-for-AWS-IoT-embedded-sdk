@@ -331,11 +331,11 @@ static SigV4Status_t writeCanonicalHeaderToCanonicalRequest( size_t headerIndex,
 
 /**
  * @brief Helper function to determine whether a header string character represents a space
- * that can be trimmed when creating "CanonicalHeaders".
+ * that can be trimmed when creating "Canonical Headers".
  * All leading and trailing spaces in the header strings need to be trimmed. Also, sequential spaces
  * in the header value need to be trimmed to a single space.
  *
- * Example of modifying header field for CanonicalHeaders:
+ * Example of modifying header field for Canonical Headers:
  * Actual header pair:                 |      Modifier header pair
  * My-Header2:    "a   b   c"  \n      |      my-header2:"a b c"\n
  *
