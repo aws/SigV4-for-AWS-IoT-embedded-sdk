@@ -268,7 +268,7 @@ static SigV4Status_t appendAllHeadersToCanonicalRequest( const char * pHeaders,
                                                          CanonicalContext_t * canonicalRequest );
 
 /**
- * @brief Append Signed Headers to the string which needs to be signed.
+ * @brief Append Signed Headers to the Canonical Request buffer.
  *
  * @param[in] headerCount Number of headers which needs to be appended.
  * @param[in] flags Flag to indicate if headers are already
@@ -285,7 +285,7 @@ static SigV4Status_t appendSignedHeaders( size_t headerCount,
                                           CanonicalContext_t * canonicalRequest );
 
 /**
- * @brief Canonicalize headers and append it to the string which needs to be signed.
+ * @brief Canonicalize headers and append it to the Canonical Request buffer.
  *
  * @param[in] headerCount Number of headers which needs to be appended.
  * @param[in,out] canonicalRequest Struct to maintain intermediary buffer
@@ -299,7 +299,7 @@ static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
                                                  CanonicalContext_t * canonicalRequest );
 
 /**
- * @brief Write signed headers to the buffer provided.
+ * @brief Write signed headers to the Canonical Request buffer.
  *
  * @param[in] headerIndex Index of header to write to buffer.
  * @param[in] flags Flag to indicate if headers are already
@@ -316,7 +316,7 @@ static SigV4Status_t writeSignedHeaderToCanonicalRequest( size_t headerIndex,
                                                           CanonicalContext_t * canonicalRequest );
 
 /**
- * @brief Write canonical headers to the buffer provided.
+ * @brief Write canonical headers to the Canonical Request buffer.
  *
  * @param[in] headerIndex Index of header to write to buffer.
  * @param[in,out] canonicalRequest Struct to maintain intermediary buffer
@@ -906,7 +906,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
     {
         bool ret = false;
 
-        assert( ( value != NULL ) && ( index < valueLen ) );
+        assert( ( value != NULL ) && ( index < valLen ) );
 
         /* Only trim spaces. */
         if( isspace( value[ index ] ) )
@@ -938,7 +938,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                                                               CanonicalContext_t * canonicalRequest )
     {
         char * pBufLoc;
-        size_t buffRemaining, keyLen = 0, i = 0, trimKeyLen = 0;
+        size_t buffRemaining, keyLen = 0, i = 0, curNumOfCopiedBytes = 0;
         const char * headerKey;
         SigV4Status_t sigV4Status = SigV4Success;
 
@@ -996,7 +996,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                                               uint32_t flags,
                                               CanonicalContext_t * canonicalRequest )
     {
-        size_t noOfHeaders = 0, keyLen = 0, i = 0;
+        size_t noOfHeaders = 0;
         SigV4Status_t sigV4Status = SigV4Success;
 
         assert( canonicalRequest != NULL );
