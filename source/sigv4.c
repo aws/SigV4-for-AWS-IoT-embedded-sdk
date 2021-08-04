@@ -339,7 +339,7 @@ static SigV4Status_t writeCanonicalHeaderToCanonicalRequest( size_t headerIndex,
  * Actual header pair:                 |      Modifier header pair
  * My-Header2:    "a   b   c"  \n      |      my-header2:"a b c"\n
  *
- * @param[in] value String to be trimmed.
+ * @param[in] value Header value or key string to be trimmed.
  * @param[in] index Index of current character.
  * @param[in] valLen Length of the string.
  * @param[in] trimmedLength Current length of trimmed string.
@@ -954,44 +954,37 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
         for( i = 0; i < keyLen; i++ )
         {
-            if( !( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) )
+            /* If the header field is not in canonical form already, we need to check
+             * whether this character represents a trimmable space. */
+            if( !( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) &&
+                ( isTrimmableSpace( headerKey, i, keyLen, curNumOfCopiedBytes ) ) )
             {
-                if( !( isTrimmableSpace( headerKey, i, keyLen, trimKeyLen ) ) )
-                {
-                    if( buffRemaining < 1 )
-                    {
-                        sigV4Status = SigV4InsufficientMemory;
-                        break;
-                    }
-                    else
-                    {
-                        *pBufLoc = tolower( headerKey[ i ] );
-                        pBufLoc++;
-                        trimKeyLen++;
-                        buffRemaining -= 1;
-                    }
-                }
+                /* Cannot copy trimmable space into canonical request buffer. */
+            }
+            /* Remaining buffer space should at least accommodate the character to copy and the trailing ";" */
+            else if( buffRemaining <= 1 )
+            {
+                sigV4Status = SigV4InsufficientMemory;
             }
             else
             {
-                *pBufLoc = canonicalRequest->pHeadersLoc[ headerIndex ].key.pData[ i ];
+                *pBufLoc = tolower( canonicalRequest->pHeadersLoc[ headerIndex ].key.pData[ i ] );
                 pBufLoc++;
-                buffRemaining -= 1;
+                buffRemaining = -1;
+                curNumOfCopiedBytes++;
             }
         }
 
-        if( buffRemaining < 1 )
+        /* Add the ending ";" character.
+         * Note: Space for ending ";" was accounted for while copying header field data to
+         * canonical request buffer. */
+        if( sigV4Status == SigV4Success )
         {
-            sigV4Status = SigV4InsufficientMemory;
-        }
-        else
-        {
+            assert( buffRemaining >= 1 );
             *pBufLoc = ';';
             pBufLoc++;
-            /* Calculate the remaining buffer. 1 is added for ';' character. */
-            buffRemaining -= 1;
             canonicalRequest->pBufCur = pBufLoc;
-            canonicalRequest->bufRemaining = buffRemaining;
+            canonicalRequest->bufRemaining = ( buffRemaining - 1 );
         }
 
         return sigV4Status;
