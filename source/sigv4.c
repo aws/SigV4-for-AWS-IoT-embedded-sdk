@@ -956,7 +956,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         {
             /* If the header field is not in canonical form already, we need to check
              * whether this character represents a trimmable space. */
-            if( !( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) &&
+            if( !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) &&
                 ( isTrimmableSpace( headerKey, i, keyLen, curNumOfCopiedBytes ) ) )
             {
                 /* Cannot copy trimmable space into canonical request buffer. */
@@ -1001,7 +1001,8 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
         assert( canonicalRequest != NULL );
         assert( canonicalRequest->pBufCur != NULL );
-
+        assert( headerCount > 0 );
+        
         for( noOfHeaders = 0; noOfHeaders < headerCount; noOfHeaders++ )
         {
             assert( ( canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData ) != NULL );
@@ -1061,21 +1062,6 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                 buffRemaining -= 1;
             }
 
-            /* if( !( isTrimmableSpace( headerKey, i, keyLen, trimKeyLen ) ) ) */
-            /* { */
-            /*     if( buffRemaining < 1 ) */
-            /*     { */
-            /*         sigV4Status = SigV4InsufficientMemory; */
-            /*         break; */
-            /*     } */
-            /*     else */
-            /*     { */
-            /*         *pBufLoc = tolower( headerKey[ i ] ); */
-            /*         pBufLoc++; */
-            /*         trimKeyLen++; */
-            /*         buffRemaining -= 1; */
-            /*     } */
-            /* } */
         }
 
         if( sigV4Status == SigV4Success )
@@ -1111,21 +1097,6 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                     buffRemaining -= 1;
                 }
 
-                /* if( !( isTrimmableSpace( value, i, valLen, trimValueLen ) ) ) */
-                /* { */
-                /*     if( buffRemaining < 1 ) */
-                /*     { */
-                /*         sigV4Status = SigV4InsufficientMemory; */
-                /*         break; */
-                /*     } */
-                /*     else */
-                /*     { */
-                /*         *pBufLoc = value[ i ]; */
-                /*         pBufLoc++; */
-                /*         trimValueLen++; */
-                /*         buffRemaining -= 1; */
-                /*     } */
-                /* } */
             }
 
             if( sigV4Status == SigV4Success )
@@ -1155,6 +1126,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
         assert( canonicalRequest != NULL );
         assert( canonicalRequest->pBufCur != NULL );
+        assert( headerCount > 0 );
 
         for( noOfHeaders = 0; noOfHeaders < headerCount; noOfHeaders++ )
         {
@@ -1204,7 +1176,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                 start = end + 1U;
                 keyFlag = 0;
             }
-            else if( ( keyFlag == 0 ) && ( !( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) && ( pHeaders[ i ] == '\r' ) && ( ( i + 1 ) < headersLen ) && ( pHeaders[ i + 1 ] == '\n' ) ) )
+            else if( ( keyFlag == 0 ) && ( !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( pHeaders[ i ] == '\r' ) && ( ( i + 1 ) < headersLen ) && ( pHeaders[ i + 1 ] == '\n' ) ) )
             {
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = start;
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( end - start );
@@ -1212,7 +1184,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                 keyFlag = 1;
                 noOfHeaders++;
             }
-            else if( ( keyFlag == 0 ) && ( ( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) && ( pHeaders[ i ] == '\n' ) ) )
+            else if( ( keyFlag == 0 ) && ( ( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( pHeaders[ i ] == '\n' ) ) )
             {
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = start;
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( end - start );
@@ -1224,7 +1196,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
             end++;
         }
 
-        if( ( sigV4Status == SigV4Success ) && !( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) )
+        if( ( sigV4Status == SigV4Success ) && !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) )
         {
             /* Sorting headers based on keys. */
             qsort( canonicalRequest->pHeadersLoc, noOfHeaders, sizeof( SigV4KeyValuePair_t ), cmpField );
@@ -1234,7 +1206,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
             sigV4Status = appendCanonicalizedHeaders( noOfHeaders, canonicalRequest );
         }
 
-        if( ( sigV4Status == SigV4Success ) && !( flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) )
+        if( ( sigV4Status == SigV4Success ) && !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) )
         {
             if( canonicalRequest->bufRemaining < 1 )
             {
