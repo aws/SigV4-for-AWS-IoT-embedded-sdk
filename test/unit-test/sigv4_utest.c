@@ -56,7 +56,8 @@
 #define DATE                                 "20150830T123600Z"
 #define REGION                               "us-east-1"
 #define SERVICE                              "iam"
-#define HEADERS                              "Host: iam.amazonaws.com\r\nContent-Type:       application/x-www-form-urlencoded;         charset=utf-8\r\nX-Amz-Date: 20150830T123600Z\r\n\r\n"
+#define HEADERS                              "Host: iam.amazonaws.com\r\nContent-Type: application/x-www-form-urlencoded; charset=utf-8\r\nX-Amz-Date: 20150830T123600Z\r\n\r\n"
+#define PRECANON_HEADER                      "content-type:application/json;host:iam.amazonaws.com"
 #define HEADERS_LENGTH                       ( sizeof( HEADERS ) - 1U )
 #define SECURITY_TOKEN                       "security-token"
 #define SECURITY_TOKEN_LENGTH                ( sizeof( SECURITY_TOKEN ) - 1U )
@@ -233,7 +234,7 @@ static int32_t echo_hash_final( void * pHashContext,
  *
  * static size_t hashToFail;
  */
-#define HAPPY_PATH_HASH_ITERATIONS 11U
+#define HAPPY_PATH_HASH_ITERATIONS    11U
 
 static size_t initHashCalledCount = 0U, initHashCallToFail = SIZE_MAX;
 static size_t updateHashCalledCount = 0U, updateHashCallToFail = SIZE_MAX;
@@ -243,7 +244,7 @@ static int32_t hash_init_failable( void * pHashContext )
 {
     int32_t ret = 0;
 
-    if(  initHashCalledCount++ == initHashCallToFail  )
+    if( initHashCalledCount++ == initHashCallToFail )
     {
         ret = 1;
     }
@@ -257,7 +258,7 @@ static int32_t hash_update_failable( void * pHashContext,
 {
     int32_t ret = 0;
 
-    if( updateHashCalledCount++ == updateHashCallToFail  )
+    if( updateHashCalledCount++ == updateHashCallToFail )
     {
         ret = 1;
     }
@@ -569,6 +570,8 @@ void test_SigV4_GenerateHTTPAuthorization_Precanonicalized()
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
 
+    params.pHttpParameters->pHeaders = PRECANON_HEADER;
+    params.pHttpParameters->headersLen = STR_LIT_LEN( PRECANON_HEADER );
     params.pHttpParameters->flags = SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG;
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
@@ -663,7 +666,7 @@ void test_SigV4_GenerateHTTPAuthorization_Hash_Errors()
     SigV4Status_t returnStatus;
     size_t i;
 
-    for(i=0U; i<HAPPY_PATH_HASH_ITERATIONS; i++)
+    for( i = 0U; i < HAPPY_PATH_HASH_ITERATIONS; i++ )
     {
         resetFailableHashParams();
         initHashCallToFail = i;
