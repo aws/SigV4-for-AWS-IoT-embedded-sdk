@@ -259,6 +259,7 @@ static void hexEncode( SigV4String_t * pInputStr,
  * @return Following statuses will be returned by the function:
  * #SigV4Success if headers are successfully added to the canonical request.
  * #SigV4InsufficientMemory if canonical request buffer cannot accommodate the header.
+ * #SigV4InvalidParameter if HTTP headers are invalid.
  * #SigV4MaxHeaderPairCountExceeded if number of headers that needs to be canonicalized
  * exceed the SIGV4_MAX_HTTP_HEADER_COUNT macro defined in the config file.
  */
@@ -288,6 +289,8 @@ static SigV4Status_t appendSignedHeaders( size_t headerCount,
  * @brief Canonicalize headers and append it to the Canonical Request buffer.
  *
  * @param[in] headerCount Number of headers which needs to be appended.
+ * @param[in] flags Flag to indicate if headers are already
+ * in the canonical form.
  * @param[in,out] canonicalRequest Struct to maintain intermediary buffer
  * and state of canonicalization.
  *
@@ -296,14 +299,41 @@ static SigV4Status_t appendSignedHeaders( size_t headerCount,
  * #SigV4InsufficientMemory if canonical request buffer cannot accommodate the header.
  */
 static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
+                                                 uint32_t flags,
                                                  CanonicalContext_t * canonicalRequest );
 
 /**
- * @brief Write signed headers to the Canonical Request buffer.
+ * @brief Parse each header key and value pair from HTTP headers.
  *
- * @param[in] headerIndex Index of header to write to buffer.
+ * @param[in] pHeaders HTTP headers to parse.
+ * @param[in] headersLen Length of HTTP headers to parse.
  * @param[in] flags Flag to indicate if headers are already
  * in the canonical form.
+ * @param[out] headerCount Count of key-value pairs parsed from pData.
+ * @param[out] canonicalRequest Struct to maintain intermediary buffer
+ * and state of canonicalization.
+ *
+ * @return Following statuses will be returned by the function:
+ * #SigV4Success if headers are successfully added to the canonical request.
+ * #SigV4InsufficientMemory if canonical request buffer cannot accommodate the header.
+ * #SigV4InvalidParameter if HTTP headers are invalid.
+ * #SigV4MaxHeaderPairCountExceeded if number of headers that needs to be canonicalized
+ * exceed the SIGV4_MAX_HTTP_HEADER_COUNT macro defined in the config file.
+ */
+SigV4Status_t parseHeaderKeyValueEntries( const char * pHeaders,
+                                          size_t headersDataLen,
+                                          uint32_t flags,
+                                          size_t headerCount,
+                                          CanonicalContext_t * canonicalRequest );
+
+/**
+ * @brief Copy headers key or header value to the Canonical Request buffer.
+ *
+ * @param[in] pData Header Key or value to be copied to the canonical request.
+ * @param[in] dataLen Length of Header Key or value.
+ * @param[in] flags Flag to indicate if headers are already
+ * in the canonical form.
+ * @param[in] separator Character seprating the multiple key-value pairs or key and values.
  * @param[in,out] canonicalRequest Struct to maintain intermediary buffer
  * and state of canonicalization.
  *
@@ -311,23 +341,11 @@ static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
  * #SigV4Success if the signed headers are successfully added to the canonical request.
  * #SigV4InsufficientMemory if canonical request buffer cannot accommodate the header.
  */
-static SigV4Status_t writeSignedHeaderToCanonicalRequest( size_t headerIndex,
-                                                          uint32_t flags,
-                                                          CanonicalContext_t * canonicalRequest );
-
-/**
- * @brief Write canonical headers to the Canonical Request buffer.
- *
- * @param[in] headerIndex Index of header to write to buffer.
- * @param[in,out] canonicalRequest Struct to maintain intermediary buffer
- * and state of canonicalization.
- *
- * @return Following statuses will be returned by the function:
- * #SigV4Success if the canonical headers are successfully added to the canonical request.
- * #SigV4InsufficientMemory if canonical request buffer cannot accommodate the header.
- */
-static SigV4Status_t writeCanonicalHeaderToCanonicalRequest( size_t headerIndex,
-                                                             CanonicalContext_t * canonicalRequest );
+SigV4Status_t copyHeaderStringToCanonicalBuffer( const char * pData,
+                                                 size_t dataLen,
+                                                 uint32_t flags,
+                                                 char separator,
+                                                 CanonicalContext_t * canonicalRequest );
 
 /**
  * @brief Helper function to determine whether a header string character represents a space
@@ -933,61 +951,72 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
 /*-----------------------------------------------------------*/
 
-    static SigV4Status_t writeSignedHeaderToCanonicalRequest( size_t headerIndex,
-                                                              uint32_t flags,
-                                                              CanonicalContext_t * canonicalRequest )
+    SigV4Status_t copyHeaderStringToCanonicalBuffer( const char * pData,
+                                                     size_t dataLen,
+                                                     uint32_t flags,
+                                                     char separator,
+                                                     CanonicalContext_t * canonicalRequest );
     {
-        char * pBufLoc;
-        size_t buffRemaining, keyLen = 0, i = 0, curNumOfCopiedBytes = 0;
-        const char * headerKey;
-        SigV4Status_t sigV4Status = SigV4Success;
+        SigV4Status_t status = SigV4Success;
+        size_t index = 0;
+        size_t numOfBytesCopied = 0;
+        size_t buffRemaining;
+        char * pCurrBufLoc;
 
+        assert( ( pData != NULL ) && ( dataLen > 0 ) );
         assert( canonicalRequest != NULL );
         assert( canonicalRequest->pBufCur != NULL );
 
-        pBufLoc = canonicalRequest->pBufCur;
         buffRemaining = canonicalRequest->bufRemaining;
+        pCurrBufLoc = canonicalRequest->pBufCur;
 
-        keyLen = canonicalRequest->pHeadersLoc[ headerIndex ].key.dataLen;
-
-        headerKey = canonicalRequest->pHeadersLoc[ headerIndex ].key.pData;
-
-        for( i = 0; i < keyLen; i++ )
+        for( index = 0; index < dataLen; index++ )
         {
             /* If the header field is not in canonical form already, we need to check
              * whether this character represents a trimmable space. */
             if( !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) &&
-                ( isTrimmableSpace( headerKey, i, keyLen, curNumOfCopiedBytes ) ) )
+                isTrimmableSpace( pData, index, dataLen, numOfBytesCopied ) )
             {
                 /* Cannot copy trimmable space into canonical request buffer. */
             }
-            /* Remaining buffer space should at least accommodate the character to copy and the trailing ";" */
+            /* Remaining buffer space should at least accommodate the character to copy and the trailing ":" */
             else if( buffRemaining <= 1 )
             {
-                sigV4Status = SigV4InsufficientMemory;
+                status = SigV4InsufficientMemory;
+                break;
             }
             else
             {
-                *pBufLoc = tolower( canonicalRequest->pHeadersLoc[ headerIndex ].key.pData[ i ] );
-                pBufLoc++;
-                buffRemaining = -1;
-                curNumOfCopiedBytes++;
+                /* Lowercase header key only. '\n' character marks the ending of value. */
+                if( separator == '\n' )
+                {
+                    *pCurrBufLoc = ( pData[ index ] );
+                }
+                else
+                {
+                    *pCurrBufLoc = tolower( pData[ index ] );
+                }
+
+                pCurrBufLoc++;
+                numOfBytesCopied++;
+                buffRemaining -= 1;
             }
         }
 
-        /* Add the ending ";" character.
-         * Note: Space for ending ";" was accounted for while copying header field data to
-         * canonical request buffer. */
-        if( sigV4Status == SigV4Success )
+        /* Add the ending separating character passed to the function.
+         * Note: Space for the separator character is accounted for while copying
+         * header field data to canonical request buffer. */
+        if( status == SigV4Success )
         {
             assert( buffRemaining >= 1 );
-            *pBufLoc = ';';
-            pBufLoc++;
-            canonicalRequest->pBufCur = pBufLoc;
+            *pCurrBufLoc = separator;
+            pCurrBufLoc++;
+            numOfBytesCopied++;
+            canonicalRequest->pBufCur = pCurrBufLoc;
             canonicalRequest->bufRemaining = ( buffRemaining - 1 );
         }
 
-        return sigV4Status;
+        return status;
     }
 
 /*-----------------------------------------------------------*/
@@ -996,17 +1025,22 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                                               uint32_t flags,
                                               CanonicalContext_t * canonicalRequest )
     {
-        size_t noOfHeaders = 0;
+        size_t headerIndex = 0, keyLen = 0;
         SigV4Status_t sigV4Status = SigV4Success;
+        const char * headerKey;
 
         assert( canonicalRequest != NULL );
         assert( canonicalRequest->pBufCur != NULL );
         assert( headerCount > 0 );
 
-        for( noOfHeaders = 0; noOfHeaders < headerCount; noOfHeaders++ )
+        for( headerIndex = 0; headerIndex < headerCount; headerIndex++ )
         {
-            assert( ( canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData ) != NULL );
-            sigV4Status = writeSignedHeaderToCanonicalRequest( noOfHeaders, flags, canonicalRequest );
+            assert( ( canonicalRequest->pHeadersLoc[ headerIndex ].key.pData ) != NULL );
+            keyLen = canonicalRequest->pHeadersLoc[ headerIndex ].key.dataLen;
+
+            headerKey = canonicalRequest->pHeadersLoc[ headerIndex ].key.pData;
+
+            sigV4Status = copyHeaderStringToCanonicalBuffer( headerKey, keyLen, flags, '; ', canonicalRequest );
 
             if( sigV4Status != SigV4Success )
             {
@@ -1023,113 +1057,35 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         return sigV4Status;
     }
 
-    static SigV4Status_t writeCanonicalHeaderToCanonicalRequest( size_t headerIndex,
-                                                                 CanonicalContext_t * canonicalRequest )
+/*-----------------------------------------------------------*/
+
+    static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
+                                                     uint32_t flags,
+                                                     CanonicalContext_t * canonicalRequest )
     {
-        size_t buffRemaining, keyLen = 0, valLen = 0, i = 0, trimValueLen = 0, trimKeyLen = 0;
-        char * pBufLoc;
+        size_t headerIndex = 0, keyLen = 0, valLen = 0;
         const char * value;
         const char * headerKey;
         SigV4Status_t sigV4Status = SigV4Success;
 
         assert( canonicalRequest != NULL );
         assert( canonicalRequest->pBufCur != NULL );
+        assert( headerCount > 0 );
 
-        pBufLoc = canonicalRequest->pBufCur;
-        buffRemaining = canonicalRequest->bufRemaining;
-
-        keyLen = canonicalRequest->pHeadersLoc[ headerIndex ].key.dataLen;
-        valLen = canonicalRequest->pHeadersLoc[ headerIndex ].value.dataLen;
-        headerKey = canonicalRequest->pHeadersLoc[ headerIndex ].key.pData;
-
-        for( i = 0; i < keyLen; i++ )
+        for( headerIndex = 0; headerIndex < headerCount; headerIndex++ )
         {
-            if( isTrimmableSpace( headerKey, i, keyLen, trimKeyLen ) )
-            {
-                /* Cannot copy trimmable space into canonical request buffer. */
-            }
-            /* Remaining buffer space should at least accommodate the character to copy and the trailing ":" */
-            else if( buffRemaining <= 1 )
-            {
-                sigV4Status = SigV4InsufficientMemory;
-                break;
-            }
-            else
-            {
-                *pBufLoc = tolower( headerKey[ i ] );
-                pBufLoc++;
-                trimKeyLen++;
-                buffRemaining -= 1;
-            }
-        }
-
-        if( sigV4Status == SigV4Success )
-        {
-            assert( buffRemaining >= 1 );
-            *pBufLoc = ':';
-            pBufLoc++;
-            buffRemaining -= 1;
-        }
-
-        if( sigV4Status == SigV4Success )
-        {
-            value = canonicalRequest->pHeadersLoc[ headerIndex ].value.pData;
-            trimValueLen = 0;
-
-            for( i = 0; i < valLen; i++ )
-            {
-                if( ( isTrimmableSpace( value, i, valLen, trimValueLen ) ) )
-                {
-                    /* Cannot copy trimmable space into canonical request buffer. */
-                }
-                /* Remaining buffer space should at least accommodate the character to copy and the trailing "\n" */
-                else if( ( buffRemaining <= 1 ) )
-                {
-                    sigV4Status = SigV4InsufficientMemory;
-                    break;
-                }
-                else
-                {
-                    *pBufLoc = value[ i ];
-                    pBufLoc++;
-                    trimValueLen++;
-                    buffRemaining -= 1;
-                }
-            }
+            assert( canonicalRequest->pHeadersLoc[ headerIndex ].key.pData != NULL );
+            keyLen = canonicalRequest->pHeadersLoc[ headerIndex ].key.dataLen;
+            valLen = canonicalRequest->pHeadersLoc[ headerIndex ].value.dataLen;
+            headerKey = canonicalRequest->pHeadersLoc[ headerIndex ].key.pData;
+            sigV4Status = copyHeaderStringToCanonicalBuffer( headerKey, keyLen, flags, ':', canonicalRequest );
 
             if( sigV4Status == SigV4Success )
             {
-                assert( buffRemaining >= 1 );
-                *pBufLoc = '\n';
-                pBufLoc++;
+                value = canonicalRequest->pHeadersLoc[ headerIndex ].value.pData;
 
-                /* Calculate the remaining buffer. 1 is added for '\n' character. */
-                buffRemaining -= 1;
-
-                canonicalRequest->pBufCur = pBufLoc;
-                canonicalRequest->bufRemaining = buffRemaining;
+                sigV4Status = copyHeaderStringToCanonicalBuffer( value, valLen, flags, '\n', canonicalRequest );
             }
-        }
-
-        return sigV4Status;
-    }
-
-/*-----------------------------------------------------------*/
-
-    static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
-                                                     CanonicalContext_t * canonicalRequest )
-    {
-        size_t noOfHeaders = 0;
-        SigV4Status_t sigV4Status = SigV4Success;
-
-        assert( canonicalRequest != NULL );
-        assert( canonicalRequest->pBufCur != NULL );
-        assert( headerCount > 0 );
-
-        for( noOfHeaders = 0; noOfHeaders < headerCount; noOfHeaders++ )
-        {
-            assert( canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData != NULL );
-            sigV4Status = writeCanonicalHeaderToCanonicalRequest( noOfHeaders, canonicalRequest );
 
             if( sigV4Status != SigV4Success )
             {
@@ -1142,23 +1098,25 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
 /*-----------------------------------------------------------*/
 
-    static SigV4Status_t appendAllHeadersToCanonicalRequest( const char * pHeaders,
-                                                             size_t headersLen,
-                                                             uint32_t flags,
-                                                             CanonicalContext_t * canonicalRequest )
+    SigV4Status_t parseHeaderKeyValueEntries( const char * pHeaders,
+                                              size_t headersDataLen,
+                                              uint32_t flags,
+                                              size_t headerCount,
+                                              CanonicalContext_t * canonicalRequest )
     {
-        const char * start;
-        const char * end;
-        size_t keyFlag = 1, noOfHeaders = 0, i = 0;
+        assert( pHeaders != NULL );
+        assert( headersDataLen > 0 );
+        assert( canonicalRequest != NULL );
+
+        size_t index = 0, noOfHeaders = 0;
+        const char * start = pHeaders;
+        const char * end = pHeaders;
+        bool keyFlag = true;
         SigV4Status_t sigV4Status = SigV4Success;
 
-        assert( pHeaders != NULL );
-        assert( canonicalRequest != NULL );
-        assert( canonicalRequest->pBufCur != NULL );
+        noOfHeaders = *headerCount;
 
-        start = end = pHeaders;
-
-        for( i = 0; i < headersLen; i++ )
+        for( index = 0; index < headersDataLen; index++ )
         {
             if( noOfHeaders == SIGV4_MAX_HTTP_HEADER_COUNT )
             {
@@ -1166,32 +1124,58 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                 break;
             }
             /* Extracting each header key and value from the headers string. */
-            else if( ( keyFlag == 1 ) && ( pHeaders[ i ] == ':' ) )
+            else if( ( keyFlag ) && ( pHeaders[ index ] == ':' ) )
             {
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData = start;
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].key.dataLen = ( end - start );
                 start = end + 1U;
-                keyFlag = 0;
+                keyFlag = false;
             }
-            else if( ( keyFlag == 0 ) && ( !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( pHeaders[ i ] == '\r' ) && ( ( i + 1 ) < headersLen ) && ( pHeaders[ i + 1 ] == '\n' ) ) )
+            else if( ( !keyFlag ) && ( !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( pHeaders[ index ] == '\r' ) && ( ( index + 1 ) < headersDataLen ) && ( pHeaders[ index + 1 ] == '\n' ) ) )
             {
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = start;
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( end - start );
                 start = end + 2U;
-                keyFlag = 1;
+                keyFlag = true;
                 noOfHeaders++;
             }
-            else if( ( keyFlag == 0 ) && ( ( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( pHeaders[ i ] == '\n' ) ) )
+            else if( ( !keyFlag ) && ( ( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( pHeaders[ index ] == '\n' ) ) )
             {
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = start;
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( end - start );
                 start = end + 1U;
-                keyFlag = 1;
+                keyFlag = true;
                 noOfHeaders++;
             }
 
             end++;
         }
+
+        *headerCount = noOfHeaders;
+
+        return sigV4Status;
+    }
+
+/*-----------------------------------------------------------*/
+
+    static SigV4Status_t appendAllHeadersToCanonicalRequest( const char * pHeaders,
+                                                             size_t headersLen,
+                                                             uint32_t flags,
+                                                             CanonicalContext_t * canonicalRequest )
+    {
+        bool keyFlag = true;
+        SigV4Status_t sigV4Status = SigV4Success;
+
+        assert( pHeaders != NULL );
+        assert( canonicalRequest != NULL );
+        assert( canonicalRequest->pBufCur != NULL );
+
+        /* Parsing header string to extract key and value. */
+        sigV4Status = parseHeaderKeyValueEntries( pHeaders,
+                                                  headersLen,
+                                                  flags,
+                                                  noOfHeaders,
+                                                  canonicalRequest );
 
         if( ( sigV4Status == SigV4Success ) && !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) )
         {
@@ -1200,7 +1184,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
             /* If the headers are canonicalized, we will copy them directly into the buffer as they do not
              * need processing, else we need to call the following function. */
-            sigV4Status = appendCanonicalizedHeaders( noOfHeaders, canonicalRequest );
+            sigV4Status = appendCanonicalizedHeaders( noOfHeaders, flags, canonicalRequest );
         }
 
         if( ( sigV4Status == SigV4Success ) && !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) )
