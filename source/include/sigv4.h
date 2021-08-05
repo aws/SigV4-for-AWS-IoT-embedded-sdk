@@ -44,7 +44,6 @@
  * defined in sigv4_config.h file. */
 #include "sigv4_config_defaults.h"
 
-#include "sigv4_internal.h"
 /* Convenience macros for library optimization */
 
 /** @addtogroup sigv4_constants
@@ -155,10 +154,10 @@ typedef enum SigV4Status
 
     /**
      * @brief The maximum number of header parameters was exceeded while parsing
-     * the http header string input parameter. Default Maximum headers specified in the
-     * library is 100 as defined by the SIGV4_MAX_HTTP_HEADER_COUNT macro. It can be
-     * changed by defining SIGV4_MAX_HTTP_HEADER_COUNT macro in the custom config file
-     * provided by the application.
+     * the http header string passed to the library.
+     * The maximum number of supported HTTP headers can be configured
+     * with the SIGV4_MAX_HTTP_HEADER_COUNT macro in the library config file
+     * passed by the application.
      *
      * Functions that may return this value:
      * - #SigV4_GenerateHTTPAuthorization
@@ -371,8 +370,7 @@ typedef struct SigV4Parameters
 /**
  * @brief Generates the HTTP Authorization header value.
  *
- * Note: Empty HTTP header keys or values are not supported which are passed
- * as a part of SigV4Parameters_t.
+ * @note The API does not support HTTP headers containing empty HTTP header keys or values.
  *
  * @param[in] pParams Parameters for generating the SigV4 signature.
  * @param[out] pAuthBuf Buffer to hold the generated Authorization header value.
