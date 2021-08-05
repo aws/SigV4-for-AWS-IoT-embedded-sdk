@@ -323,7 +323,8 @@ static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
 SigV4Status_t parseHeaderKeyValueEntries( const char * pHeaders,
                                           size_t headersDataLen,
                                           uint32_t flags,
-                                          size_t headerCount,
+                                          size_t * headerCount,
+                                          ,
                                           CanonicalContext_t * canonicalRequest );
 
 /**
@@ -955,7 +956,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                                                      size_t dataLen,
                                                      uint32_t flags,
                                                      char separator,
-                                                     CanonicalContext_t * canonicalRequest );
+                                                     CanonicalContext_t * canonicalRequest )
     {
         SigV4Status_t status = SigV4Success;
         size_t index = 0;
@@ -1040,7 +1041,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
             headerKey = canonicalRequest->pHeadersLoc[ headerIndex ].key.pData;
 
-            sigV4Status = copyHeaderStringToCanonicalBuffer( headerKey, keyLen, flags, '; ', canonicalRequest );
+            sigV4Status = copyHeaderStringToCanonicalBuffer( headerKey, keyLen, flags, ';', canonicalRequest );
 
             if( sigV4Status != SigV4Success )
             {
@@ -1101,20 +1102,23 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
     SigV4Status_t parseHeaderKeyValueEntries( const char * pHeaders,
                                               size_t headersDataLen,
                                               uint32_t flags,
-                                              size_t headerCount,
+                                              size_t * headerCount,
                                               CanonicalContext_t * canonicalRequest )
     {
-        assert( pHeaders != NULL );
-        assert( headersDataLen > 0 );
-        assert( canonicalRequest != NULL );
-
-        size_t index = 0, noOfHeaders = 0;
-        const char * start = pHeaders;
-        const char * end = pHeaders;
+        size_t index = 0, noOfHeaders;
+        const char * pKeyOrValStartLoc;
+        const char * pCurrLoc;
         bool keyFlag = true;
         SigV4Status_t sigV4Status = SigV4Success;
 
+        assert( pHeaders != NULL );
+        assert( headersDataLen > 0 );
+        assert( canonicalRequest != NULL );
+        assert( headerCount != NULL );
+
         noOfHeaders = *headerCount;
+        pKeyOrValStartLoc = pHeaders;
+        pCurrLoc = pHeaders;
 
         for( index = 0; index < headersDataLen; index++ )
         {
@@ -1123,32 +1127,41 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                 sigV4Status = SigV4MaxHeaderPairCountExceeded;
                 break;
             }
-            /* Extracting each header key and value from the headers string. */
+            /* Look for key part of an header field entry. */
             else if( ( keyFlag ) && ( pHeaders[ index ] == ':' ) )
             {
-                canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData = start;
-                canonicalRequest->pHeadersLoc[ noOfHeaders ].key.dataLen = ( end - start );
-                start = end + 1U;
+                canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData = pKeyOrValStartLoc;
+                canonicalRequest->pHeadersLoc[ noOfHeaders ].key.dataLen = ( pCurrLoc - pKeyOrValStartLoc );
+                pKeyOrValStartLoc = pCurrLoc + 1U;
                 keyFlag = false;
             }
-            else if( ( !keyFlag ) && ( !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( pHeaders[ index ] == '\r' ) && ( ( index + 1 ) < headersDataLen ) && ( pHeaders[ index + 1 ] == '\n' ) ) )
+            /* Look for header value part of a header field entry for both canonicalized and non-canonicalized forms. */
+            else if( ( !keyFlag ) )
             {
-                canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = start;
-                canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( end - start );
-                start = end + 2U;
-                keyFlag = true;
-                noOfHeaders++;
-            }
-            else if( ( !keyFlag ) && ( ( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( pHeaders[ index ] == '\n' ) ) )
-            {
-                canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = start;
-                canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( end - start );
-                start = end + 1U;
-                keyFlag = true;
-                noOfHeaders++;
+                /* Non-canonicalized headers will have header values ending with "\r\n". */
+                if( !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( ( index + 1 ) < headersDataLen ) &&
+                    ( 0 == strncmp( pCurrLoc, "\r\n", strlen( "\r\n" ) ) ) )
+                {
+                    canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = pKeyOrValStartLoc;
+                    canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( pCurrLoc - pKeyOrValStartLoc );
+                    /* Set starting location of the next header key string after the "\r\n". */
+                    pKeyOrValStartLoc = pCurrLoc + 2U;
+                    keyFlag = true;
+                    noOfHeaders++;
+                }
+                /* Canonicalized headers will have header values ending just with "\n". */
+                else if( ( ( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( pHeaders[ index ] == '\n' ) ) )
+                {
+                    canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = pKeyOrValStartLoc;
+                    canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( pCurrLoc - pKeyOrValStartLoc );
+                    /* Set starting location of the next header key string after the "\n". */
+                    pKeyOrValStartLoc = pCurrLoc + 1U;
+                    keyFlag = true;
+                    noOfHeaders++;
+                }
             }
 
-            end++;
+            pCurrLoc++;
         }
 
         *headerCount = noOfHeaders;
@@ -1164,6 +1177,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                                                              CanonicalContext_t * canonicalRequest )
     {
         bool keyFlag = true;
+        size_t noOfHeaders = 0;
         SigV4Status_t sigV4Status = SigV4Success;
 
         assert( pHeaders != NULL );
@@ -1174,7 +1188,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
         sigV4Status = parseHeaderKeyValueEntries( pHeaders,
                                                   headersLen,
                                                   flags,
-                                                  noOfHeaders,
+                                                  &noOfHeaders,
                                                   canonicalRequest );
 
         if( ( sigV4Status == SigV4Success ) && !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) )
