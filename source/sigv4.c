@@ -123,7 +123,7 @@
  * order to provide stability to qSort() calls.
  */
     static int32_t cmpField( const void * pFirstVal,
-                                const void * pSecondVal );
+                             const void * pSecondVal );
 
 #endif /* #if (SIGV4_USE_CANONICAL_SUPPORT == 1) */
 
