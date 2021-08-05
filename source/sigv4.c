@@ -247,7 +247,8 @@ static void hexEncode( SigV4String_t * pInputStr,
                        SigV4String_t * pHexOutput );
 
 /**
- * @brief Extract each header key and value from passed pHeaders string.
+ * @brief Extract all header key-value pairs from the passed headers data and add them
+ * to the canonical request.
  *
  * @param[in] pHeaders HTTP headers to canonicalize.
  * @param[in] headersLen Length of HTTP headers to canonicalize.
@@ -314,21 +315,19 @@ static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
  * and state of canonicalization.
  *
  * @return Following statuses will be returned by the function:
- * #SigV4Success if headers are successfully added to the canonical request.
+ * #SigV4Success if header key or value is successfully added to the canonical request.
  * #SigV4InsufficientMemory if canonical request buffer cannot accommodate the header.
- * #SigV4InvalidParameter if HTTP headers are invalid.
- * #SigV4MaxHeaderPairCountExceeded if number of headers that needs to be canonicalized
- * exceed the SIGV4_MAX_HTTP_HEADER_COUNT macro defined in the config file.
+ * #SigV4MaxHeaderPairCountExceeded if number of key-value entries in the headers data
+ * exceeds the SIGV4_MAX_HTTP_HEADER_COUNT macro defined in the config file.
  */
 SigV4Status_t parseHeaderKeyValueEntries( const char * pHeaders,
                                           size_t headersDataLen,
                                           uint32_t flags,
                                           size_t * headerCount,
-                                          ,
                                           CanonicalContext_t * canonicalRequest );
 
 /**
- * @brief Copy headers key or header value to the Canonical Request buffer.
+ * @brief Copy header key or header value to the Canonical Request buffer.
  *
  * @param[in] pData Header Key or value to be copied to the canonical request.
  * @param[in] dataLen Length of Header Key or value.
@@ -339,7 +338,7 @@ SigV4Status_t parseHeaderKeyValueEntries( const char * pHeaders,
  * and state of canonicalization.
  *
  * @return Following statuses will be returned by the function:
- * #SigV4Success if the signed headers are successfully added to the canonical request.
+ * #SigV4Success if the headers are successfully added to the canonical request.
  * #SigV4InsufficientMemory if canonical request buffer cannot accommodate the header.
  */
 SigV4Status_t copyHeaderStringToCanonicalBuffer( const char * pData,
@@ -980,7 +979,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
             {
                 /* Cannot copy trimmable space into canonical request buffer. */
             }
-            /* Remaining buffer space should at least accommodate the character to copy and the trailing ":" */
+            /* Remaining buffer space should at least accommodate the character to copy and the trailing separator character. */
             else if( buffRemaining <= 1 )
             {
                 status = SigV4InsufficientMemory;
@@ -988,7 +987,8 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
             }
             else
             {
-                /* Lowercase header key only. '\n' character marks the ending of value. */
+                /* Lowercase header key only. '\n' character marks the end of the value and header value
+                 * does not need to be lowercased. */
                 if( separator == '\n' )
                 {
                     *pCurrBufLoc = ( pData[ index ] );
@@ -1012,7 +1012,6 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
             assert( buffRemaining >= 1 );
             *pCurrBufLoc = separator;
             pCurrBufLoc++;
-            numOfBytesCopied++;
             canonicalRequest->pBufCur = pCurrBufLoc;
             canonicalRequest->bufRemaining = ( buffRemaining - 1 );
         }
@@ -1041,6 +1040,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
             headerKey = canonicalRequest->pHeadersLoc[ headerIndex ].key.pData;
 
+            /* ';' is used to separate signed multiple headers in the canonical request. */
             sigV4Status = copyHeaderStringToCanonicalBuffer( headerKey, keyLen, flags, ';', canonicalRequest );
 
             if( sigV4Status != SigV4Success )
@@ -1079,12 +1079,13 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
             keyLen = canonicalRequest->pHeadersLoc[ headerIndex ].key.dataLen;
             valLen = canonicalRequest->pHeadersLoc[ headerIndex ].value.dataLen;
             headerKey = canonicalRequest->pHeadersLoc[ headerIndex ].key.pData;
+            /* ':' is used to separate header key and header value in the canonical request. */
             sigV4Status = copyHeaderStringToCanonicalBuffer( headerKey, keyLen, flags, ':', canonicalRequest );
 
             if( sigV4Status == SigV4Success )
             {
                 value = canonicalRequest->pHeadersLoc[ headerIndex ].value.pData;
-
+                /* '\n' is used to separate each key-value pair in the canonical request. */
                 sigV4Status = copyHeaderStringToCanonicalBuffer( value, valLen, flags, '\n', canonicalRequest );
             }
 
