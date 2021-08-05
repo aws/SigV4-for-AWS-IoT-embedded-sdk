@@ -157,7 +157,7 @@ typedef enum SigV4Status
      * @brief The maximum number of header parameters was exceeded while parsing
      * the http header string input parameter. Default Maximum headers specified in the
      * library is 100 as defined by the SIGV4_MAX_HTTP_HEADER_COUNT macro. It can be
-     * changed by defing SIGV4_MAX_HTTP_HEADER_COUNT macro in the custom config file
+     * changed by defining SIGV4_MAX_HTTP_HEADER_COUNT macro in the custom config file
      * provided by the application.
      *
      * Functions that may return this value:
@@ -371,7 +371,7 @@ typedef struct SigV4Parameters
 /**
  * @brief Generates the HTTP Authorization header value.
  *
- * Note: Empty HTTP header keys or values are not supported which are passed
+ * Empty HTTP header keys or values are not supported which are passed
  * as a part of SigV4Parameters_t.
  *
  * @param[in] pParams Parameters for generating the SigV4 signature.
