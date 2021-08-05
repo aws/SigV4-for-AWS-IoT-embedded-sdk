@@ -5,6 +5,7 @@ addtodate
 addtogroup
 aggregator
 amz
+api
 apr
 ascii
 authbuflen
