@@ -1177,7 +1177,6 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                                                              uint32_t flags,
                                                              CanonicalContext_t * canonicalRequest )
     {
-        bool keyFlag = true;
         size_t noOfHeaders = 0;
         SigV4Status_t sigV4Status = SigV4Success;
 
