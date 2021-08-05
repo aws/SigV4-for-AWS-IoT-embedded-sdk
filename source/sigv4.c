@@ -122,7 +122,7 @@
  * a value greater than 0 if @pSecondVal < @pFirstVal. 0 is never returned in
  * order to provide stability to qSort() calls.
  */
-    static int32_t cmpKeyValue( const void * pFirstVal,
+    static int32_t cmpField( const void * pFirstVal,
                                 const void * pSecondVal );
 
 #endif /* #if (SIGV4_USE_CANONICAL_SUPPORT == 1) */
