@@ -1162,7 +1162,7 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
             pCurrLoc++;
         }
 
-        /* Ensure each key has its coresspnding value. */
+        /* Ensure each key has its corresponding value. */
         assert( keyFlag == true );
 
         *headerCount = noOfHeaders;
