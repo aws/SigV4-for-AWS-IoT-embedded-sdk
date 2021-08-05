@@ -371,7 +371,7 @@ typedef struct SigV4Parameters
 /**
  * @brief Generates the HTTP Authorization header value.
  *
- * Empty HTTP header keys or values are not supported which are passed
+ * Note: Empty HTTP header keys or values are not supported which are passed
  * as a part of SigV4Parameters_t.
  *
  * @param[in] pParams Parameters for generating the SigV4 signature.
@@ -442,8 +442,4 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
 
 /* @[declare_sigV4_awsIotDateToIso8601_function] */
 
-SigV4Status_t generateCanonicalHeaders( const char * pHeaders,
-                                        size_t headersLen,
-                                        uint32_t flags,
-                                        CanonicalContext_t * canonicalRequest );
 #endif /* SIGV4_H_ */
