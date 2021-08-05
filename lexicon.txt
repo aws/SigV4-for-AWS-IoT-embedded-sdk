@@ -42,6 +42,7 @@ hashupdate
 headercount
 headerindex
 headerlen
+headersdatalen
 headerslen
 hh
 hhmmss
