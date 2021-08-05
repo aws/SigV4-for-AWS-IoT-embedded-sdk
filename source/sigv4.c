@@ -1136,29 +1136,26 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
                 keyFlag = false;
             }
             /* Look for header value part of a header field entry for both canonicalized and non-canonicalized forms. */
-            else if( ( !keyFlag ) )
+            /* Non-canonicalized headers will have header values ending with "\r\n". */
+            else if( ( !keyFlag ) && !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( ( index + 1 ) < headersDataLen ) &&
+                     ( 0 == strncmp( pCurrLoc, "\r\n", strlen( "\r\n" ) ) ) )
             {
-                /* Non-canonicalized headers will have header values ending with "\r\n". */
-                if( !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( ( index + 1 ) < headersDataLen ) &&
-                    ( 0 == strncmp( pCurrLoc, "\r\n", strlen( "\r\n" ) ) ) )
-                {
-                    canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = pKeyOrValStartLoc;
-                    canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( pCurrLoc - pKeyOrValStartLoc );
-                    /* Set starting location of the next header key string after the "\r\n". */
-                    pKeyOrValStartLoc = pCurrLoc + 2U;
-                    keyFlag = true;
-                    noOfHeaders++;
-                }
-                /* Canonicalized headers will have header values ending just with "\n". */
-                else if( ( ( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( pHeaders[ index ] == '\n' ) ) )
-                {
-                    canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = pKeyOrValStartLoc;
-                    canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( pCurrLoc - pKeyOrValStartLoc );
-                    /* Set starting location of the next header key string after the "\n". */
-                    pKeyOrValStartLoc = pCurrLoc + 1U;
-                    keyFlag = true;
-                    noOfHeaders++;
-                }
+                canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = pKeyOrValStartLoc;
+                canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( pCurrLoc - pKeyOrValStartLoc );
+                /* Set starting location of the next header key string after the "\r\n". */
+                pKeyOrValStartLoc = pCurrLoc + 2U;
+                keyFlag = true;
+                noOfHeaders++;
+            }
+            /* Canonicalized headers will have header values ending just with "\n". */
+            else if( ( !keyFlag ) && ( ( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( pHeaders[ index ] == '\n' ) ) )
+            {
+                canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = pKeyOrValStartLoc;
+                canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( pCurrLoc - pKeyOrValStartLoc );
+                /* Set starting location of the next header key string after the "\n". */
+                pKeyOrValStartLoc = pCurrLoc + 1U;
+                keyFlag = true;
+                noOfHeaders++;
             }
 
             pCurrLoc++;
