@@ -306,7 +306,7 @@ static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
  * @brief Parse each header key and value pair from HTTP headers.
  *
  * @param[in] pHeaders HTTP headers to parse.
- * @param[in] headersLen Length of HTTP headers to parse.
+ * @param[in] headersDataLen Length of HTTP headers to parse.
  * @param[in] flags Flag to indicate if headers are already
  * in the canonical form.
  * @param[out] headerCount Count of key-value pairs parsed from pData.
@@ -333,7 +333,7 @@ SigV4Status_t parseHeaderKeyValueEntries( const char * pHeaders,
  * @param[in] dataLen Length of Header Key or value.
  * @param[in] flags Flag to indicate if headers are already
  * in the canonical form.
- * @param[in] separator Character seprating the multiple key-value pairs or key and values.
+ * @param[in] separator Character separating the multiple key-value pairs or key and values.
  * @param[in,out] canonicalRequest Struct to maintain intermediary buffer
  * and state of canonicalization.
  *
