@@ -44,6 +44,7 @@
  * defined in sigv4_config.h file. */
 #include "sigv4_config_defaults.h"
 
+#include "sigv4_internal.h"
 /* Convenience macros for library optimization */
 
 /** @addtogroup sigv4_constants
@@ -154,7 +155,10 @@ typedef enum SigV4Status
 
     /**
      * @brief The maximum number of header parameters was exceeded while parsing
-     * the http header string input parameter.
+     * the http header string input parameter. Default Maximum headers specified in the
+     * library is 100 as defined by the SIGV4_MAX_HTTP_HEADER_COUNT macro. It can be
+     * changed by defing SIGV4_MAX_HTTP_HEADER_COUNT macro in the custom config file
+     * provided by the application.
      *
      * Functions that may return this value:
      * - #SigV4_GenerateHTTPAuthorization
@@ -367,6 +371,9 @@ typedef struct SigV4Parameters
 /**
  * @brief Generates the HTTP Authorization header value.
  *
+ * Note: Empty HTTP header keys or values are not supported which are passed
+ * as a part of SigV4Parameters_t.
+ *
  * @param[in] pParams Parameters for generating the SigV4 signature.
  * @param[out] pAuthBuf Buffer to hold the generated Authorization header value.
  * @param[in, out] authBufLen Input: the length of pAuthBuf, output: the length
@@ -432,5 +439,11 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
                                          size_t dateLen,
                                          char * pDateISO8601,
                                          size_t dateISO8601Len );
+
 /* @[declare_sigV4_awsIotDateToIso8601_function] */
+
+SigV4Status_t generateCanonicalHeaders( const char * pHeaders,
+                                        size_t headersLen,
+                                        uint32_t flags,
+                                        CanonicalContext_t * canonicalRequest );
 #endif /* SIGV4_H_ */
