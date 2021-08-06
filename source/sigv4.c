@@ -324,7 +324,10 @@ static SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
  * @param[in,out] pCanonicalRequest The canonical request containing the
  * query parameter array of keys and values
  */
-static void setQueryParameterKey(size_t currentParameter, const char * pKey, size_t keyLen, CanonicalContext_t * pCanonicalRequest);
+static void setQueryParameterKey( size_t currentParameter,
+                                  const char * pKey,
+                                  size_t keyLen,
+                                  CanonicalContext_t * pCanonicalRequest );
 
 /**
  * @brief Set a query parameter value in the canonical request.
@@ -335,7 +338,10 @@ static void setQueryParameterKey(size_t currentParameter, const char * pKey, siz
  * @param[in,out] pCanonicalRequest The canonical request containing the
  * query parameter array of keys and values
  */
-static void setQueryParameterValue(size_t currentParameter, const char * pValue, size_t valueLen, CanonicalContext_t * pCanonicalRequest);
+static void setQueryParameterValue( size_t currentParameter,
+                                    const char * pValue,
+                                    size_t valueLen,
+                                    CanonicalContext_t * pCanonicalRequest );
 
 /**
  * @brief Update the HMAC using an input key.
@@ -1643,19 +1649,25 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
 
 /*-----------------------------------------------------------*/
 
-static void setQueryParameterKey(size_t currentParameter, const char * pKey, size_t keyLen, CanonicalContext_t * pCanonicalRequest)
-{
-    pCanonicalRequest->pQueryLoc[ currentParameter ].key.pData = pKey;
-    pCanonicalRequest->pQueryLoc[ currentParameter ].key.dataLen = keyLen;
-}
+    static void setQueryParameterKey( size_t currentParameter,
+                                      const char * pKey,
+                                      size_t keyLen,
+                                      CanonicalContext_t * pCanonicalRequest )
+    {
+        pCanonicalRequest->pQueryLoc[ currentParameter ].key.pData = pKey;
+        pCanonicalRequest->pQueryLoc[ currentParameter ].key.dataLen = keyLen;
+    }
 
 /*-----------------------------------------------------------*/
 
-static void setQueryParameterValue(size_t currentParameter, const char * pValue, size_t valueLen, CanonicalContext_t * pCanonicalRequest)
-{
-    pCanonicalRequest->pQueryLoc[ currentParameter ].value.pData = pValue;
-    pCanonicalRequest->pQueryLoc[ currentParameter ].value.dataLen = valueLen;
-}
+    static void setQueryParameterValue( size_t currentParameter,
+                                        const char * pValue,
+                                        size_t valueLen,
+                                        CanonicalContext_t * pCanonicalRequest )
+    {
+        pCanonicalRequest->pQueryLoc[ currentParameter ].value.pData = pValue;
+        pCanonicalRequest->pQueryLoc[ currentParameter ].value.dataLen = valueLen;
+    }
 
 /*-----------------------------------------------------------*/
 
@@ -1675,7 +1687,7 @@ static void setQueryParameterValue(size_t currentParameter, const char * pValue,
         {
             if( ( pQuery[ i ] == '=' ) && !fieldHasValue )
             {
-                setQueryParameterKey(currentParameter, &pQuery[ startOfFieldOrValue ], i - startOfFieldOrValue, pCanonicalRequest);
+                setQueryParameterKey( currentParameter, &pQuery[ startOfFieldOrValue ], i - startOfFieldOrValue, pCanonicalRequest );
                 startOfFieldOrValue = i + 1U;
                 fieldHasValue = 1U;
             }
@@ -1694,16 +1706,16 @@ static void setQueryParameterValue(size_t currentParameter, const char * pValue,
                 }
                 else if( !fieldHasValue )
                 {
-                    setQueryParameterKey(currentParameter, &pQuery[ startOfFieldOrValue ], i - startOfFieldOrValue, pCanonicalRequest);
+                    setQueryParameterKey( currentParameter, &pQuery[ startOfFieldOrValue ], i - startOfFieldOrValue, pCanonicalRequest );
                     /* The previous field did not have a value set for it, so set its value to NULL. */
-                    setQueryParameterValue(currentParameter, NULL, 0U, pCanonicalRequest);
+                    setQueryParameterValue( currentParameter, NULL, 0U, pCanonicalRequest );
                     startOfFieldOrValue = i + 1U;
                     currentParameter++;
                 }
                 else
                 {
                     /* End of value reached, so store a pointer to the previously set value. */
-                    setQueryParameterValue(currentParameter, &pQuery[ startOfFieldOrValue ], i - startOfFieldOrValue, pCanonicalRequest);
+                    setQueryParameterValue( currentParameter, &pQuery[ startOfFieldOrValue ], i - startOfFieldOrValue, pCanonicalRequest );
                     fieldHasValue = 0U;
                     startOfFieldOrValue = i + 1U;
                     currentParameter++;

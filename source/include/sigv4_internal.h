@@ -148,8 +148,8 @@ typedef struct SigV4String
  */
 typedef struct SigV4ConstString
 {
-    const char * pData;   /**< SigV4 string data */
-    size_t dataLen; /**< Length of pData */
+    const char * pData; /**< SigV4 string data */
+    size_t dataLen;     /**< Length of pData */
 } SigV4ConstString_t;
 
 /**

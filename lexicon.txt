@@ -25,6 +25,7 @@ completehashandhexencode
 const
 constness
 copydoc
+currentparameter
 datalen
 datelen
 dd
@@ -105,6 +106,7 @@ pbufprocessing
 pbufstart
 pbytesremaining
 pcanonicalcontext
+pcanonicalrequest
 pcanonicaluri
 pcredscope
 pcryptointerface
@@ -146,6 +148,7 @@ psignedheaderslen
 psigningkey
 ptestformatfailure
 puri
+pvalue
 qsort
 querylen
 rande
@@ -204,6 +207,7 @@ urilen
 url
 utc
 vallen
+valuelen
 xor
 xy
 yyyy
