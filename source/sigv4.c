@@ -46,7 +46,7 @@
  *
  * @return Returns 'true' if @pInput is empty, and 'false' otherwise.
  */
-    static bool emptySigV4String( SigV4String_t * pInput );
+    static bool emptySigV4String( SigV4ConstString_t * pInput );
 
 /**
  * @brief Normalize a URI string according to RFC 3986 and fill destination
@@ -305,7 +305,7 @@ static SigV4Status_t generateAuthorizationValuePrefix( const SigV4Parameters_t *
  * are already canonicalized.
  *
  * @param[in] pLine The line to write to the canonical request.
- * @param[in] lineLen The length of @p pLine.
+ * @param[in] lineLen The length of @p pLine
  * @param[in,out] pCanonicalContext The canonical context where
  * the line should be written.
  * @return SigV4InsufficientMemory if the length of the canonical request
@@ -314,6 +314,28 @@ static SigV4Status_t generateAuthorizationValuePrefix( const SigV4Parameters_t *
 static SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
                                                   size_t lineLen,
                                                   CanonicalContext_t * pCanonicalContext );
+
+/**
+ * @brief Set a query parameter key in the canonical request.
+ *
+ * @param[in] currentParameter The index of the query key to set
+ * @param[in] pKey The pointer to the query key
+ * @param[in] keyLen The length of @p pKey
+ * @param[in,out] pCanonicalRequest The canonical request containing the
+ * query parameter array of keys and values
+ */
+static void setQueryParameterKey(size_t currentParameter, const char * pKey, size_t keyLen, CanonicalContext_t * pCanonicalRequest);
+
+/**
+ * @brief Set a query parameter value in the canonical request.
+ *
+ * @param[in] currentParameter The index of the query value to set
+ * @param[in] pValue The pointer to the query value
+ * @param[in] valueLen The length of @p pValue
+ * @param[in,out] pCanonicalRequest The canonical request containing the
+ * query parameter array of keys and values
+ */
+static void setQueryParameterValue(size_t currentParameter, const char * pValue, size_t valueLen, CanonicalContext_t * pCanonicalRequest);
 
 /**
  * @brief Update the HMAC using an input key.
@@ -1018,7 +1040,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
 
 #if ( SIGV4_USE_CANONICAL_SUPPORT == 1 )
 
-    static bool emptySigV4String( SigV4String_t * pInput )
+    static bool emptySigV4String( SigV4ConstString_t * pInput )
     {
         bool returnVal = true;
 
@@ -1621,6 +1643,22 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
 
 /*-----------------------------------------------------------*/
 
+static void setQueryParameterKey(size_t currentParameter, const char * pKey, size_t keyLen, CanonicalContext_t * pCanonicalRequest)
+{
+    pCanonicalRequest->pQueryLoc[ currentParameter ].key.pData = pKey;
+    pCanonicalRequest->pQueryLoc[ currentParameter ].key.dataLen = keyLen;
+}
+
+/*-----------------------------------------------------------*/
+
+static void setQueryParameterValue(size_t currentParameter, const char * pValue, size_t valueLen, CanonicalContext_t * pCanonicalRequest)
+{
+    pCanonicalRequest->pQueryLoc[ currentParameter ].value.pData = pValue;
+    pCanonicalRequest->pQueryLoc[ currentParameter ].value.dataLen = valueLen;
+}
+
+/*-----------------------------------------------------------*/
+
     static void setQueryStringFieldsAndValues( const char * pQuery,
                                                size_t queryLen,
                                                size_t * pNumberOfParameters,
@@ -1637,8 +1675,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         {
             if( ( pQuery[ i ] == '=' ) && !fieldHasValue )
             {
-                pCanonicalRequest->pQueryLoc[ currentParameter ].key.pData = ( char * ) &pQuery[ startOfFieldOrValue ];
-                pCanonicalRequest->pQueryLoc[ currentParameter ].key.dataLen = i - startOfFieldOrValue;
+                setQueryParameterKey(currentParameter, &pQuery[ startOfFieldOrValue ], i - startOfFieldOrValue, pCanonicalRequest);
                 startOfFieldOrValue = i + 1U;
                 fieldHasValue = 1U;
             }
@@ -1657,19 +1694,16 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                 }
                 else if( !fieldHasValue )
                 {
-                    pCanonicalRequest->pQueryLoc[ currentParameter ].key.pData = ( char * ) &pQuery[ startOfFieldOrValue ];
-                    pCanonicalRequest->pQueryLoc[ currentParameter ].key.dataLen = i - startOfFieldOrValue;
+                    setQueryParameterKey(currentParameter, &pQuery[ startOfFieldOrValue ], i - startOfFieldOrValue, pCanonicalRequest);
                     /* The previous field did not have a value set for it, so set its value to NULL. */
-                    pCanonicalRequest->pQueryLoc[ currentParameter ].value.pData = NULL;
-                    pCanonicalRequest->pQueryLoc[ currentParameter ].value.dataLen = 0U;
+                    setQueryParameterValue(currentParameter, NULL, 0U, pCanonicalRequest);
                     startOfFieldOrValue = i + 1U;
                     currentParameter++;
                 }
                 else
                 {
                     /* End of value reached, so store a pointer to the previously set value. */
-                    pCanonicalRequest->pQueryLoc[ currentParameter ].value.pData = ( char * ) &pQuery[ startOfFieldOrValue ];
-                    pCanonicalRequest->pQueryLoc[ currentParameter ].value.dataLen = i - startOfFieldOrValue;
+                    setQueryParameterValue(currentParameter, &pQuery[ startOfFieldOrValue ], i - startOfFieldOrValue, pCanonicalRequest);
                     fieldHasValue = 0U;
                     startOfFieldOrValue = i + 1U;
                     currentParameter++;
@@ -1690,7 +1724,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
     }
 
     static SigV4Status_t writeValueInCanonicalizedQueryString( char ** pBufCur,
-                                                               char * pValue,
+                                                               const char * pValue,
                                                                size_t valueLen,
                                                                size_t * pEncodedLen,
                                                                size_t * pRemainingLen )
@@ -2704,7 +2738,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
     HmacContext_t hmacContext = { 0 };
     SigV4String_t signingKey;
 
-    /*returnStatus = verifySigV4Parameters( pParams );*/
+    returnStatus = verifySigV4Parameters( pParams );
 
     authPrefixLen = *authBufLen;
 

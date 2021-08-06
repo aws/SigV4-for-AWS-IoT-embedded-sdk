@@ -6,6 +6,7 @@ aggregator
 algorithmlen
 amz
 api
+apr
 ascii
 auth
 authbuflen
