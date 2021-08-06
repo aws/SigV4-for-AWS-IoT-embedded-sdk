@@ -5,7 +5,7 @@ addtogroup
 aggregator
 algorithmlen
 amz
-apr
+api
 ascii
 auth
 authbuflen
@@ -16,6 +16,7 @@ bufferlen
 bufremaining
 canonicalrequest
 canonicalurilen
+cbmc
 chunked
 com
 config
@@ -48,6 +49,7 @@ hashupdate
 headercount
 headerindex
 headerlen
+headersdatalen
 headerslen
 hh
 hhmmss
@@ -162,6 +164,7 @@ servicelen
 sha
 signaturelen
 <<<<<<< HEAD
+<<<<<<< HEAD
 signedheaders
 =======
 <<<<<<< HEAD
@@ -171,31 +174,27 @@ signedheaderslen
 signingkey
 >>>>>>> bf7559c (SigV4_GenerateHTTPAuthorization Implementation)
 >>>>>>> d393cea (SigV4_GenerateHTTPAuthorization Implementation)
+=======
+signedheaders
+signedheaderslen
+signingkey
+>>>>>>> 72971e2 (Merge doxygen)
 sizeof
 snprintf
 ss
 sscanf
-<<<<<<< HEAD
 standalone
 strftime
-=======
-strftime
 stringtosign
->>>>>>> bf7559c (SigV4_GenerateHTTPAuthorization Implementation)
 struct
 structs
 sts
 subfolder
 sublicense
 thu
-<<<<<<< HEAD
 trimmable
 trimmedlength
 tm
-=======
-tm
-trimmedlen
->>>>>>> bf7559c (SigV4_GenerateHTTPAuthorization Implementation)
 tue
 txt
 un
@@ -204,10 +203,7 @@ urilen
 url
 utc
 vallen
-<<<<<<< HEAD
-=======
 xor
 xy
->>>>>>> bf7559c (SigV4_GenerateHTTPAuthorization Implementation)
 yyyy
 yyyymmdd
