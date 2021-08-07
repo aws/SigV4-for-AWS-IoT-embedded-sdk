@@ -276,7 +276,7 @@ static SigV4Status_t generateCanonicalRequestUntilHeaders( const SigV4Parameters
                                                            size_t * pSignedHeadersLen );
 
 /**
- * @brief Generate the prefix of the Authorization header equal to
+ * @brief Generates the prefix of the Authorization header of the format:
  * "<algorithm> Credential=<access key ID>/<credential scope>, SignedHeaders=<SignedHeaders>, Signature="
  *
  * @param[in] pParams The application-defined parameters used to
@@ -287,7 +287,10 @@ static SigV4Status_t generateCanonicalRequestUntilHeaders( const SigV4Parameters
  * @param[in] signedHeadersLen The length of @p pSignedHeaders.
  * @param[in,out] pAuthBuf The authorization buffer where to write the prefix.
  * Pointer is updated with the next location to write the value of the signature.
- * @param[in] pAuthPrefixLen The length of @p pAuthBuf.
+ * @param[in, out] pAuthPrefixLen On input, it should contain the total length of @p pAuthBuf. 
+ * On output, this will be filled with the length of the Authorization header, if
+ * operation is successful.
+ * 
  * @return #SigV4InsufficientMemory if the length of the canonical request output
  * buffer cannot fit the actual request before the headers, #SigV4Success otherwise.
  */
@@ -296,7 +299,7 @@ static SigV4Status_t generateAuthorizationValuePrefix( const SigV4Parameters_t *
                                                        size_t algorithmLen,
                                                        const char * pSignedHeaders,
                                                        size_t signedHeadersLen,
-                                                       char ** pAuthBuf,
+                                                       char * pAuthBuf,
                                                        size_t * pAuthPrefixLen );
 
 /**
@@ -1184,9 +1187,9 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         return URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE;
     }
 
-    static SigV4Status_t encodeURI( const char * pUri,
+     static SigV4Status_t encodeURI( const char * pUri,
                                     size_t uriLen,
-                                    char * pCanonicalURI,
+                                    char * pCanonicalBuffer,
                                     size_t * canonicalURILen,
                                     bool encodeSlash,
                                     bool doubleEncodeEquals )
@@ -1199,16 +1202,16 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         SigV4Status_t returnStatus = SigV4Success;
 
         assert( pUri != NULL );
-        assert( pCanonicalURI != NULL );
+        assert( pCanonicalBuffer != NULL );
         assert( canonicalURILen != NULL );
         assert( *canonicalURILen > 0U );
 
         pUriLoc = pUri;
-        pBuffer = pCanonicalURI;
+        pBuffer = pCanonicalBuffer;
 
         for(; index < uriLen; index++ )
         {
-            currUriChar = *pCanonicalURI[index];
+            currUriChar = pUri[index];
 
             if( doubleEncodeEquals && ( currUriChar == '=' ) )
             {
@@ -2507,23 +2510,35 @@ static SigV4Status_t generateCanonicalRequestUntilHeaders( const SigV4Parameters
     return returnStatus;
 }
 
+
 static SigV4Status_t generateAuthorizationValuePrefix( const SigV4Parameters_t * pParams,
                                                        const char * pAlgorithm,
                                                        size_t algorithmLen,
                                                        const char * pSignedHeaders,
                                                        size_t signedHeadersLen,
-                                                       char ** pAuthBuf,
+                                                       char * pAuthBuf,
                                                        size_t * pAuthPrefixLen )
 {
     SigV4Status_t returnStatus = SigV4Success;
     SigV4String_t credentialScope;
     size_t authPrefixLen = 0U;
+    size_t numOfBytesWritten = 0U;
+
+    assert( pParams != NULL );
+    assert( pAlgorithm != NULL );
+    assert( algorithmLen > 0 );
+    assert( pSignedHeaders != NULL );
+    assert( signedHeadersLen > 0 );
+    assert( pAuthBuf != NULL );
+    assert( ( pAuthPrefixLen != NULL ) && ( *pAuthPrefixLen > 0 ) );
 
     /* Since the signed headers are required to be a part of final Authorization header value,
      * we copy the signed headers onto the auth buffer before continuing to generate the signature
      * in order to prevent an additional copy and/or usage of extra space. */
     if( returnStatus == SigV4Success )
     {
+        size_t encodedSignatureLen = ( pParams->pCryptoInterface->hashDigestLen * 2U );
+
         /* Check if the authorization buffer has enough space to hold the final SigV4 Authorization header value. */
         authPrefixLen = algorithmLen + SPACE_CHAR_LEN +                                            \
                         AUTH_CREDENTIAL_PREFIX_LEN + pParams->pCredentials->accessKeyIdLen +       \
@@ -2531,59 +2546,69 @@ static SigV4Status_t generateAuthorizationValuePrefix( const SigV4Parameters_t *
                         AUTH_SEPARATOR_LEN + AUTH_SIGNED_HEADERS_PREFIX_LEN + signedHeadersLen +   \
                         AUTH_SEPARATOR_LEN + AUTH_SIGNATURE_PREFIX_LEN;
 
-        if( *pAuthPrefixLen < authPrefixLen + ( pParams->pCryptoInterface->hashDigestLen * 2U ) )
+        if( *pAuthPrefixLen < ( authPrefixLen + encodedSignatureLen ) )
         {
             LogError( ( "Insufficient memory provided to write the Authorization header value, bytesExceeded=%lu",
-                        ( unsigned long ) ( authPrefixLen + ( pParams->pCryptoInterface->hashDigestLen * 2U ) - *pAuthPrefixLen ) ) );
+                        ( unsigned long ) ( authPrefixLen + encodedSignatureLen - *pAuthPrefixLen ) ) );
             returnStatus = SigV4InsufficientMemory;
             LOG_INSUFFICIENT_MEMORY_ERROR( "string to sign",
-                                           sizeNeededBeforeHash + ( pParams->pCryptoInterface->hashDigestLen * 2U ) - SIGV4_PROCESSING_BUFFER_LENGTH );
+                                           sizeNeededBeforeHash + encodedSignatureLen - SIGV4_PROCESSING_BUFFER_LENGTH );
         }
     }
 
-    /* START: Writing of authorization value prefix. */
-    /* Write <algorithm> */
-    ( void ) memcpy( *pAuthBuf, pAlgorithm, algorithmLen );
-    *pAuthBuf += algorithmLen;
-    **pAuthBuf = SPACE_CHAR;
-    *pAuthBuf += SPACE_CHAR_LEN;
+    /* START:  Writing of authorization value prefix. */
+    /******************* Write <algorithm> *******************************************/
+    ( void ) memcpy( pAuthBuf, pAlgorithm, algorithmLen );
+    numOfBytesWritten += algorithmLen;
 
-    /* Write "Credential=<access key ID>/<credential scope>, " */
-    ( void ) memcpy( *pAuthBuf, AUTH_CREDENTIAL_PREFIX, AUTH_CREDENTIAL_PREFIX_LEN );
-    *pAuthBuf += AUTH_CREDENTIAL_PREFIX_LEN;
-    ( void ) memcpy( *pAuthBuf,
+    /* Add space saparator. */
+    pAuthBuf[ numOfBytesWritten++ ] = SPACE_CHAR;
+
+    /**************** Write "Credential=<access key ID>/<credential scope>, " ****************/
+    ( void ) memcpy( ( pAuthBuf + numOfBytesWritten ), AUTH_CREDENTIAL_PREFIX, AUTH_CREDENTIAL_PREFIX_LEN );
+    numOfBytesWritten += AUTH_CREDENTIAL_PREFIX_LEN;
+    ( void ) memcpy( ( pAuthBuf + numOfBytesWritten ),
                      pParams->pCredentials->pAccessKeyId,
                      pParams->pCredentials->accessKeyIdLen );
-    *pAuthBuf += pParams->pCredentials->accessKeyIdLen;
-    **pAuthBuf = CREDENTIAL_SCOPE_SEPARATOR;
-    *pAuthBuf += CREDENTIAL_SCOPE_SEPARATOR_LEN;
-    credentialScope.pData = *pAuthBuf;
+    numOfBytesWritten += pParams->pCredentials->accessKeyIdLen;
+
+    pAuthBuf[ numOfBytesWritten++ ] = CREDENTIAL_SCOPE_SEPARATOR;
+    credentialScope.pData = ( pAuthBuf + numOfBytesWritten );
     /* #authBufLen is an overestimate but the validation was already done earlier. */
     credentialScope.dataLen = *pAuthPrefixLen;
     ( void ) generateCredentialScope( pParams, &credentialScope );
-    *pAuthBuf += credentialScope.dataLen;
-    ( void ) memcpy( *pAuthBuf, AUTH_SEPARATOR, AUTH_SEPARATOR_LEN );
-    *pAuthBuf += AUTH_SEPARATOR_LEN;
-    /* Write "SignedHeaders=<signedHeaders>, " */
-    ( void ) memcpy( *pAuthBuf, AUTH_SIGNED_HEADERS_PREFIX, AUTH_SIGNED_HEADERS_PREFIX_LEN );
-    *pAuthBuf += AUTH_SIGNED_HEADERS_PREFIX_LEN;
-    ( void ) memcpy( *pAuthBuf, pSignedHeaders, signedHeadersLen );
-    *pAuthBuf += signedHeadersLen;
+    numOfBytesWritten += credentialScope.dataLen;
 
-    ( void ) memcpy( *pAuthBuf, AUTH_SEPARATOR, AUTH_SEPARATOR_LEN );
-    *pAuthBuf += AUTH_SEPARATOR_LEN;
-    /* Write "Signature=<signature>" */
-    ( void ) memcpy( *pAuthBuf, AUTH_SIGNATURE_PREFIX, AUTH_SIGNATURE_PREFIX_LEN );
-    *pAuthBuf += AUTH_SIGNATURE_PREFIX_LEN;
+    /* Add separator before the Signed Headers information. */
+    ( void ) memcpy( pAuthBuf + numOfBytesWritten, AUTH_SEPARATOR, AUTH_SEPARATOR_LEN );
+    numOfBytesWritten += AUTH_SEPARATOR_LEN;
+
+
+    /************************ Write "SignedHeaders=<signedHeaders>, " *******************************/
+    ( void ) memcpy( pAuthBuf + numOfBytesWritten, AUTH_SIGNED_HEADERS_PREFIX, AUTH_SIGNED_HEADERS_PREFIX_LEN );
+    numOfBytesWritten += AUTH_SIGNED_HEADERS_PREFIX_LEN;
+    ( void ) memcpy( pAuthBuf + numOfBytesWritten, pSignedHeaders, signedHeadersLen );
+    numOfBytesWritten += signedHeadersLen;
+
+    /* Add separator before the Signature field name. */
+    ( void ) memcpy( pAuthBuf + numOfBytesWritten, AUTH_SEPARATOR, AUTH_SEPARATOR_LEN );
+    numOfBytesWritten += AUTH_SEPARATOR_LEN;
+
+    /****************************** Write "Signature=<signature>" *******************************/
+    ( void ) memcpy( pAuthBuf + numOfBytesWritten, AUTH_SIGNATURE_PREFIX, AUTH_SIGNATURE_PREFIX_LEN );
+    numOfBytesWritten += AUTH_SIGNATURE_PREFIX_LEN;
+
     /* END: Writing of authorization value prefix. */
 
     if( returnStatus == SigV4Success )
     {
+        assert( authPrefixLen == numOfBytesWritten );
         *pAuthPrefixLen = authPrefixLen;
     }
 
     return returnStatus;
 }
+
 
 static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
                                          HmacContext_t * pHmacContext,
@@ -2795,7 +2820,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
         returnStatus = generateAuthorizationValuePrefix( pParams,
                                                          pAlgorithm, algorithmLen,
                                                          pSignedHeaders, signedHeadersLen,
-                                                         &pAuthBuf, &authPrefixLen );
+                                                         pAuthBuf, &authPrefixLen );
     }
 
     /* Hash and hex-encode the canonical request to the buffer. */
@@ -2854,7 +2879,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
         SigV4String_t hexEncodedHmac;
         originalHmac.pData = canonicalContext.pBufCur;
         originalHmac.dataLen = pParams->pCryptoInterface->hashDigestLen;
-        hexEncodedHmac.pData = pAuthBuf;
+        hexEncodedHmac.pData = pAuthBuf + authPrefixLen;
         /* #authBufLen is an overestimate but the validation was already done earlier. */
         hexEncodedHmac.dataLen = *authBufLen;
         returnStatus = lowercaseHexEncode( &originalHmac,
