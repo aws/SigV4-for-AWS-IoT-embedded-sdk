@@ -193,7 +193,7 @@
         /**
          * @brief All accumulated key data.
          */
-        char key[ SIGV4_HASH_MAX_BLOCK_LENGTH ];
+        char key[ SIGV4_HASH_DIGEST_LENGTH ];
 
         /**
          * @brief The length of the accumulated key data.
