@@ -122,8 +122,8 @@
  * a value greater than 0 if @pSecondVal < @pFirstVal. 0 is never returned in
  * order to provide stability to qSort() calls.
  */
-    static int32_t cmpField( const void * pFirstVal,
-                             const void * pSecondVal );
+    static int cmpField( const void * pFirstVal,
+                         const void * pSecondVal );
 
 #endif /* #if (SIGV4_USE_CANONICAL_SUPPORT == 1) */
 
@@ -800,8 +800,8 @@ static SigV4Status_t getCredentialScope( SigV4Parameters_t * pSigV4Params,
 
 /*-----------------------------------------------------------*/
 
-    static int32_t cmpField( const void * pFirstVal,
-                             const void * pSecondVal )
+    static int cmpField( const void * pFirstVal,
+                         const void * pSecondVal )
     {
         SigV4KeyValuePair_t * pFirst, * pSecond = NULL;
         size_t lenSmall = 0U;
