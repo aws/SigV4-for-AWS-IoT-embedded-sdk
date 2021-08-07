@@ -287,10 +287,10 @@ static SigV4Status_t generateCanonicalRequestUntilHeaders( const SigV4Parameters
  * @param[in] signedHeadersLen The length of @p pSignedHeaders.
  * @param[in,out] pAuthBuf The authorization buffer where to write the prefix.
  * Pointer is updated with the next location to write the value of the signature.
- * @param[in, out] pAuthPrefixLen On input, it should contain the total length of @p pAuthBuf. 
+ * @param[in, out] pAuthPrefixLen On input, it should contain the total length of @p pAuthBuf.
  * On output, this will be filled with the length of the Authorization header, if
  * operation is successful.
- * 
+ *
  * @return #SigV4InsufficientMemory if the length of the canonical request output
  * buffer cannot fit the actual request before the headers, #SigV4Success otherwise.
  */
@@ -505,12 +505,12 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
                                          size_t * pBytesRemaining );
 
 /**
- * @brief Format the credential scope of the authorization header using the access key ID,
- * date, region, and service parameters found in #SigV4Parameters_t and ends with the
- * "aws4_request" terminator.
+ * @brief Format the credential scope for the authorization header.
+ * Credential scope includes the access key ID, date, region, and service parameters, and
+ * ends with "aws4_request" terminator.
  *
  * @param[in] pSigV4Params The application parameters defining the credential's scope.
- * @param[in, out] pCredScope The credential scope in the V4 required format.
+ * @param[in, out] pCredScope The credential scope in the SigV4 format.
  *
  * @return SigV4InsufficientMemory if the length of @p pCredScope was insufficient to
  * fit the actual credential scope, #SigV4Success otherwise.
@@ -952,14 +952,14 @@ static SigV4Status_t lowercaseHexEncode( const SigV4String_t * pInputStr,
 
     hex = pHexOutput->pData;
 
-    if( pHexOutput->dataLen < pInputStr->dataLen * 2U )
+    /* Hex string notification of binary data takes twice the size. */
+    if( pHexOutput->dataLen < ( pInputStr->dataLen * 2U ) )
     {
         returnStatus = SigV4InsufficientMemory;
         LOG_INSUFFICIENT_MEMORY_ERROR( "hex encode",
                                        ( pInputStr->dataLen * 2U ) - pHexOutput->dataLen );
     }
-
-    if( returnStatus == SigV4Success )
+    else
     {
         for( i = 0; i < pInputStr->dataLen; i++ )
         {
@@ -1008,11 +1008,10 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
     {
         returnStatus = SigV4InsufficientMemory;
         LOG_INSUFFICIENT_MEMORY_ERROR( "write the credential scope",
-                                       sizeNeeded - pCredScope->dataLen );
+                                       ( sizeNeeded - pCredScope->dataLen ) );
     }
-
     /* Each concatenated component is separated by a '/' character. */
-    if( returnStatus == SigV4Success )
+    else
     {
         /* Concatenate first 8 characters from the provided ISO 8601 string (YYYYMMDD). */
         ( void ) memcpy( pBufWrite, pSigV4Params->pDateIso8601, ISO_DATE_SCOPE_LEN );
@@ -1039,6 +1038,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         ( void ) memcpy( pBufWrite, CREDENTIAL_SCOPE_TERMINATOR, CREDENTIAL_SCOPE_TERMINATOR_LEN );
         pBufWrite += CREDENTIAL_SCOPE_TERMINATOR_LEN;
 
+        assert( ( pBufWrite - pCredScope->pData ) == sizeNeeded );
         pCredScope->dataLen = sizeNeeded;
     }
 
@@ -1187,7 +1187,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         return URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE;
     }
 
-     static SigV4Status_t encodeURI( const char * pUri,
+    static SigV4Status_t encodeURI( const char * pUri,
                                     size_t uriLen,
                                     char * pCanonicalBuffer,
                                     size_t * canonicalURILen,
@@ -1209,9 +1209,9 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         pUriLoc = pUri;
         pBuffer = pCanonicalBuffer;
 
-        for(; index < uriLen; index++ )
+        for( ; index < uriLen; index++ )
         {
-            currUriChar = pUri[index];
+            currUriChar = pUri[ index ];
 
             if( doubleEncodeEquals && ( currUriChar == '=' ) )
             {
@@ -1237,8 +1237,8 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
             }
             else
             {
-                if( ( bytesConsumed > (SIZE_MAX - URI_ENCODED_SPECIAL_CHAR_SIZE) ) ||
-                    ( (bytesConsumed + URI_ENCODED_SPECIAL_CHAR_SIZE) > bufferLen ) )
+                if( ( bytesConsumed > ( SIZE_MAX - URI_ENCODED_SPECIAL_CHAR_SIZE ) ) ||
+                    ( ( bytesConsumed + URI_ENCODED_SPECIAL_CHAR_SIZE ) > bufferLen ) )
                 {
                     returnStatus = SigV4InsufficientMemory;
                     LOG_INSUFFICIENT_MEMORY_ERROR( "encode the URI",
@@ -2006,6 +2006,13 @@ static int32_t completeHash( const char * pInput,
 {
     int32_t hashStatus = -1;
 
+    assert( pOutput != NULL );
+    assert( outputLen > 0 );
+    assert( pCryptoInterface != NULL );
+    assert( pCryptoInterface->hashInit != NULL );
+    assert( pCryptoInterface->hashUpdate != NULL );
+    assert( pCryptoInterface->hashFinal != NULL );
+
     hashStatus = pCryptoInterface->hashInit( pCryptoInterface->pHashContext );
 
     if( hashStatus == 0 )
@@ -2033,22 +2040,25 @@ static SigV4Status_t completeHashAndHexEncode( const char * pInput,
 {
     SigV4Status_t returnStatus = SigV4Success;
     /* Used to store the hash of the request payload. */
-    char hashedPayload[ SIGV4_HASH_MAX_DIGEST_LENGTH ];
+    char hashBuffer[ SIGV4_HASH_MAX_DIGEST_LENGTH ];
     SigV4String_t originalHash;
     SigV4String_t hexEncodedHash;
 
     assert( pOutput != NULL );
     assert( pOutputLen != NULL );
     assert( pCryptoInterface != NULL );
+    assert( pCryptoInterface->hashInit != NULL );
+    assert( pCryptoInterface->hashUpdate != NULL );
+    assert( pCryptoInterface->hashFinal != NULL );
 
-    originalHash.pData = hashedPayload;
+    originalHash.pData = hashBuffer;
     originalHash.dataLen = pCryptoInterface->hashDigestLen;
     hexEncodedHash.pData = pOutput;
     hexEncodedHash.dataLen = *pOutputLen;
 
     if( completeHash( pInput,
                       inputLen,
-                      hashedPayload,
+                      hashBuffer,
                       pCryptoInterface->hashDigestLen,
                       pCryptoInterface ) != 0 )
     {
@@ -2329,6 +2339,10 @@ static size_t writeStringToSignPrefix( char * pBufStart,
                                        size_t algorithmLen,
                                        const char * pDateIso8601 )
 {
+    assert( pBufStart != NULL );
+    assert( pAlgorithm != NULL );
+    assert( pDateIso8601 != NULL );
+
     /* Need to write all substrings that come before the hash in the string to sign. */
 
     /* Write HMAC and hashing algorithm used for SigV4 authentication. */
@@ -2355,6 +2369,10 @@ static SigV4Status_t writeStringToSign( const SigV4Parameters_t * pParams,
     SigV4Status_t returnStatus = SigV4Success;
     size_t encodedLen = pCanonicalContext->bufRemaining;
     char * pBufStart = ( char * ) pCanonicalContext->pBufProcessing;
+ 
+    assert(pParams!= NULL);
+    assert((pAlgorithm!= NULL) && (algorithmLen > 0));
+    assert(pCanonicalContext!= NULL); 
 
     returnStatus = completeHashAndHexEncode( pBufStart,
                                              ( size_t ) ( pCanonicalContext->pBufCur - pBufStart ),
