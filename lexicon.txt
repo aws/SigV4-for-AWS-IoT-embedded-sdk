@@ -132,6 +132,7 @@ sep
 servicelen
 sha
 signaturelen
+signedheaders
 sizeof
 snprintf
 ss
