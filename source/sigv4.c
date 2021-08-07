@@ -1155,33 +1155,33 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         return hexChar;
     }
 
-    static size_t writeHexCodeOfChar( char ** pBuffer,
+    static size_t writeHexCodeOfChar( char * pBuffer,
+                                      size_t bufferLen,
                                       char code )
     {
-        **pBuffer = '%';
-        ++( *pBuffer );
-        **pBuffer = toUpperHexChar( code >> 4 );
-        ++( *pBuffer );
-        **pBuffer = toUpperHexChar( code & 0x0F );
-        ++( *pBuffer );
+        assert( pBuffer != NULL );
+        assert( bufferLen >= URI_ENCODED_SPECIAL_CHAR_SIZE );
 
-        return 3;
+        *pBuffer = '%';
+        *( pBuffer + 1U ) = toUpperHexChar( code >> 4 );
+        *( pBuffer + 2U ) = toUpperHexChar( code & 0x0F );
+
+        return URI_ENCODED_SPECIAL_CHAR_SIZE;
     }
 
-    static size_t writeDoubleEncodedEquals( char ** pBuffer )
+    static size_t writeDoubleEncodedEquals( char * pBuffer,
+                                            size_t bufferLen )
     {
-        **pBuffer = '%';
-        ++( *pBuffer );
-        **pBuffer = '2';
-        ++( *pBuffer );
-        **pBuffer = '5';
-        ++( *pBuffer );
-        **pBuffer = '3';
-        ++( *pBuffer );
-        **pBuffer = 'D';
-        ++( *pBuffer );
+        assert( pBuffer != NULL );
+        assert( bufferLen > URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE );
 
-        return 5;
+        *pBuffer = '%';
+        *( pBuffer + 1U ) = '2';
+        *( pBuffer + 2U ) = '5';
+        *( pBuffer + 3U ) = '3';
+        *( pBuffer + 4U ) = 'D';
+
+        return URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE;
     }
 
     static SigV4Status_t encodeURI( const char * pUri,
@@ -1192,8 +1192,10 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                                     bool doubleEncodeEquals )
     {
         const char * pUriLoc = NULL;
-        char * pBufLoc = NULL;
-        size_t i = 0U, bytesConsumed = 0U;
+        char * pBuffer = NULL;
+        size_t index = 0U, bytesConsumed = 0U;
+        size_t bufferLen = *canonicalURILen;
+        char currUriChar;
         SigV4Status_t returnStatus = SigV4Success;
 
         assert( pUri != NULL );
@@ -1202,51 +1204,56 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         assert( *canonicalURILen > 0U );
 
         pUriLoc = pUri;
-        pBufLoc = pCanonicalURI;
+        pBuffer = pCanonicalURI;
 
-        while( i++ < uriLen && *pUriLoc && returnStatus == SigV4Success )
+        for(; index < uriLen; index++ )
         {
-            if( doubleEncodeEquals && ( *pUriLoc == '=' ) )
+            currUriChar = *pCanonicalURI[index];
+
+            if( doubleEncodeEquals && ( currUriChar == '=' ) )
             {
-                if( ( bytesConsumed > SIZE_MAX - 5U ) || ( bytesConsumed + 5U > *canonicalURILen ) )
+                if( ( bytesConsumed > ( SIZE_MAX - URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE ) ) ||
+                    ( ( bytesConsumed + URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE ) > bufferLen ) )
                 {
                     returnStatus = SigV4InsufficientMemory;
                     LOG_INSUFFICIENT_MEMORY_ERROR( "encode the URI",
-                                                   bytesConsumed + 5U - *canonicalURILen );
+                                                   bytesConsumed + URI_SUZ - bufferLen );
+                    break;
                 }
                 else
                 {
-                    bytesConsumed += writeDoubleEncodedEquals( &pBufLoc );
+                    bytesConsumed += writeDoubleEncodedEquals( pBuffer + bytesConsumed,
+                                                               ( bufferLen - bytesConsumed ) );
                 }
             }
-            else if( isalnum( *pUriLoc ) || ( *pUriLoc == '-' ) || ( *pUriLoc == '_' ) || ( *pUriLoc == '.' ) || ( *pUriLoc == '~' ) ||
-                     ( ( *pUriLoc == '/' ) && !encodeSlash ) )
+            else if( isalnum( currUriChar ) || ( currUriChar == '-' ) || ( currUriChar == '_' ) || ( currUriChar == '.' ) || ( currUriChar == '~' ) ||
+                     ( ( currUriChar == '/' ) && !encodeSlash ) )
             {
-                *pBufLoc = *pUriLoc;
-                ++pBufLoc;
+                *( pBuffer + bytesConsumed ) = currUriChar;
                 ++bytesConsumed;
             }
             else
             {
-                if( ( bytesConsumed > SIZE_MAX - 3U ) || ( bytesConsumed + 3U > *canonicalURILen ) )
+                if( ( bytesConsumed > (SIZE_MAX - URI_ENCODED_SPECIAL_CHAR_SIZE) ) ||
+                    ( (bytesConsumed + URI_ENCODED_SPECIAL_CHAR_SIZE) > bufferLen ) )
                 {
                     returnStatus = SigV4InsufficientMemory;
                     LOG_INSUFFICIENT_MEMORY_ERROR( "encode the URI",
-                                                   bytesConsumed + 3U - *canonicalURILen );
+                                                   ( bytesConsumed + URI_ENCODED_SPECIAL_CHAR_SIZE - bufferLen ) );
+                    break;
                 }
                 else
                 {
-                    bytesConsumed += writeHexCodeOfChar( &pBufLoc, *pUriLoc );
+                    bytesConsumed += writeHexCodeOfChar( pBuffer + bytesConsumed,
+                                                         ( bufferLen - bytesConsumed ), currUriChar );
                 }
             }
 
-            if( bytesConsumed > *canonicalURILen )
+            if( bytesConsumed > bufferLen )
             {
                 returnStatus = SigV4InsufficientMemory;
-                LOG_INSUFFICIENT_MEMORY_ERROR( "encode the URI", bytesConsumed - *canonicalURILen );
+                LOG_INSUFFICIENT_MEMORY_ERROR( "encode the URI", bytesConsumed - bufferLen );
             }
-
-            pUriLoc++;
         }
 
         *canonicalURILen = bytesConsumed;
@@ -1445,6 +1452,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         assert( canonicalRequest->pBufCur != NULL );
         assert( headerCount > 0 );
 
+        /* Store the starting location of the Signed Headers in the Canonical Request buffer. */
         *pSignedHeaders = canonicalRequest->pBufCur;
 
         for( headerIndex = 0; headerIndex < headerCount; headerIndex++ )
@@ -1463,6 +1471,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
             }
         }
 
+        /* Store the length of the "Signed Headers" data appended to the Canonical Request. */
         *pSignedHeadersLen = ( size_t ) ( canonicalRequest->pBufCur - *pSignedHeaders - 1U );
 
         if( sigV4Status == SigV4Success )
@@ -2251,6 +2260,9 @@ static SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
 {
     SigV4Status_t returnStatus = SigV4Success;
 
+    assert( ( pLine != NULL ) && ( lineLen > 0 ) );
+    assert( ( pCanonicalContext != NULL ) && ( pCanonicalContext->pBufCur != NULL ) );
+
     if( pCanonicalContext->bufRemaining < lineLen + 1U )
     {
         returnStatus = SigV4InsufficientMemory;
@@ -2267,8 +2279,7 @@ static SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
         *pCanonicalContext->pBufCur = LINEFEED_CHAR;
         pCanonicalContext->pBufCur += 1U;
 
-        pCanonicalContext->bufRemaining -= lineLen + \
-                                           1U;
+        pCanonicalContext->bufRemaining -= ( lineLen + 1U );
     }
 
     return returnStatus;
@@ -2443,11 +2454,15 @@ static SigV4Status_t generateCanonicalRequestUntilHeaders( const SigV4Parameters
                  ( strncmp( pParams->pService, S3_SERVICE_NAME, S3_SERVICE_NAME_LEN ) == 0 ) )
         {
             /* S3 is the only service in which the URI must only be encoded once. */
-            returnStatus = generateCanonicalURI( pPath, pathLen, false, pCanonicalContext );
+            returnStatus = generateCanonicalURI( pPath, pathLen,
+                                                 false /* Do not encode twice. */,
+                                                 pCanonicalContext );
         }
         else
         {
-            returnStatus = generateCanonicalURI( pPath, pathLen, true, pCanonicalContext );
+            returnStatus = generateCanonicalURI( pPath, pathLen,
+                                                 true /* Encode twice */,
+                                                 pCanonicalContext );
         }
     }
 
@@ -2463,7 +2478,9 @@ static SigV4Status_t generateCanonicalRequestUntilHeaders( const SigV4Parameters
         }
         else
         {
-            returnStatus = generateCanonicalQuery( pParams->pHttpParameters->pQuery, pParams->pHttpParameters->queryLen, pCanonicalContext );
+            returnStatus = generateCanonicalQuery( pParams->pHttpParameters->pQuery,
+                                                   pParams->pHttpParameters->queryLen,
+                                                   pCanonicalContext );
         }
     }
 
