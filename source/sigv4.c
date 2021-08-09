@@ -1038,7 +1038,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         ( void ) memcpy( pBufWrite, CREDENTIAL_SCOPE_TERMINATOR, CREDENTIAL_SCOPE_TERMINATOR_LEN );
         pBufWrite += CREDENTIAL_SCOPE_TERMINATOR_LEN;
 
-        assert( ( pBufWrite - pCredScope->pData ) == sizeNeeded );
+        assert( ( size_t ) ( pBufWrite - pCredScope->pData ) == sizeNeeded );
         pCredScope->dataLen = sizeNeeded;
     }
 
@@ -2369,10 +2369,10 @@ static SigV4Status_t writeStringToSign( const SigV4Parameters_t * pParams,
     SigV4Status_t returnStatus = SigV4Success;
     size_t encodedLen = pCanonicalContext->bufRemaining;
     char * pBufStart = ( char * ) pCanonicalContext->pBufProcessing;
- 
-    assert(pParams!= NULL);
-    assert((pAlgorithm!= NULL) && (algorithmLen > 0));
-    assert(pCanonicalContext!= NULL); 
+
+    assert( pParams != NULL );
+    assert( ( pAlgorithm != NULL ) && ( algorithmLen > 0 ) );
+    assert( pCanonicalContext != NULL );
 
     returnStatus = completeHashAndHexEncode( pBufStart,
                                              ( size_t ) ( pCanonicalContext->pBufCur - pBufStart ),
