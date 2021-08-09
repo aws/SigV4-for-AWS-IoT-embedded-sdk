@@ -1181,7 +1181,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         *pBuffer = '%';
         *( pBuffer + 1U ) = '2';
         *( pBuffer + 2U ) = '5';
-        *( pBuffer + 3U ) = '3';
+        *( pBuffer + URI_ENCODED_SPECIAL_CHAR_SIZE ) = '3';
         *( pBuffer + 4U ) = 'D';
 
         return URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE;
@@ -1189,66 +1189,60 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
 
     static SigV4Status_t encodeURI( const char * pUri,
                                     size_t uriLen,
-                                    char * pCanonicalBuffer,
+                                    char * pCanonicalURI,
                                     size_t * canonicalURILen,
                                     bool encodeSlash,
                                     bool doubleEncodeEquals )
     {
         const char * pUriLoc = NULL;
-        char * pBuffer = NULL;
-        size_t index = 0U, bytesConsumed = 0U;
-        size_t bufferLen = *canonicalURILen;
-        char currUriChar;
+        char * pBufLoc = NULL;
+        size_t i = 0U, bytesConsumed = 0U;
+        size_t bufferLen = 0U;
         SigV4Status_t returnStatus = SigV4Success;
 
         assert( pUri != NULL );
-        assert( pCanonicalBuffer != NULL );
+        assert( pCanonicalURI != NULL );
         assert( canonicalURILen != NULL );
         assert( *canonicalURILen > 0U );
 
         pUriLoc = pUri;
-        pBuffer = pCanonicalBuffer;
+        pBufLoc = pCanonicalURI;
+        bufferLen = *canonicalURILen;
 
-        for( ; index < uriLen; index++ )
+        while( ( i++ < uriLen ) && *pUriLoc && ( returnStatus == SigV4Success ) )
         {
-            currUriChar = pUri[ index ];
-
-            if( doubleEncodeEquals && ( currUriChar == '=' ) )
+            if( doubleEncodeEquals && ( *pUriLoc == '=' ) )
             {
-                if( ( bytesConsumed > ( SIZE_MAX - URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE ) ) ||
-                    ( ( bytesConsumed + URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE ) > bufferLen ) )
+                if( ( bytesConsumed > SIZE_MAX - URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE ) ||
+                    ( bytesConsumed + URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE > bufferLen ) )
                 {
                     returnStatus = SigV4InsufficientMemory;
                     LOG_INSUFFICIENT_MEMORY_ERROR( "encode the URI",
-                                                   bytesConsumed + URI_SUZ - bufferLen );
-                    break;
+                                                   ( bytesConsumed + URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE - bufferLen ) );
                 }
                 else
                 {
-                    bytesConsumed += writeDoubleEncodedEquals( pBuffer + bytesConsumed,
-                                                               ( bufferLen - bytesConsumed ) );
+                    bytesConsumed += writeDoubleEncodedEquals( pBufLoc, bufferLen - bytesConsumed );
                 }
             }
-            else if( isalnum( currUriChar ) || ( currUriChar == '-' ) || ( currUriChar == '_' ) || ( currUriChar == '.' ) || ( currUriChar == '~' ) ||
-                     ( ( currUriChar == '/' ) && !encodeSlash ) )
+            else if( isalnum( *pUriLoc ) || ( *pUriLoc == '-' ) || ( *pUriLoc == '_' ) || ( *pUriLoc == '.' ) || ( *pUriLoc == '~' ) ||
+                     ( ( *pUriLoc == '/' ) && !encodeSlash ) )
             {
-                *( pBuffer + bytesConsumed ) = currUriChar;
+                *pBufLoc = *pUriLoc;
+                ++pBufLoc;
                 ++bytesConsumed;
             }
             else
             {
-                if( ( bytesConsumed > ( SIZE_MAX - URI_ENCODED_SPECIAL_CHAR_SIZE ) ) ||
-                    ( ( bytesConsumed + URI_ENCODED_SPECIAL_CHAR_SIZE ) > bufferLen ) )
+                if( ( bytesConsumed > SIZE_MAX - URI_ENCODED_SPECIAL_CHAR_SIZE ) || ( bytesConsumed + URI_ENCODED_SPECIAL_CHAR_SIZE > bufferLen ) )
                 {
                     returnStatus = SigV4InsufficientMemory;
                     LOG_INSUFFICIENT_MEMORY_ERROR( "encode the URI",
                                                    ( bytesConsumed + URI_ENCODED_SPECIAL_CHAR_SIZE - bufferLen ) );
-                    break;
                 }
                 else
                 {
-                    bytesConsumed += writeHexCodeOfChar( pBuffer + bytesConsumed,
-                                                         ( bufferLen - bytesConsumed ), currUriChar );
+                    bytesConsumed += writeHexCodeOfChar( pBufLoc, bufferLen - bytesConsumed, *pUriLoc );
                 }
             }
 
@@ -1257,6 +1251,8 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                 returnStatus = SigV4InsufficientMemory;
                 LOG_INSUFFICIENT_MEMORY_ERROR( "encode the URI", bytesConsumed - bufferLen );
             }
+
+            pUriLoc++;
         }
 
         *canonicalURILen = bytesConsumed;
@@ -2579,7 +2575,7 @@ static SigV4Status_t generateAuthorizationValuePrefix( const SigV4Parameters_t *
     ( void ) memcpy( pAuthBuf, pAlgorithm, algorithmLen );
     numOfBytesWritten += algorithmLen;
 
-    /* Add space saparator. */
+    /* Add space separator. */
     pAuthBuf[ numOfBytesWritten++ ] = SPACE_CHAR;
 
     /**************** Write "Credential=<access key ID>/<credential scope>, " ****************/

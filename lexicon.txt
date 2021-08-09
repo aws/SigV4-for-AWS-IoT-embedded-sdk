@@ -167,22 +167,9 @@ sep
 servicelen
 sha
 signaturelen
-<<<<<<< HEAD
-<<<<<<< HEAD
-signedheaders
-=======
-<<<<<<< HEAD
-=======
 signedheaders
 signedheaderslen
 signingkey
->>>>>>> bf7559c (SigV4_GenerateHTTPAuthorization Implementation)
->>>>>>> d393cea (SigV4_GenerateHTTPAuthorization Implementation)
-=======
-signedheaders
-signedheaderslen
-signingkey
->>>>>>> 72971e2 (Merge doxygen)
 sizeof
 snprintf
 ss
