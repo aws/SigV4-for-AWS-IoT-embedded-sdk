@@ -122,12 +122,12 @@
  */
 typedef struct SigV4DateTime
 {
-    int32_t tm_year;     /**< Year (1900 or later) */
-    int32_t tm_mon;      /**< Month (1 to 12) */
-    int32_t tm_mday;     /**< Day of Month (1 to 28/29/30/31) */
-    int32_t tm_hour;     /**< Hour (0 to 23) */
-    int32_t tm_min;      /**< Minutes (0 to 59) */
-    int32_t tm_sec;      /**< Seconds (0 to 60) */
+    int32_t tm_year; /**< Year (1900 or later) */
+    int32_t tm_mon;  /**< Month (1 to 12) */
+    int32_t tm_mday; /**< Day of Month (1 to 28/29/30/31) */
+    int32_t tm_hour; /**< Hour (0 to 23) */
+    int32_t tm_min;  /**< Minutes (0 to 59) */
+    int32_t tm_sec;  /**< Seconds (0 to 60) */
 } SigV4DateTime_t;
 
 /**
@@ -137,8 +137,8 @@ typedef struct SigV4DateTime
  */
 typedef struct SigV4String
 {
-    char * pData;       /**< SigV4 string data */
-    size_t dataLen;     /**< Length of pData */
+    char * pData;   /**< SigV4 string data */
+    size_t dataLen; /**< Length of pData */
 } SigV4String_t;
 
 /**
@@ -148,8 +148,8 @@ typedef struct SigV4String
  */
 typedef struct SigV4ConstString
 {
-    const char * pData;     /**< SigV4 string data */
-    size_t dataLen;         /**< Length of pData */
+    const char * pData; /**< SigV4 string data */
+    size_t dataLen;     /**< Length of pData */
 } SigV4ConstString_t;
 
 /**
@@ -159,11 +159,11 @@ typedef struct SigV4ConstString
  */
 typedef struct SigV4KeyValuePair
 {
-    SigV4ConstString_t key;       /**< SigV4 string identifier */
-    SigV4ConstString_t value;     /**< SigV4 data */
+    SigV4ConstString_t key;   /**< SigV4 string identifier */
+    SigV4ConstString_t value; /**< SigV4 data */
 } SigV4KeyValuePair_t;
 
-typedef SigV4KeyValuePair_t SigV4Header_t;     /**< SigV4 header representation */
+typedef SigV4KeyValuePair_t SigV4Header_t; /**< SigV4 header representation */
 
 /**
  * @brief An aggregator to maintain the internal state of canonicalization
@@ -171,12 +171,12 @@ typedef SigV4KeyValuePair_t SigV4Header_t;     /**< SigV4 header representation 
  */
 typedef struct CanonicalContext
 {
-    SigV4KeyValuePair_t pQueryLoc[ SIGV4_MAX_QUERY_PAIR_COUNT ];        /**< Query pointers used during sorting. */
-    SigV4KeyValuePair_t pHeadersLoc[ SIGV4_MAX_HTTP_HEADER_COUNT ];     /**< Header pointers used during sorting. */
+    SigV4KeyValuePair_t pQueryLoc[ SIGV4_MAX_QUERY_PAIR_COUNT ];    /**< Query pointers used during sorting. */
+    SigV4KeyValuePair_t pHeadersLoc[ SIGV4_MAX_HTTP_HEADER_COUNT ]; /**< Header pointers used during sorting. */
 
-    uint8_t pBufProcessing[ SIGV4_PROCESSING_BUFFER_LENGTH ];           /**< Internal calculation buffer used during canonicalization. */
-    char * pBufCur;                                                     /**< pBufProcessing cursor. */
-    size_t bufRemaining;                                                /**< pBufProcessing value used during internal calculation. */
+    uint8_t pBufProcessing[ SIGV4_PROCESSING_BUFFER_LENGTH ];       /**< Internal calculation buffer used during canonicalization. */
+    char * pBufCur;                                                 /**< pBufProcessing cursor. */
+    size_t bufRemaining;                                            /**< pBufProcessing value used during internal calculation. */
 } CanonicalContext_t;
 
 /**
