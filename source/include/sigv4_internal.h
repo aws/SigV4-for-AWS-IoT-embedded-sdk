@@ -28,9 +28,21 @@
 #ifndef SIGV4_INTERNAL_H_
 #define SIGV4_INTERNAL_H_
 
+/* SIGV4_DO_NOT_USE_CUSTOM_CONFIG allows building of the SigV4 library without a
+ * config file. If a config file is provided, the SIGV4_DO_NOT_USE_CUSTOM_CONFIG
+ * macro must not be defined.
+ */
+#ifndef SIGV4_DO_NOT_USE_CUSTOM_CONFIG
+    #include "sigv4_config.h"
+#endif
+
+/* Include config defaults header to get default values of configurations not
+ * defined in sigv4_config.h file. */
+#include "sigv4_config_defaults.h"
+
 /* Constants for date verification. */
-#define YEAR_MIN               1900L /**< Earliest year accepted. */
-#define MONTH_ASCII_LEN        3U    /**< Length of month abbreviations. */
+#define YEAR_MIN               1900L               /**< Earliest year accepted. */
+#define MONTH_ASCII_LEN        3U                  /**< Length of month abbreviations. */
 
 /**
  * @brief Month name abbreviations for RFC 5322 date parsing.
@@ -42,16 +54,66 @@
  */
 #define MONTH_DAYS             { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
 
-#define FORMAT_RFC_3339        "%4Y-%2M-%2DT%2h:%2m:%2sZ"         /**< Format string to parse RFC 3339 date. */
-#define FORMAT_RFC_3339_LEN    sizeof( FORMAT_RFC_3339 ) - 1U     /**< Length of the RFC 3339 format string. */
+#define FORMAT_RFC_3339        "%4Y-%2M-%2DT%2h:%2m:%2sZ"                       /**< Format string to parse RFC 3339 date. */
+#define FORMAT_RFC_3339_LEN    sizeof( FORMAT_RFC_3339 ) - 1U                   /**< Length of the RFC 3339 format string. */
 
-#define FORMAT_RFC_5322        "%3*, %2D %3M %4Y %2h:%2m:%2s GMT" /**< Format string to parse RFC 5322 date. */
-#define FORMAT_RFC_5322_LEN    sizeof( FORMAT_RFC_5322 ) - 1U     /**< Length of the RFC 3339 format string. */
+#define FORMAT_RFC_5322        "%3*, %2D %3M %4Y %2h:%2m:%2s GMT"               /**< Format string to parse RFC 5322 date. */
+#define FORMAT_RFC_5322_LEN    sizeof( FORMAT_RFC_5322 ) - 1U                   /**< Length of the RFC 3339 format string. */
 
-#define ISO_YEAR_LEN           4U                                 /**< Length of year value in ISO 8601 date. */
-#define ISO_NON_YEAR_LEN       2U                                 /**< Length of non-year values in ISO 8601 date. */
+#define ISO_YEAR_LEN           4U                                               /**< Length of year value in ISO 8601 date. */
+#define ISO_NON_YEAR_LEN       2U                                               /**< Length of non-year values in ISO 8601 date. */
 
-#define ISO_DATE_SCOPE_LEN     8U                                 /**< Length of date substring used in credential scope. */
+#define ISO_DATE_SCOPE_LEN     8U                                               /**< Length of date substring used in credential scope. */
+
+/* SigV4 related string literals and lengths. */
+
+/**
+ * @brief The separator between each component of the credential scope.
+ */
+#define CREDENTIAL_SCOPE_SEPARATOR           '/'
+#define CREDENTIAL_SCOPE_SEPARATOR_LEN       1U     /**< The length of #CREDENTIAL_SCOPE_SEPARATOR. */
+
+/**
+ * @brief The last component that terminates the credential scope.
+ */
+#define CREDENTIAL_SCOPE_TERMINATOR          "aws4_request"
+#define CREDENTIAL_SCOPE_TERMINATOR_LEN      ( sizeof( CREDENTIAL_SCOPE_TERMINATOR ) - 1U )     /**< The length of #CREDENTIAL_SCOPE_TERMINATOR. */
+
+/**
+ * @brief Default value when HttpParameters_t.pPath == NULL.
+ */
+#define HTTP_EMPTY_PATH                      "/"
+#define HTTP_EMPTY_PATH_LEN                  ( sizeof( HTTP_EMPTY_PATH ) - 1U )                   /**< The length of #HTTP_EMPTY_PATH. */
+
+#define LINEFEED_CHAR                        '\n'                                                 /**< A linefeed character used to build the canonical request. */
+#define LINEFEED_CHAR_LEN                    1U                                                   /**< The length of #LINEFEED_CHAR. */
+
+#define SPACE_CHAR                           ' '                                                  /**< A linefeed character used to build the Authorization header value. */
+#define SPACE_CHAR_LEN                       1U                                                   /**< The length of #SPACE_CHAR. */
+
+#define S3_SERVICE_NAME                      "s3"                                                 /**< S3 is the only service where the URI must only be encoded once. */
+#define S3_SERVICE_NAME_LEN                  ( sizeof( S3_SERVICE_NAME ) - 1U )                   /**< The length of #S3_SERVICE_NAME. */
+
+#define SIGV4_HMAC_SIGNING_KEY_PREFIX        "AWS4"                                               /**< HMAC signing key prefix. */
+#define SIGV4_HMAC_SIGNING_KEY_PREFIX_LEN    ( sizeof( SIGV4_HMAC_SIGNING_KEY_PREFIX ) - 1U )     /**< The length of #SIGV4_HMAC_SIGNING_KEY_PREFIX. */
+
+#define AUTH_CREDENTIAL_PREFIX               "Credential="                                        /**< The prefix that goes before the credential value in the Authorization header value. */
+#define AUTH_CREDENTIAL_PREFIX_LEN           ( sizeof( AUTH_CREDENTIAL_PREFIX ) - 1U )            /**< The length of #AUTH_CREDENTIAL_PREFIX. */
+#define AUTH_SEPARATOR                       ", "                                                 /**< The separator between each component in the Authorization header value. */
+#define AUTH_SEPARATOR_LEN                   ( sizeof( AUTH_SEPARATOR ) - 1U )                    /**< The length of #AUTH_SEPARATOR. */
+#define AUTH_SIGNED_HEADERS_PREFIX           "SignedHeaders="                                     /**< The prefix that goes before the signed headers in the Authorization header value. */
+#define AUTH_SIGNED_HEADERS_PREFIX_LEN       ( sizeof( AUTH_SIGNED_HEADERS_PREFIX ) - 1U )        /**< The length of #AUTH_SIGNED_HEADERS_PREFIX. */
+#define AUTH_SIGNATURE_PREFIX                "Signature="                                         /**< The prefix that goes before the signature in the Authorization header value. */
+#define AUTH_SIGNATURE_PREFIX_LEN            ( sizeof( AUTH_SIGNATURE_PREFIX ) - 1U )             /**< The length of #AUTH_SIGNATURE_PREFIX. */
+
+/**
+ * @brief A helper macro to print insufficient memory errors.
+ */
+#define LOG_INSUFFICIENT_MEMORY_ERROR( purposeOfWrite, bytesExceeded )                       \
+    do {                                                                                     \
+        LogError( ( "Insufficient memory provided to " purposeOfWrite ", bytesExceeded=%lu", \
+                    ( unsigned long ) ( bytesExceeded ) ) );                                 \
+    } while( 0 )
 
 /**
  * @brief An aggregator representing the individually parsed elements of the
@@ -80,14 +142,25 @@ typedef struct SigV4String
 } SigV4String_t;
 
 /**
+ * @brief A library structure holding the string and length values of parameters to
+ * be sorted and standardized. This allows for a layer of abstraction during the
+ * canonicalization step of the V4 signing process.
+ */
+typedef struct SigV4ConstString
+{
+    const char * pData; /**< SigV4 string data */
+    size_t dataLen;     /**< Length of pData */
+} SigV4ConstString_t;
+
+/**
  * @brief A key-value pair data structure that allows for sorting of SigV4
  * string values using internal comparison functions, and provides additional
  * stability to qSort(), to comply with Misra rule 21.9.
  */
 typedef struct SigV4KeyValuePair
 {
-    SigV4String_t key;   /**< SigV4 string identifier */
-    SigV4String_t value; /**< SigV4 data */
+    SigV4ConstString_t key;   /**< SigV4 string identifier */
+    SigV4ConstString_t value; /**< SigV4 data */
 } SigV4KeyValuePair_t;
 
 typedef SigV4KeyValuePair_t SigV4Header_t; /**< SigV4 header representation */
@@ -98,12 +171,35 @@ typedef SigV4KeyValuePair_t SigV4Header_t; /**< SigV4 header representation */
  */
 typedef struct CanonicalContext
 {
-    char * pQueryLoc[ SIGV4_MAX_QUERY_PAIR_COUNT ];           /**< Query pointers used during sorting. */
-    char * pHeadersLoc[ SIGV4_MAX_HTTP_HEADER_COUNT ];        /**< Header pointers used during sorting. */
+    SigV4KeyValuePair_t pQueryLoc[ SIGV4_MAX_QUERY_PAIR_COUNT ];    /**< Query pointers used during sorting. */
+    SigV4KeyValuePair_t pHeadersLoc[ SIGV4_MAX_HTTP_HEADER_COUNT ]; /**< Header pointers used during sorting. */
 
-    uint8_t pBufProcessing[ SIGV4_PROCESSING_BUFFER_LENGTH ]; /**< Internal calculation buffer used during canonicalization. */
-    char * pBufCur;                                           /**< pBufProcessing cursor */
-    size_t bufRemaining;                                      /**< pBufProcessing value used during internal calculation. */
+    uint8_t pBufProcessing[ SIGV4_PROCESSING_BUFFER_LENGTH ];       /**< Internal calculation buffer used during canonicalization. */
+    char * pBufCur;                                                 /**< pBufProcessing cursor. */
+    size_t bufRemaining;                                            /**< pBufProcessing value used during internal calculation. */
 } CanonicalContext_t;
+
+/**
+ * @brief An aggregator to maintain the internal state of HMAC
+ * calculations.
+ */
+typedef struct HmacContext
+{
+    /**
+     * @brief The cryptography interface.
+     */
+    const SigV4CryptoInterface_t * pCryptoInterface;
+
+    /**
+     * @brief All accumulated key data.
+     */
+    char key[ SIGV4_HASH_DIGEST_LENGTH ];
+
+    /**
+     * @brief The length of the accumulated key data.
+     */
+    size_t keyLen;
+} HmacContext_t;
+
 
 #endif /* ifndef SIGV4_INTERNAL_H_ */

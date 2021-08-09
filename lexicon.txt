@@ -5,6 +5,7 @@ addtodate
 addtogroup
 aggregator
 amz
+api
 apr
 ascii
 authbuflen
@@ -39,7 +40,10 @@ gr
 hashfinal
 hashinit
 hashupdate
+headercount
+headerindex
 headerlen
+headersdatalen
 headerslen
 hh
 hhmmss
@@ -128,6 +132,7 @@ sep
 servicelen
 sha
 signaturelen
+signedheaders
 sizeof
 snprintf
 ss
@@ -140,6 +145,8 @@ sts
 subfolder
 sublicense
 thu
+trimmable
+trimmedlength
 tm
 tue
 txt
@@ -148,5 +155,6 @@ uri
 urilen
 url
 utc
+vallen
 yyyy
 yyyymmdd

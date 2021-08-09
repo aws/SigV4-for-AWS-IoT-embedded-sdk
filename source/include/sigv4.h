@@ -150,7 +150,19 @@ typedef enum SigV4Status
      * Functions that may return this value:
      * - #SigV4_AwsIotDateToIso8601
      */
-    SigV4ISOFormattingError
+    SigV4ISOFormattingError,
+
+    /**
+     * @brief The maximum number of header parameters was exceeded while parsing
+     * the http header string passed to the library.
+     * The maximum number of supported HTTP headers can be configured
+     * with the SIGV4_MAX_HTTP_HEADER_COUNT macro in the library config file
+     * passed by the application.
+     *
+     * Functions that may return this value:
+     * - #SigV4_GenerateHTTPAuthorization
+     */
+    SigV4MaxHeaderPairCountExceeded
 } SigV4Status_t;
 
 /**
@@ -358,6 +370,8 @@ typedef struct SigV4Parameters
 /**
  * @brief Generates the HTTP Authorization header value.
  *
+ * @note The API does not support HTTP headers containing empty HTTP header keys or values.
+ *
  * @param[in] pParams Parameters for generating the SigV4 signature.
  * @param[out] pAuthBuf Buffer to hold the generated Authorization header value.
  * @param[in, out] authBufLen Input: the length of pAuthBuf, output: the length
@@ -423,5 +437,7 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
                                          size_t dateLen,
                                          char * pDateISO8601,
                                          size_t dateISO8601Len );
+
 /* @[declare_sigV4_awsIotDateToIso8601_function] */
+
 #endif /* SIGV4_H_ */
