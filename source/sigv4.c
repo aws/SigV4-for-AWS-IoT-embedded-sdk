@@ -40,15 +40,6 @@
 #if ( SIGV4_USE_CANONICAL_SUPPORT == 1 )
 
 /**
- * @brief Verifies if a SigV4 string value is empty.
- *
- * @param[in] pInput The SigV4 string value struct to verify.
- *
- * @return Returns 'true' if @pInput is empty, and 'false' otherwise.
- */
-    static bool emptySigV4String( SigV4ConstString_t * pInput );
-
-/**
  * @brief Normalize a URI string according to RFC 3986 and fill destination
  * buffer with the formatted string.
  *
@@ -1050,17 +1041,6 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
 
 #if ( SIGV4_USE_CANONICAL_SUPPORT == 1 )
 
-    static bool emptySigV4String( SigV4ConstString_t * pInput )
-    {
-        bool returnVal = true;
-
-        assert( pInput != NULL );
-
-        return ( pInput->pData == NULL || pInput->dataLen == 0 ) ? returnVal : !returnVal;
-    }
-
-/*-----------------------------------------------------------*/
-
     static int cmpHeaderField( const void * pFirstVal,
                                const void * pSecondVal )
     {
@@ -1073,8 +1053,8 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         pFirst = ( SigV4KeyValuePair_t * ) pFirstVal;
         pSecond = ( SigV4KeyValuePair_t * ) pSecondVal;
 
-        assert( !emptySigV4String( &pFirst->key ) );
-        assert( !emptySigV4String( &pSecond->key ) );
+        assert( ( pFirst->key.pData != NULL ) && ( pFirst->key.dataLen != 0U ) );
+        assert( ( pSecond->key.pData != NULL ) && ( pSecond->key.dataLen != 0U ) );
 
         if( pFirst->key.dataLen <= pSecond->key.dataLen )
         {
@@ -1105,8 +1085,8 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         pFirst = ( SigV4KeyValuePair_t * ) pFirstVal;
         pSecond = ( SigV4KeyValuePair_t * ) pSecondVal;
 
-        assert( !emptySigV4String( &pFirst->key ) );
-        assert( !emptySigV4String( &pSecond->key ) );
+        assert( ( pFirst->key.pData != NULL ) && ( pFirst->key.dataLen != 0U ) );
+        assert( ( pSecond->key.pData != NULL ) && ( pSecond->key.dataLen != 0U ) );
 
         lenSmall = ( pFirst->key.dataLen < pSecond->key.dataLen ) ? pFirst->key.dataLen : pSecond->key.dataLen;
         compResult = ( int32_t ) strncmp( ( char * ) pFirst->key.pData,
@@ -1168,6 +1148,9 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         assert( pBuffer != NULL );
         assert( bufferLen >= URI_ENCODED_SPECIAL_CHAR_SIZE );
 
+        /* Suppress unused warning in when asserts are disabled. */
+        ( void ) bufferLen;
+
         *pBuffer = '%';
         *( pBuffer + 1U ) = toUpperHexChar( code >> 4 );
         *( pBuffer + 2U ) = toUpperHexChar( code & 0x0F );
@@ -1182,6 +1165,9 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
     {
         assert( pBuffer != NULL );
         assert( bufferLen > URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE );
+
+        /* Suppress unused warning in when asserts are disabled. */
+        ( void ) bufferLen;
 
         *pBuffer = '%';
         *( pBuffer + 1U ) = '2';
@@ -1761,7 +1747,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
             {
                 returnStatus = SigV4MaxQueryPairCountExceeded;
                 LogError( ( "Failed to parse query string: Number of query parameters exceeds max threshold defined in config. "
-                            "SIGV4_MAX_QUERY_PAIR_COUNT=%lu", SIGV4_MAX_QUERY_PAIR_COUNT ) );
+                            "SIGV4_MAX_QUERY_PAIR_COUNT=%lu", ( unsigned long ) SIGV4_MAX_QUERY_PAIR_COUNT ) );
                 break;
             }
         }
@@ -1780,7 +1766,6 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                                                                size_t * pEncodedLen )
     {
         SigV4Status_t returnStatus = SigV4Success;
-        char * pBufCurLoc = pBufCur;
         size_t bytesWritten = 0U;
 
         assert( pBufCur != NULL );
@@ -1907,7 +1892,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         assert( pCanonicalContext != NULL );
         assert( pCanonicalContext->pBufCur != NULL );
 
-        returnStatus == setQueryStringFieldsAndValues( pQuery, queryLen, &numberOfParameters, pCanonicalContext );
+        returnStatus = setQueryStringFieldsAndValues( pQuery, queryLen, &numberOfParameters, pCanonicalContext );
 
         if( returnStatus == SigV4Success )
         {
@@ -2603,8 +2588,6 @@ static SigV4Status_t generateAuthorizationValuePrefix( const SigV4Parameters_t *
             LogError( ( "Insufficient memory provided to write the Authorization header value, bytesExceeded=%lu",
                         ( unsigned long ) ( authPrefixLen + encodedSignatureLen - *pAuthPrefixLen ) ) );
             returnStatus = SigV4InsufficientMemory;
-            LOG_INSUFFICIENT_MEMORY_ERROR( "string to sign",
-                                           sizeNeededBeforeHash + encodedSignatureLen - SIGV4_PROCESSING_BUFFER_LENGTH );
         }
     }
 
