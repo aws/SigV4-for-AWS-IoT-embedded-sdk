@@ -56,7 +56,7 @@
 #define DATE                                 "20150830T123600Z"
 #define REGION                               "us-east-1"
 #define SERVICE                              "iam"
-#define HEADERS                              "Host: iam.amazonaws.com\r\nContent-Type: application/x-www-form-urlencoded; charset=utf-8\r\nX-Amz-Date: 20150830T123600Z\r\n\r\n"
+#define HEADERS                              "Host: iam.amazonaws.com\r\nContent-Type: application/x-www-form-urlencoded; charset=utf-8\r\nX-Amz-Date: "DATE "\r\n\r\n"
 #define PRECANON_HEADER                      "content-type:application/json;host:iam.amazonaws.com"
 #define HEADERS_LENGTH                       ( sizeof( HEADERS ) - 1U )
 #define SECURITY_TOKEN                       "security-token"
@@ -65,7 +65,7 @@
 #define EXPIRATION_LENGTH                    ( sizeof( EXPIRATION ) - 1U )
 
 /* Insufficient memory parameters for SIGV4_PROCESSING_BUFFER_LENGTH=350. In the comments below,
- * + means concatenation. */
+ * + means concatenation, OOM means "Out of Memory", LF means newline character */
 
 /* HTTP method + URI-encoded variant of this string must be greater than SIGV4_PROCESSING_BUFFER_LENGTH. */
 #define PATH_FIRST_ENCODE_OOM                                                           \
@@ -167,7 +167,9 @@ void formatAndVerifyInputDate( const char * pInputDate,
     tearDown();
 }
 
-static int32_t sha256_init( void * pHashContext )
+/*==================== OpenSSL Based implementation of Crypto Interface ===================== */
+
+static int32_t valid_sha256_init( void * pHashContext )
 {
     if( SHA256_Init( ( SHA256_CTX * ) pHashContext ) == 1 )
     {
@@ -177,9 +179,9 @@ static int32_t sha256_init( void * pHashContext )
     return -1;
 }
 
-static int32_t sha256_update( void * pHashContext,
-                              const char * pInput,
-                              size_t inputLen )
+static int32_t valid_sha256_update( void * pHashContext,
+                                    const char * pInput,
+                                    size_t inputLen )
 {
     if( SHA256_Update( ( SHA256_CTX * ) pHashContext, pInput, inputLen ) )
     {
@@ -189,17 +191,19 @@ static int32_t sha256_update( void * pHashContext,
     return -1;
 }
 
-static int32_t sha256_final( void * pHashContext,
-                             char * pOutput,
-                             size_t outputLen )
+static int32_t valid_sha256_final( void * pHashContext,
+                                   char * pOutput,
+                                   size_t outputLen )
 {
-    if( SHA256_Final( pOutput, ( SHA256_CTX * ) pHashContext ) )
+    if( SHA256_Final( ( uint8_t * ) pOutput, ( SHA256_CTX * ) pHashContext ) )
     {
         return 0;
     }
 
     return -1;
 }
+
+/*==================== Echo Implementation of Crypto Interface ===================== */
 
 static hashEchoBuffer[ SIGV4_HASH_MAX_BLOCK_LENGTH ];
 static size_t hashInputLen;
@@ -226,6 +230,8 @@ static int32_t echo_hash_final( void * pHashContext,
 {
     ( void ) memcpy( pOutput, hashEchoBuffer, hashInputLen );
 }
+
+/*==================== Failable Implementation of Crypto Interface ===================== */
 
 /*
  #define FAIL_HASH_INIT 1U,
@@ -279,6 +285,8 @@ static int32_t hash_final_failable( void * pHashContext,
 
     return ret;
 }
+
+/*============================ Test Helpers ========================== */
 
 static void resetFailableHashParams()
 {
@@ -334,11 +342,11 @@ static void resetInputParams()
     params.pService = SERVICE;
     params.serviceLen = sizeof( SERVICE ) - 1U;
     cryptoInterface.pHashContext = &sha256;
-    cryptoInterface.hashInit = sha256_init;
-    cryptoInterface.hashUpdate = sha256_update;
-    cryptoInterface.hashFinal = sha256_final;
-    cryptoInterface.hashBlockLen = SIGV4_SHA256_BLOCK_LENGTH;
-    cryptoInterface.hashDigestLen = SIGV4_SHA256_DIGEST_LENGTH;
+    cryptoInterface.hashInit = valid_sha256_init;
+    cryptoInterface.hashUpdate = valid_sha256_update;
+    cryptoInterface.hashFinal = valid_sha256_final;
+    cryptoInterface.hashBlockLen = SIGV4_HASH_MAX_BLOCK_LENGTH;
+    cryptoInterface.hashDigestLen = SIGV4_HASH_MAX_DIGEST_LENGTH;
     params.pCryptoInterface = &cryptoInterface;
 }
 
@@ -494,6 +502,8 @@ void test_SigV4_AwsIotDateToIso8601_Formatting_Error()
     }
 }
 
+/* ======================= Testing SigV4_GenerateHTTPAuthorization =========================== */
+/* TODO - Verify the generated signatures. */
 void test_SigV4_GenerateHTTPAuthorization_Happy_Paths()
 {
     SigV4Status_t returnStatus;

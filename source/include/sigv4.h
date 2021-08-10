@@ -185,7 +185,7 @@ typedef enum SigV4Status
      * Functions that may return this value:
      * - #SigV4_GenerateHTTPAuthorization
      */
-    SigV4HashError,
+    SigV4HashError
 } SigV4Status_t;
 
 /**
