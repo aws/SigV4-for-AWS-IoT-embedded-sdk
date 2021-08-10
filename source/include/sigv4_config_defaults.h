@@ -78,18 +78,31 @@
 #endif
 
 /**
- * @brief Macro defining the digest length of the specified hash function, used
- * to determine the length of the output buffer.
+ * @brief Macro indicating the largest block size of any hashing
+ * algorithm used for SigV4 authentication i.e. the maximum of all
+ * values specified for the hashBlockLen in #SigV4CryptoInterface_t.
+ * For example, using SHA-512 would require this value to be at least 128.
+ *
+ * <b>Possible values:</b> Any positive 32 bit integer. <br>
+ * <b>Default value:</b> `64`
+ */
+#ifndef SIGV4_HASH_MAX_BLOCK_LENGTH
+    #define SIGV4_HASH_MAX_BLOCK_LENGTH    64U
+#endif
+
+/**
+ * @brief Macro defining the maximum digest length of the specified hash function,
+ * used to determine the length of the output buffer.
  *
  * This macro should be updated if using a hashing algorithm other than SHA256
- * (32 byte digest length). For example, SHA512 would require this macro to be
- * updated to 64 to accurately reflect its digest length.
+ * (32 byte digest length). For example, using SHA512 would require this
+ * value to be at least 64.
  *
  * <b>Possible values:</b> Any positive 32 bit integer. <br>
  * <b>Default value:</b> `32`
  */
-#ifndef SIGV4_HASH_DIGEST_LENGTH
-    #define SIGV4_HASH_DIGEST_LENGTH    32U
+#ifndef SIGV4_HASH_MAX_DIGEST_LENGTH
+    #define SIGV4_HASH_MAX_DIGEST_LENGTH    32U
 #endif
 
 /**
