@@ -1727,7 +1727,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                     i++;
                 }
 
-                if( i - startOfFieldOrValue == 0U )
+                if( ( i - startOfFieldOrValue ) == 0U )
                 {
                     /* A field should never be empty, but a value can be empty
                      * provided a field was specified first. */
@@ -1865,7 +1865,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                 }
             }
 
-            if( ( remainingLen < 1U ) && ( numberOfParameters != i + 1 ) )
+            if( ( remainingLen < 1U ) && ( numberOfParameters != ( i + 1 ) ) )
             {
                 returnStatus = SigV4InsufficientMemory;
                 LOG_INSUFFICIENT_MEMORY_ERROR( "write the canonical query", 1U );
@@ -2323,7 +2323,7 @@ static SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
                          lineLen );
         pCanonicalContext->pBufCur += lineLen;
 
-        *pCanonicalContext->pBufCur = LINEFEED_CHAR;
+        *( pCanonicalContext->pBufCur ) = LINEFEED_CHAR;
         pCanonicalContext->pBufCur += 1U;
 
         pCanonicalContext->bufRemaining -= ( lineLen + 1U );
