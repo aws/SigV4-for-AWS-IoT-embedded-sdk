@@ -169,7 +169,10 @@ typedef enum SigV4Status
 
     /**
      * @brief The maximum number of query parameters was exceeded while parsing
-     * the query string input parameter.
+     * the query string passed to the library.
+     * The maximum number of supported query parameters can be configured
+     * with the SIGV4_MAX_QUERY_PAIR_COUNT macro in the library config file
+     * passed by the application.
      *
      * Functions that may return this value:
      * - #SigV4_GenerateHTTPAuthorization

@@ -1159,6 +1159,8 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         return hexChar;
     }
 
+/*-----------------------------------------------------------*/
+
     static size_t writeHexCodeOfChar( char * pBuffer,
                                       size_t bufferLen,
                                       char code )
@@ -1172,6 +1174,8 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
 
         return URI_ENCODED_SPECIAL_CHAR_SIZE;
     }
+
+/*-----------------------------------------------------------*/
 
     static size_t writeDoubleEncodedEquals( char * pBuffer,
                                             size_t bufferLen )
@@ -1187,6 +1191,8 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
 
         return URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE;
     }
+
+/*-----------------------------------------------------------*/
 
     static SigV4Status_t encodeURI( const char * pUri,
                                     size_t uriLen,
@@ -1334,6 +1340,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
     }
 
 /*-----------------------------------------------------------*/
+
     static bool isTrimmableSpace( const char * value,
                                   size_t index,
                                   size_t valLen,
@@ -1764,6 +1771,8 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         return returnStatus;
     }
 
+/*-----------------------------------------------------------*/
+
     static SigV4Status_t writeValueInCanonicalizedQueryString( char * pBufCur,
                                                                size_t bufferLen,
                                                                const char * pValue,
@@ -1807,6 +1816,8 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
 
         return returnStatus;
     }
+
+/*-----------------------------------------------------------*/
 
     static SigV4Status_t writeCanonicalQueryParameters( CanonicalContext_t * pCanonicalRequest,
                                                         size_t numberOfParameters )
@@ -1883,6 +1894,8 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
 
         return returnStatus;
     }
+
+/*-----------------------------------------------------------*/
 
     static SigV4Status_t generateCanonicalQuery( const char * pQuery,
                                                  size_t queryLen,
