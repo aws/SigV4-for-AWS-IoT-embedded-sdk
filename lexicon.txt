@@ -20,8 +20,8 @@ canonicalurilen
 cbmc
 chunked
 com
-config
 completehashandhexencode
+config
 const
 constness
 copydoc
@@ -32,8 +32,8 @@ dd
 deconstructed
 defgroup
 doubleencodeequals
-encodetwice
 encodeslash
+encodetwice
 endif
 enums
 expirationlen
@@ -53,6 +53,7 @@ headerindex
 headerlen
 headersdatalen
 headerslen
+hexencoded
 hh
 hhmmss
 hmac
@@ -68,8 +69,8 @@ ifndef
 inc
 ingroup
 inputlen
-ipad
 iot
+ipad
 iso
 jan
 january
@@ -155,8 +156,6 @@ rande
 readloc
 regionlen
 rfc
-trimmedlen
-trimmedlength
 sdk
 sec
 secretaccesskey
@@ -183,9 +182,11 @@ sts
 subfolder
 sublicense
 thu
-trimmable
-trimmedlength
 tm
+trimmable
+trimmedlen
+trimmedlength
+trimmedlength
 tue
 txt
 un
