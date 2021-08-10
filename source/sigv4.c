@@ -2846,7 +2846,9 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
 
     if( returnStatus == SigV4Success )
     {
-        returnStatus = generateCanonicalRequestUntilHeaders( pParams, &canonicalContext, &pSignedHeaders, &signedHeadersLen );
+        returnStatus = generateCanonicalRequestUntilHeaders( pParams, &canonicalContext,
+                                                             &pSignedHeaders,
+                                                             &signedHeadersLen );
     }
 
     /* Write the prefix of the Authorizaton header value. */

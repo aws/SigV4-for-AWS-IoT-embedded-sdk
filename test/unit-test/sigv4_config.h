@@ -36,15 +36,15 @@
 #define SIGV4_CONFIG_H_
 
 
-#define LOGGING_LEVEL_DEBUG 1
+#define LOGGING_LEVEL_DEBUG    1
 
 /* @[code_example_loggingmacros] */
 /************* Define Logging Macros using printf function ***********/
 
-#define PrintfError( ... )         printf( "Error: "__VA_ARGS__ );  printf( "\n" )
-#define PrintfWarn( ... )          printf( "Warn: "__VA_ARGS__ );  printf( "\n" )
-#define PrintfInfo( ... )          printf( "Info: " __VA_ARGS__ ); printf( "\n" )
-#define PrintfDebug( ... )         printf( "Debug: " __VA_ARGS__ ); printf( "\n" )
+#define PrintfError( ... )         printf( "[%d] Error: ", __LINE__ ); printf( __VA_ARGS__ );  printf( "\n" )
+#define PrintfWarn( ... )          printf( "[%d] Warn: ", __LINE__ ); printf( __VA_ARGS__ );  printf( "\n" )
+#define PrintfInfo( ... )          printf( "[%d] Info: ", __LINE__ ); printf( __VA_ARGS__ ); printf( "\n" )
+#define PrintfDebug( ... )         printf( "[%d] Debug: ", __LINE__ ); printf( __VA_ARGS__ ); printf( "\n" )
 
 #ifdef LOGGING_LEVEL_ERROR
     #define LogError( message )    PrintfError message
@@ -76,7 +76,7 @@
  * <b>Default value:</b> `1024`
  */
 #ifndef SIGV4_PROCESSING_BUFFER_LENGTH
-    #define SIGV4_PROCESSING_BUFFER_LENGTH    350U
+    #define SIGV4_PROCESSING_BUFFER_LENGTH    350
 #endif
 
 /**
