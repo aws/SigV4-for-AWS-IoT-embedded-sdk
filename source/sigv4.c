@@ -69,13 +69,13 @@
  * @param[in] encodeTwice Service-dependent option to indicate whether
  * encoding should be done twice. For example, S3 requires that the
  * URI is encoded only once, while other services encode twice.
- * @param[in, out] canonicalRequest Struct to maintain intermediary buffer
+ * @param[in, out] pCanonicalRequest Struct to maintain intermediary buffer
  * and state of canonicalization.
  */
     static SigV4Status_t generateCanonicalURI( const char * pUri,
                                                size_t uriLen,
                                                bool encodeTwice,
-                                               CanonicalContext_t * canonicalRequest );
+                                               CanonicalContext_t * pCanonicalRequest );
 
 /**
  * @brief Canonicalize the query string HTTP URL, beginning (but not
@@ -83,12 +83,12 @@
  *
  * @param[in] pQuery HTTP request query.
  * @param[in] queryLen Length of pQuery.
- * @param[in, out] canonicalRequest Struct to maintain intermediary buffer
+ * @param[in, out] pCanonicalContext Struct to maintain intermediary buffer
  * and state of canonicalization.
  */
     static SigV4Status_t generateCanonicalQuery( const char * pQuery,
                                                  size_t queryLen,
-                                                 CanonicalContext_t * canonicalRequest );
+                                                 CanonicalContext_t * pCanonicalContext );
 
 /**
  * @brief Compare two SigV4 data structures lexicographically, without case-sensitivity.
@@ -793,7 +793,7 @@ static SigV4Status_t scanValue( const char * pDate,
                                 SigV4DateTime_t * pDateElements )
 {
     SigV4Status_t returnStatus = SigV4InvalidParameter;
-    const char * pMonthNames[] = MONTH_NAMES;
+    const char * const pMonthNames[] = MONTH_NAMES;
     const char * pLoc = pDate + readLoc;
     size_t remainingLenToRead = lenToRead;
     int32_t result = 0;
@@ -1044,14 +1044,14 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
     static int cmpHeaderField( const void * pFirstVal,
                                const void * pSecondVal )
     {
-        SigV4KeyValuePair_t * pFirst, * pSecond = NULL;
+        const SigV4KeyValuePair_t * pFirst, * pSecond = NULL;
         size_t lenSmall = 0U;
 
         assert( pFirstVal != NULL );
         assert( pSecondVal != NULL );
 
-        pFirst = ( SigV4KeyValuePair_t * ) pFirstVal;
-        pSecond = ( SigV4KeyValuePair_t * ) pSecondVal;
+        pFirst = ( const SigV4KeyValuePair_t * ) pFirstVal;
+        pSecond = ( const SigV4KeyValuePair_t * ) pSecondVal;
 
         assert( ( pFirst->key.pData != NULL ) && ( pFirst->key.dataLen != 0U ) );
         assert( ( pSecond->key.pData != NULL ) && ( pSecond->key.dataLen != 0U ) );
@@ -1075,22 +1075,22 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
     static int cmpQueryFieldValue( const void * pFirstVal,
                                    const void * pSecondVal )
     {
-        SigV4KeyValuePair_t * pFirst, * pSecond = NULL;
+        const SigV4KeyValuePair_t * pFirst, * pSecond = NULL;
         size_t lenSmall = 0U;
         int32_t compResult = -1;
 
         assert( pFirstVal != NULL );
         assert( pSecondVal != NULL );
 
-        pFirst = ( SigV4KeyValuePair_t * ) pFirstVal;
-        pSecond = ( SigV4KeyValuePair_t * ) pSecondVal;
+        pFirst = ( const SigV4KeyValuePair_t * ) pFirstVal;
+        pSecond = ( const SigV4KeyValuePair_t * ) pSecondVal;
 
         assert( ( pFirst->key.pData != NULL ) && ( pFirst->key.dataLen != 0U ) );
         assert( ( pSecond->key.pData != NULL ) && ( pSecond->key.dataLen != 0U ) );
 
         lenSmall = ( pFirst->key.dataLen < pSecond->key.dataLen ) ? pFirst->key.dataLen : pSecond->key.dataLen;
-        compResult = ( int32_t ) strncmp( ( char * ) pFirst->key.pData,
-                                          ( char * ) pSecond->key.pData,
+        compResult = ( int32_t ) strncmp( pFirst->key.pData,
+                                          pSecond->key.pData,
                                           lenSmall );
 
         if( compResult == 0 )
@@ -1099,8 +1099,8 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
             {
                 /* The fields are equal, so sorting must be done by value. */
                 lenSmall = ( pFirst->value.dataLen < pSecond->value.dataLen ) ? pFirst->value.dataLen : pSecond->value.dataLen;
-                compResult = ( int32_t ) strncmp( ( char * ) pFirst->value.pData,
-                                                  ( char * ) pSecond->value.pData,
+                compResult = ( int32_t ) strncmp( pFirst->value.pData,
+                                                  pSecond->value.pData,
                                                   lenSmall );
             }
             else
@@ -1354,6 +1354,10 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
             {
                 ret = true;
             }
+            else
+            {
+                /* Empty else. */
+            }
         }
 
         return ret;
@@ -1576,6 +1580,10 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                 keyFlag = true;
                 noOfHeaders++;
             }
+            else
+            {
+                /* Empty else. */
+            }
 
             pCurrLoc++;
         }
@@ -1743,7 +1751,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                 /* Empty else. */
             }
 
-            if( currentParameter > SIGV4_MAX_QUERY_PAIR_COUNT )
+            if( currentParameter >= SIGV4_MAX_QUERY_PAIR_COUNT )
             {
                 returnStatus = SigV4MaxQueryPairCountExceeded;
                 LogError( ( "Failed to parse query string: Number of query parameters exceeds max threshold defined in config. "
@@ -2010,6 +2018,10 @@ static SigV4Status_t verifySigV4Parameters( const SigV4Parameters_t * pParams )
     {
         LogError( ( "Parameter check failed: pParams->pHttpParameters->pHeaders is NULL." ) );
         returnStatus = SigV4InvalidParameter;
+    }
+    else
+    {
+        /* Empty else. */
     }
 
     return returnStatus;
@@ -2358,6 +2370,8 @@ static size_t writeStringToSignPrefix( char * pBufStart,
                                        size_t algorithmLen,
                                        const char * pDateIso8601 )
 {
+    char * pBuffer = pBufStart;
+
     assert( pBufStart != NULL );
     assert( pAlgorithm != NULL );
     assert( pDateIso8601 != NULL );
@@ -2365,17 +2379,17 @@ static size_t writeStringToSignPrefix( char * pBufStart,
     /* Need to write all substrings that come before the hash in the string to sign. */
 
     /* Write HMAC and hashing algorithm used for SigV4 authentication. */
-    ( void ) memcpy( pBufStart, pAlgorithm, algorithmLen );
-    pBufStart += algorithmLen;
+    ( void ) memcpy( pBuffer, pAlgorithm, algorithmLen );
+    pBuffer += algorithmLen;
 
-    *pBufStart = LINEFEED_CHAR;
-    pBufStart += 1U;
+    *pBuffer = LINEFEED_CHAR;
+    pBuffer += 1U;
 
     /* Concatenate entire ISO 8601 date string. */
-    ( void ) memcpy( pBufStart, pDateIso8601, SIGV4_ISO_STRING_LEN );
-    pBufStart += SIGV4_ISO_STRING_LEN;
+    ( void ) memcpy( pBuffer, pDateIso8601, SIGV4_ISO_STRING_LEN );
+    pBuffer += SIGV4_ISO_STRING_LEN;
 
-    *pBufStart = LINEFEED_CHAR;
+    *pBuffer = LINEFEED_CHAR;
 
     return algorithmLen + 1U + SIGV4_ISO_STRING_LEN + 1U;
 }
