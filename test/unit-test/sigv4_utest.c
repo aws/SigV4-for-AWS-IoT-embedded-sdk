@@ -347,10 +347,6 @@ static void resetInputParams()
     creds.accessKeyIdLen = sizeof( ACCESS_KEY_ID ) - 1U;
     creds.pSecretAccessKey = SECRET_KEY;
     creds.secretAccessKeyLen = SECRET_KEY_LEN;
-    creds.pSecurityToken = SECURITY_TOKEN;
-    creds.securityTokenLen = SECURITY_TOKEN_LENGTH;
-    creds.pExpiration = EXPIRATION;
-    creds.expirationLen = EXPIRATION_LENGTH;
     params.pAlgorithm = SIGV4_AWS4_HMAC_SHA256;
     params.algorithmLen = SIGV4_AWS4_HMAC_SHA256_LENGTH;
     params.pCredentials = &creds;
@@ -399,7 +395,7 @@ int suiteTearDown( int numFailures )
  * @brief Test happy path with zero-initialized and adequately sized input and
  * output buffers.
  */
-void xtest_SigV4_AwsIotDateToIso8601_Happy_Path()
+void test_SigV4_AwsIotDateToIso8601_Happy_Path()
 {
     /* Test unformatted inputs against their final expected values, in both RFC
      * 3339 and 5322 formats. */
@@ -434,7 +430,7 @@ void xtest_SigV4_AwsIotDateToIso8601_Happy_Path()
 /**
  * @brief Test NULL and invalid parameters.
  */
-void xtest_SigV4_AwsIotDateToIso8601_Invalid_Params()
+void test_SigV4_AwsIotDateToIso8601_Invalid_Params()
 {
     /* Output buffer of insufficient length. */
     char testBufferShort[ SIGV4_ISO_STRING_LEN - 1U ] = { 0 };
@@ -489,7 +485,7 @@ void xtest_SigV4_AwsIotDateToIso8601_Invalid_Params()
 /**
  * @brief Test valid input parameters representing invalid dates.
  */
-void xtest_SigV4_AwsIotDateToIso8601_Formatting_Error()
+void test_SigV4_AwsIotDateToIso8601_Formatting_Error()
 {
     size_t index = 0U;
 
@@ -521,6 +517,122 @@ void xtest_SigV4_AwsIotDateToIso8601_Formatting_Error()
 }
 
 /* ======================= Testing SigV4_GenerateHTTPAuthorization =========================== */
+
+void test_SigV4_GenerateHTTPAuthorization_Invalid_Params()
+{
+    SigV4Status_t returnStatus;
+
+    /******* All cases of NULL input parameters. ******/
+    returnStatus = SigV4_GenerateHTTPAuthorization( NULL, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, NULL, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, NULL, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, NULL, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, NULL );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    /******** All cases of invalid HTTP parameters. *********/
+    resetInputParams();
+    params.pHttpParameters = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pHttpParameters->pHttpMethod = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+    resetInputParams();
+    params.pHttpParameters->httpMethodLen = 0U;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pHttpParameters->pHeaders = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+    resetInputParams();
+    params.pHttpParameters->headersLen = 0U;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    /******** All cases of invalid Credential Parameters. *********/
+    resetInputParams();
+    params.pCredentials = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pCredentials->pAccessKeyId = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+    resetInputParams();
+    params.pCredentials->accessKeyIdLen = 0U;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pCredentials->pSecretAccessKey = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+    resetInputParams();
+    params.pCredentials->secretAccessKeyLen = 0U;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    /******** All cases of invalid Cyrpto interface members. *********/
+    resetInputParams();
+    params.pCryptoInterface = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pCryptoInterface->hashInit = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pCryptoInterface->hashUpdate = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pCryptoInterface->hashBlockLen = SIGV4_HASH_MAX_BLOCK_LENGTH + 1;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pCryptoInterface->hashDigestLen = SIGV4_HASH_MAX_DIGEST_LENGTH + 1;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    /******** All remaining cases of invalid SigV4Params_t members. *********/
+    resetInputParams();
+    params.pDateIso8601 = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pRegion = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+    resetInputParams();
+    params.regionLen = 0U;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pService = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+    resetInputParams();
+    params.serviceLen = 0U;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+}
+
 /* TODO - Verify the generated signatures. */
 void test_SigV4_GenerateHTTPAuthorization_Happy_Paths()
 {

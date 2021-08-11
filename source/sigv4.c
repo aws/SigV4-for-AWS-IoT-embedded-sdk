@@ -505,7 +505,7 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
  * @param[in, out] pCredScope The credential scope in the SigV4 format.
  */
 static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
-                                              SigV4String_t * pCredScope );
+                                     SigV4String_t * pCredScope );
 
 /**
  * @brief Check if the date represents a valid leap year day.
@@ -582,13 +582,18 @@ static SigV4Status_t parseDate( const char * pDate,
                                 SigV4DateTime_t * pDateElements );
 
 /**
- * @brief Verify @p pParams and its sub-members.
+ * @brief Verify input parameters to the SigV4_GenerateHTTPAuthorization API.
  *
  * @param[in] pParams Complete SigV4 configurations passed by application.
+ * @param[in]
  *
  * @return #SigV4Success if successful, #SigV4InvalidParameter otherwise.
  */
-static SigV4Status_t verifySigV4Parameters( const SigV4Parameters_t * pParams );
+static SigV4Status_t verifyParamsToGenerateAuthHeaderApi( const SigV4Parameters_t * pParams,
+                                                          const char * pAuthBuf,
+                                                          const size_t * authBufLen,
+                                                          char * const * pSignature,
+                                                          const size_t * signatureLen );
 
 /**
  * @brief Hex digest of provided string parameter.
@@ -976,9 +981,8 @@ static size_t sizeNeededForCredentialScope( const SigV4Parameters_t * pSigV4Para
 }
 
 static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
-                                              SigV4String_t * pCredScope )
+                                     SigV4String_t * pCredScope )
 {
-    SigV4Status_t returnStatus = SigV4Success;
     char * pBufWrite = NULL;
     size_t credScopeLen = sizeNeededForCredentialScope( pSigV4Params );
 
@@ -993,37 +997,36 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
     pBufWrite = pCredScope->pData;
 
     /* Each concatenated component is separated by a '/' character. */
-        /* Concatenate first 8 characters from the provided ISO 8601 string (YYYYMMDD). */
-        ( void ) memcpy( pBufWrite, pSigV4Params->pDateIso8601, ISO_DATE_SCOPE_LEN );
-        pBufWrite += ISO_DATE_SCOPE_LEN;
+    /* Concatenate first 8 characters from the provided ISO 8601 string (YYYYMMDD). */
+    ( void ) memcpy( pBufWrite, pSigV4Params->pDateIso8601, ISO_DATE_SCOPE_LEN );
+    pBufWrite += ISO_DATE_SCOPE_LEN;
 
-        *pBufWrite = CREDENTIAL_SCOPE_SEPARATOR;
-        pBufWrite += CREDENTIAL_SCOPE_SEPARATOR_LEN;
+    *pBufWrite = CREDENTIAL_SCOPE_SEPARATOR;
+    pBufWrite += CREDENTIAL_SCOPE_SEPARATOR_LEN;
 
-        /* Concatenate AWS region. */
-        ( void ) memcpy( pBufWrite, pSigV4Params->pRegion, pSigV4Params->regionLen );
-        pBufWrite += pSigV4Params->regionLen;
+    /* Concatenate AWS region. */
+    ( void ) memcpy( pBufWrite, pSigV4Params->pRegion, pSigV4Params->regionLen );
+    pBufWrite += pSigV4Params->regionLen;
 
-        *pBufWrite = CREDENTIAL_SCOPE_SEPARATOR;
-        pBufWrite += CREDENTIAL_SCOPE_SEPARATOR_LEN;
+    *pBufWrite = CREDENTIAL_SCOPE_SEPARATOR;
+    pBufWrite += CREDENTIAL_SCOPE_SEPARATOR_LEN;
 
-        /* Concatenate AWS service. */
-        ( void ) memcpy( pBufWrite, pSigV4Params->pService, pSigV4Params->serviceLen );
-        pBufWrite += pSigV4Params->serviceLen;
+    /* Concatenate AWS service. */
+    ( void ) memcpy( pBufWrite, pSigV4Params->pService, pSigV4Params->serviceLen );
+    pBufWrite += pSigV4Params->serviceLen;
 
-        *pBufWrite = CREDENTIAL_SCOPE_SEPARATOR;
-        pBufWrite += CREDENTIAL_SCOPE_SEPARATOR_LEN;
+    *pBufWrite = CREDENTIAL_SCOPE_SEPARATOR;
+    pBufWrite += CREDENTIAL_SCOPE_SEPARATOR_LEN;
 
-        /* Concatenate terminator. */
-        ( void ) memcpy( pBufWrite, CREDENTIAL_SCOPE_TERMINATOR, CREDENTIAL_SCOPE_TERMINATOR_LEN );
-        pBufWrite += CREDENTIAL_SCOPE_TERMINATOR_LEN;
+    /* Concatenate terminator. */
+    ( void ) memcpy( pBufWrite, CREDENTIAL_SCOPE_TERMINATOR, CREDENTIAL_SCOPE_TERMINATOR_LEN );
+    pBufWrite += CREDENTIAL_SCOPE_TERMINATOR_LEN;
 
-        /* Verify that the number of bytes written match the sizeNeededForCredentialScope()
-         * utility function for calculating size of credential scope. */
-        assert( ( size_t ) ( pBufWrite - pCredScope->pData ) == credScopeLen );
+    /* Verify that the number of bytes written match the sizeNeededForCredentialScope()
+     * utility function for calculating size of credential scope. */
+    assert( ( size_t ) ( pBufWrite - pCredScope->pData ) == credScopeLen );
 
-        pCredScope->dataLen = credScopeLen;
-
+    pCredScope->dataLen = credScopeLen;
 }
 
 /*-----------------------------------------------------------*/
@@ -1913,14 +1916,20 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 
 /*-----------------------------------------------------------*/
 
-static SigV4Status_t verifySigV4Parameters( const SigV4Parameters_t * pParams )
+static SigV4Status_t verifyParamsToGenerateAuthHeaderApi( const SigV4Parameters_t * pParams,
+                                                          const char * pAuthBuf,
+                                                          const size_t * authBufLen,
+                                                          char * const * pSignature,
+                                                          const size_t * signatureLen )
 {
     SigV4Status_t returnStatus = SigV4Success;
 
     /* Check for NULL members of struct pParams */
-    if( pParams == NULL )
+    if( ( pParams == NULL ) || ( pAuthBuf == NULL ) || ( authBufLen == NULL ) ||
+        ( pSignature == NULL ) || ( signatureLen == NULL ) )
     {
-        LogError( ( "Parameter check failed: pParams is NULL." ) );
+        LogError( ( "Parameter check failed: At least one of the input parameters is NULL. "
+                    "Input parameters cannot be NULL" ) );
         returnStatus = SigV4InvalidParameter;
     }
     else if( pParams->pCredentials == NULL )
@@ -1928,39 +1937,29 @@ static SigV4Status_t verifySigV4Parameters( const SigV4Parameters_t * pParams )
         LogError( ( "Parameter check failed: pParams->pCredentials is NULL." ) );
         returnStatus = SigV4InvalidParameter;
     }
-    else if( pParams->pCredentials->pAccessKeyId == NULL )
+    else if( ( pParams->pCredentials->pAccessKeyId == NULL ) || ( pParams->pCredentials->accessKeyIdLen == 0U ) )
     {
-        LogError( ( "Parameter check failed: pParams->pCredentials->pAccessKeyId is NULL." ) );
+        LogError( ( "Parameter check failed: Access Key ID data is invalid." ) );
         returnStatus = SigV4InvalidParameter;
     }
-    else if( pParams->pCredentials->pSecretAccessKey == NULL )
+    else if( ( pParams->pCredentials->pSecretAccessKey == NULL ) || ( pParams->pCredentials->secretAccessKeyLen == 0U ) )
     {
-        LogError( ( "Parameter check failed: pParams->pCredentials->pSecretAccessKey is NULL." ) );
-        returnStatus = SigV4InvalidParameter;
-    }
-    else if( pParams->pCredentials->pSecurityToken == NULL )
-    {
-        LogError( ( "Parameter check failed: pParams->pCredentials->pSecurityToken is NULL." ) );
-        returnStatus = SigV4InvalidParameter;
-    }
-    else if( pParams->pCredentials->pExpiration == NULL )
-    {
-        LogError( ( "Parameter check failed: pParams->pCredentials->pExpiration is NULL." ) );
+        LogError( ( "Parameter check failed: Secret Access Key data is invalid." ) );
         returnStatus = SigV4InvalidParameter;
     }
     else if( pParams->pDateIso8601 == NULL )
     {
-        LogError( ( "Parameter check failed: pParams->pDateIso8601 is NULL." ) );
+        LogError( ( "Parameter check failed: pParams->DateIso8601 data is NULL." ) );
         returnStatus = SigV4InvalidParameter;
     }
-    else if( pParams->pRegion == NULL )
+    else if( ( pParams->pRegion == NULL ) || ( pParams->regionLen == 0U ) )
     {
-        LogError( ( "Parameter check failed: pParams->pRegion is NULL." ) );
+        LogError( ( "Parameter check failed: Region data is invalid." ) );
         returnStatus = SigV4InvalidParameter;
     }
-    else if( pParams->pService == NULL )
+    else if( ( pParams->pService == NULL ) || ( pParams->serviceLen == 0U ) )
     {
-        LogError( ( "Parameter check failed: pParams->pService is NULL." ) );
+        LogError( ( "Parameter check failed: Service data is invalid." ) );
         returnStatus = SigV4InvalidParameter;
     }
     else if( pParams->pCryptoInterface == NULL )
@@ -1968,9 +1967,10 @@ static SigV4Status_t verifySigV4Parameters( const SigV4Parameters_t * pParams )
         LogError( ( "Parameter check failed: pParams->pCryptoInterface is NULL." ) );
         returnStatus = SigV4InvalidParameter;
     }
-    else if( pParams->pCryptoInterface->pHashContext == NULL )
+    else if( ( pParams->pCryptoInterface->hashInit == NULL ) || ( pParams->pCryptoInterface->hashUpdate == NULL ) ||
+             ( pParams->pCryptoInterface->hashFinal == NULL ) )
     {
-        LogError( ( "Parameter check failed: pParams->pCryptoInterface->pHashContext is NULL." ) );
+        LogError( ( "Parameter check failed: At least one of hashInit, hashUpdate, hashFinal function pointer members is NULL." ) );
         returnStatus = SigV4InvalidParameter;
     }
     else if( pParams->pCryptoInterface->hashBlockLen > SIGV4_HASH_MAX_BLOCK_LENGTH )
@@ -1990,15 +1990,19 @@ static SigV4Status_t verifySigV4Parameters( const SigV4Parameters_t * pParams )
         LogError( ( "Parameter check failed: pParams->pHttpParameters is NULL." ) );
         returnStatus = SigV4InvalidParameter;
     }
-    else if( pParams->pHttpParameters->pHttpMethod == NULL )
+    else if( ( pParams->pHttpParameters->pHttpMethod == NULL ) || ( pParams->pHttpParameters->httpMethodLen == 0U ) )
     {
-        LogError( ( "Parameter check failed: pParams->pHttpParameters->pHttpMethod is NULL." ) );
+        LogError( ( "Parameter check failed: HTTP Method data is either NULL or zero bytes in length." ) );
         returnStatus = SigV4InvalidParameter;
     }
-    else if( pParams->pHttpParameters->pHeaders == NULL )
+    else if( ( pParams->pHttpParameters->pHeaders == NULL ) || ( pParams->pHttpParameters->headersLen == 0U ) )
     {
-        LogError( ( "Parameter check failed: pParams->pHttpParameters->pHeaders is NULL." ) );
+        LogError( ( "Parameter check failed: HTTP URI path information is either NULL or zero bytes in length." ) );
         returnStatus = SigV4InvalidParameter;
+    }
+    else
+    {
+        /* Empty else block for MISRA C:2012 compliance. */
     }
 
     return returnStatus;
@@ -2816,21 +2820,26 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
     HmacContext_t hmacContext = { 0 };
     SigV4String_t signingKey;
 
-    returnStatus = verifySigV4Parameters( pParams );
+    returnStatus = verifyParamsToGenerateAuthHeaderApi( pParams,
+                                                        pAuthBuf, authBufLen,
+                                                        pSignature, signatureLen );
 
-    authPrefixLen = *authBufLen;
+    if( returnStatus == SigV4Success )
+    {
+        authPrefixLen = *authBufLen;
 
-    /* Default arguments. */
-    if( ( pParams->pAlgorithm == NULL ) || ( pParams->algorithmLen == 0 ) )
-    {
-        /* The default algorithm is AWS4-HMAC-SHA256. */
-        pAlgorithm = SIGV4_AWS4_HMAC_SHA256;
-        algorithmLen = SIGV4_AWS4_HMAC_SHA256_LENGTH;
-    }
-    else
-    {
-        pAlgorithm = pParams->pAlgorithm;
-        algorithmLen = pParams->algorithmLen;
+        /* Default arguments. */
+        if( ( pParams->pAlgorithm == NULL ) || ( pParams->algorithmLen == 0 ) )
+        {
+            /* The default algorithm is AWS4-HMAC-SHA256. */
+            pAlgorithm = SIGV4_AWS4_HMAC_SHA256;
+            algorithmLen = SIGV4_AWS4_HMAC_SHA256_LENGTH;
+        }
+        else
+        {
+            pAlgorithm = pParams->pAlgorithm;
+            algorithmLen = pParams->algorithmLen;
+        }
     }
 
     if( returnStatus == SigV4Success )
