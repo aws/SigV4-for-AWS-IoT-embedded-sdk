@@ -91,7 +91,7 @@
                                                  CanonicalContext_t * pCanonicalContext );
 
 /**
- * @brief Determine if a character can be written without needing encoding.
+ * @brief Determine if a character can be written without needing URI encoding when generating Canonical Request.
  *
  * @param[in] c The character to evaluate.
  * @param[in] encodeSlash Whether slashes may be encoded.
