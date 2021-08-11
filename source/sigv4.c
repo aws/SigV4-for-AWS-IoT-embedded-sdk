@@ -355,6 +355,8 @@ static void setQueryParameterValue( size_t currentParameter,
  * #hmacData. Appending multiple substrings, then calling #hmacKey
  * on the appended string is also equivalent to calling #hmacKey on
  * each individual substring.
+ * @note This function accepts a const char * so that string literals
+ * can be passed in.
  *
  * @param[in] pHmacContext The context used for HMAC calculation.
  * @param[in] pKey The key used as input for HMAC calculation.
@@ -362,7 +364,7 @@ static void setQueryParameterValue( size_t currentParameter,
  * @return Zero on success, all other return values are failures.
  */
 static int32_t hmacKey( HmacContext_t * pHmacContext,
-                        const uint8_t * pKey,
+                        const char * pKey,
                         size_t keyLen );
 
 /**
@@ -878,7 +880,8 @@ static SigV4Status_t parseDate( const char * pDate,
                                 SigV4DateTime_t * pDateElements )
 {
     SigV4Status_t returnStatus = SigV4InvalidParameter;
-    size_t readLoc = 0U, lenToRead = 0U, formatIndex = 0U;
+    size_t readLoc = 0U, formatIndex = 0U;
+    uint8_t lenToRead = 0U;
 
     assert( pDate != NULL );
     assert( pFormat != NULL );
@@ -895,7 +898,7 @@ static SigV4Status_t parseDate( const char * pDate,
             formatIndex++;
 
             /* Numerical value of length specifier character. */
-            lenToRead = ( size_t ) ( pFormat[ formatIndex ] - '0' );
+            lenToRead = ( ( uint8_t ) pFormat[ formatIndex ] - ( uint8_t ) '0' );
             formatIndex++;
 
             /* Ensure read is within buffer bounds. */
@@ -1456,6 +1459,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         size_t headerIndex = 0, keyLen = 0;
         SigV4Status_t sigV4Status = SigV4Success;
         const char * headerKey;
+        ptrdiff_t signedHeadersLen = 0;
 
         assert( canonicalRequest != NULL );
         assert( canonicalRequest->pBufCur != NULL );
@@ -1481,7 +1485,8 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         }
 
         /* Store the length of the "Signed Headers" data appended to the Canonical Request. */
-        *pSignedHeadersLen = ( ( size_t ) ( canonicalRequest->pBufCur - *pSignedHeaders ) - 1U );
+        signedHeadersLen = canonicalRequest->pBufCur - *pSignedHeaders - 1;
+        *pSignedHeadersLen = ( size_t ) signedHeadersLen;
 
         if( sigV4Status == SigV4Success )
         {
@@ -1545,6 +1550,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         const char * pCurrLoc;
         bool keyFlag = true;
         SigV4Status_t sigV4Status = SigV4Success;
+        ptrdiff_t dataLen = 0;
 
         assert( pHeaders != NULL );
         assert( headersDataLen > 0 );
@@ -1565,8 +1571,9 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
             /* Look for key part of an header field entry. */
             else if( ( keyFlag ) && ( pHeaders[ index ] == ':' ) )
             {
+                dataLen = pCurrLoc - pKeyOrValStartLoc;
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData = pKeyOrValStartLoc;
-                canonicalRequest->pHeadersLoc[ noOfHeaders ].key.dataLen = ( pCurrLoc - pKeyOrValStartLoc );
+                canonicalRequest->pHeadersLoc[ noOfHeaders ].key.dataLen = ( size_t ) dataLen;
                 pKeyOrValStartLoc = pCurrLoc + 1U;
                 keyFlag = false;
             }
@@ -1575,8 +1582,9 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
             else if( ( !keyFlag ) && !FLAG_IS_SET( flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( ( index + 1U ) < headersDataLen ) &&
                      ( 0 == strncmp( pCurrLoc, "\r\n", strlen( "\r\n" ) ) ) )
             {
+                dataLen = pCurrLoc - pKeyOrValStartLoc;
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = pKeyOrValStartLoc;
-                canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( pCurrLoc - pKeyOrValStartLoc );
+                canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( size_t ) dataLen;
                 /* Set starting location of the next header key string after the "\r\n". */
                 pKeyOrValStartLoc = pCurrLoc + 2U;
                 keyFlag = true;
@@ -1585,8 +1593,9 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
             /* Canonicalized headers will have header values ending just with "\n". */
             else if( ( !keyFlag ) && ( FLAG_IS_SET( flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( pHeaders[ index ] == '\n' ) ) )
             {
+                dataLen = pCurrLoc - pKeyOrValStartLoc;
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = pKeyOrValStartLoc;
-                canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( pCurrLoc - pKeyOrValStartLoc );
+                canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( size_t ) dataLen;
                 /* Set starting location of the next header key string after the "\n". */
                 pKeyOrValStartLoc = pCurrLoc + 1U;
                 keyFlag = true;
@@ -2121,11 +2130,12 @@ static SigV4Status_t completeHashAndHexEncode( const char * pInput,
 }
 
 static int32_t hmacKey( HmacContext_t * pHmacContext,
-                        const uint8_t * pKey,
+                        const char * pKey,
                         size_t keyLen )
 {
     int32_t returnStatus = 0;
     const SigV4CryptoInterface_t * pCryptoInterface = NULL;
+    const uint8_t * pUnsignedKey = ( const uint8_t * ) pKey;
 
     assert( pHmacContext != NULL );
     assert( pHmacContext->key != NULL );
@@ -2141,7 +2151,7 @@ static int32_t hmacKey( HmacContext_t * pHmacContext,
     if( ( pHmacContext->keyLen + keyLen ) <= pCryptoInterface->hashBlockLen )
     {
         /* The key fits into the block so just append it. */
-        ( void ) memcpy( pHmacContext->key + pHmacContext->keyLen, pKey, keyLen );
+        ( void ) memcpy( pHmacContext->key + pHmacContext->keyLen, pUnsignedKey, keyLen );
     }
     else
     {
@@ -2162,7 +2172,7 @@ static int32_t hmacKey( HmacContext_t * pHmacContext,
         if( returnStatus == 0 )
         {
             returnStatus = pCryptoInterface->hashUpdate( pCryptoInterface->pHashContext,
-                                                         pKey,
+                                                         pUnsignedKey,
                                                          keyLen );
         }
     }
@@ -2230,7 +2240,7 @@ static int32_t hmacData( HmacContext_t * pHmacContext,
     {
         /* Hash the data. */
         returnStatus = pCryptoInterface->hashUpdate( pCryptoInterface->pHashContext,
-                                                     pData,
+                                                     ( const uint8_t * ) pData,
                                                      dataLen );
     }
 
@@ -2411,13 +2421,14 @@ static SigV4Status_t writeStringToSign( const SigV4Parameters_t * pParams,
     SigV4Status_t returnStatus = SigV4Success;
     size_t encodedLen = pCanonicalContext->bufRemaining;
     char * pBufStart = ( char * ) pCanonicalContext->pBufProcessing;
+    ptrdiff_t bufferLen = pCanonicalContext->pBufCur - pBufStart;
 
     assert( pParams != NULL );
     assert( ( pAlgorithm != NULL ) && ( algorithmLen > 0 ) );
     assert( pCanonicalContext != NULL );
 
     returnStatus = completeHashAndHexEncode( pBufStart,
-                                             ( size_t ) ( pCanonicalContext->pBufCur - pBufStart ),
+                                             ( size_t ) bufferLen,
                                              pCanonicalContext->pBufCur + 1,
                                              &encodedLen,
                                              pParams->pCryptoInterface );
@@ -2846,6 +2857,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
     size_t encodedLen = 0U, algorithmLen = 0U, signedHeadersLen = 0U, authPrefixLen = 0U;
     HmacContext_t hmacContext = { 0 };
     SigV4String_t signingKey;
+    ptrdiff_t bufferLen;
 
     returnStatus = verifySigV4Parameters( pParams );
 
@@ -2913,17 +2925,17 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
 
     /* Use the SigningKey and StringToSign to produce the final signature.
      * Note that the StringToSign starts from the beginning of the processing buffer. */
-    if( ( returnStatus == SigV4Success ) &&
-        ( completeHmac( &hmacContext,
-                        signingKey.pData,
-                        signingKey.dataLen,
-                        ( char * ) canonicalContext.pBufProcessing,
-                        ( size_t ) ( canonicalContext.pBufCur - ( char * ) canonicalContext.pBufProcessing ),
-                        canonicalContext.pBufCur,
-                        pParams->pCryptoInterface->hashDigestLen,
-                        pParams->pCryptoInterface ) != 0 ) )
+    if( returnStatus == SigV4Success )
     {
-        returnStatus = SigV4HashError;
+        bufferLen = canonicalContext.pBufCur - ( char * ) canonicalContext.pBufProcessing;
+        returnStatus = ( completeHmac( &hmacContext,
+                                       signingKey.pData,
+                                       signingKey.dataLen,
+                                       ( char * ) canonicalContext.pBufProcessing,
+                                       ( size_t ) bufferLen,
+                                       canonicalContext.pBufCur,
+                                       pParams->pCryptoInterface->hashDigestLen,
+                                       pParams->pCryptoInterface ) != 0 ) ? SigV4HashError : SigV4Success;
     }
 
     /* Hex-encode the final signature beforehand to its precalculated
