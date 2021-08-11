@@ -627,6 +627,20 @@ static SigV4Status_t lowercaseHexEncode( const SigV4String_t * pInputStr,
  */
 static size_t sizeNeededForCredentialScope( const SigV4Parameters_t * pSigV4Params );
 
+/**
+ * @brief Copy a string into a char * buffer.
+ * @note This function can be used to copy a string literal without
+ * MISRA warnings.
+ *
+ * @param[in] destination The buffer to write
+ * @param[in] source String to copy.
+ * @param[in] length Number of characters to copy.
+ * @return @p length
+ */
+static size_t copyString( char * destination,
+                          const char * source,
+                          size_t length );
+
 /*-----------------------------------------------------------*/
 
 static void intToAscii( int32_t value,
@@ -994,6 +1008,18 @@ static size_t sizeNeededForCredentialScope( const SigV4Parameters_t * pSigV4Para
            CREDENTIAL_SCOPE_SEPARATOR_LEN + CREDENTIAL_SCOPE_TERMINATOR_LEN;
 }
 
+/*-----------------------------------------------------------*/
+
+static size_t copyString( char * destination,
+                          const char * source,
+                          size_t length )
+{
+    ( void ) memcpy( destination, source, length );
+    return length;
+}
+
+/*-----------------------------------------------------------*/
+
 static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                                               SigV4String_t * pCredScope )
 {
@@ -1043,8 +1069,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         pBufWrite += CREDENTIAL_SCOPE_SEPARATOR_LEN;
 
         /* Concatenate terminator. */
-        ( void ) memcpy( pBufWrite, CREDENTIAL_SCOPE_TERMINATOR, CREDENTIAL_SCOPE_TERMINATOR_LEN );
-        pBufWrite += CREDENTIAL_SCOPE_TERMINATOR_LEN;
+        pBufWrite += copyString( pBufWrite, CREDENTIAL_SCOPE_TERMINATOR, CREDENTIAL_SCOPE_TERMINATOR_LEN );
 
         assert( ( size_t ) ( pBufWrite - pCredScope->pData ) == sizeNeeded );
         pCredScope->dataLen = sizeNeeded;
@@ -2630,8 +2655,7 @@ static SigV4Status_t generateAuthorizationValuePrefix( const SigV4Parameters_t *
         numOfBytesWritten += SPACE_CHAR_LEN;
 
         /**************** Write "Credential=<access key ID>/<credential scope>, " ****************/
-        ( void ) memcpy( ( pAuthBuf + numOfBytesWritten ), AUTH_CREDENTIAL_PREFIX, AUTH_CREDENTIAL_PREFIX_LEN );
-        numOfBytesWritten += AUTH_CREDENTIAL_PREFIX_LEN;
+        numOfBytesWritten += copyString( ( pAuthBuf + numOfBytesWritten ), AUTH_CREDENTIAL_PREFIX, AUTH_CREDENTIAL_PREFIX_LEN );
         ( void ) memcpy( ( pAuthBuf + numOfBytesWritten ),
                          pParams->pCredentials->pAccessKeyId,
                          pParams->pCredentials->accessKeyIdLen );
@@ -2646,23 +2670,19 @@ static SigV4Status_t generateAuthorizationValuePrefix( const SigV4Parameters_t *
         numOfBytesWritten += credentialScope.dataLen;
 
         /* Add separator before the Signed Headers information. */
-        ( void ) memcpy( pAuthBuf + numOfBytesWritten, AUTH_SEPARATOR, AUTH_SEPARATOR_LEN );
-        numOfBytesWritten += AUTH_SEPARATOR_LEN;
+        numOfBytesWritten += copyString( pAuthBuf + numOfBytesWritten, AUTH_SEPARATOR, AUTH_SEPARATOR_LEN );
 
 
         /************************ Write "SignedHeaders=<signedHeaders>, " *******************************/
-        ( void ) memcpy( pAuthBuf + numOfBytesWritten, AUTH_SIGNED_HEADERS_PREFIX, AUTH_SIGNED_HEADERS_PREFIX_LEN );
-        numOfBytesWritten += AUTH_SIGNED_HEADERS_PREFIX_LEN;
+        numOfBytesWritten += copyString( pAuthBuf + numOfBytesWritten, AUTH_SIGNED_HEADERS_PREFIX, AUTH_SIGNED_HEADERS_PREFIX_LEN );
         ( void ) memcpy( pAuthBuf + numOfBytesWritten, pSignedHeaders, signedHeadersLen );
         numOfBytesWritten += signedHeadersLen;
 
         /* Add separator before the Signature field name. */
-        ( void ) memcpy( pAuthBuf + numOfBytesWritten, AUTH_SEPARATOR, AUTH_SEPARATOR_LEN );
-        numOfBytesWritten += AUTH_SEPARATOR_LEN;
+        numOfBytesWritten += copyString( pAuthBuf + numOfBytesWritten, AUTH_SEPARATOR, AUTH_SEPARATOR_LEN );
 
         /****************************** Write "Signature=<signature>" *******************************/
-        ( void ) memcpy( pAuthBuf + numOfBytesWritten, AUTH_SIGNATURE_PREFIX, AUTH_SIGNATURE_PREFIX_LEN );
-        numOfBytesWritten += AUTH_SIGNATURE_PREFIX_LEN;
+        numOfBytesWritten += copyString( pAuthBuf + numOfBytesWritten, AUTH_SIGNATURE_PREFIX, AUTH_SIGNATURE_PREFIX_LEN );
 
         /* END: Writing of authorization value prefix. */
 
