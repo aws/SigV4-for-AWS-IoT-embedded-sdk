@@ -1065,8 +1065,8 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
             lenSmall = pSecond->key.dataLen;
         }
 
-        return strncmp( ( char * ) pFirst->key.pData,
-                        ( char * ) pSecond->key.pData,
+        return strncmp( pFirst->key.pData,
+                        pSecond->key.pData,
                         lenSmall );
     }
 
@@ -1706,21 +1706,24 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         /* Set cursors to each field and value in the query string. */
         for( i = 0U; i < queryLen; i++ )
         {
-            if( ( pQuery[ i ] == '=' ) && !fieldHasValue )
+            /* This test is at the beginning of the loop to ensure that
+             * `pCanonicalRequest->pQueryLoc`is only accessed with a valid index.
+             * The final iteration may result in `currentParameter` holding
+             * SIGV4_MAX_QUERY_PAIR_COUNT, in order to set the number of parameters. */
+            if( currentParameter >= SIGV4_MAX_QUERY_PAIR_COUNT )
             {
-                /* Store information about Query Parameter Key in the canonical context. This query parameter has an associated value. */
-                setQueryParameterKey( currentParameter, &pQuery[ startOfFieldOrValue ], i - startOfFieldOrValue, pCanonicalRequest );
-                startOfFieldOrValue = i + 1U;
-                fieldHasValue = true;
+                returnStatus = SigV4MaxQueryPairCountExceeded;
+                LogError( ( "Failed to parse query string: Number of query parameters exceeds max threshold defined in config. "
+                            "SIGV4_MAX_QUERY_PAIR_COUNT=%lu", ( unsigned long ) SIGV4_MAX_QUERY_PAIR_COUNT ) );
+                break;
             }
-            else if( ( i == queryLen - 1U ) || ( ( pQuery[ i ] == '&' ) && ( i != 0U ) ) )
-            {
-                /* Adjust for the length of the last query parameter. */
-                if( i == queryLen - 1U )
-                {
-                    i++;
-                }
 
+            /* Encountering an '&' indicates the start of a new key, and the end of the
+             * old value (or key if the field has no value). The last value will not be
+             * followed by anything, so we iterate to one beyond the end of the string.
+             * Short circuit evaluation ensures the string is not dereferenced for that case. */
+            if( ( i == queryLen ) || ( ( pQuery[ i ] == '&' ) && ( i != 0U ) ) )
+            {
                 if( ( i - startOfFieldOrValue ) == 0U )
                 {
                     /* A field should never be empty, but a value can be empty
@@ -1746,17 +1749,16 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                     currentParameter++;
                 }
             }
+            else if( ( pQuery[ i ] == '=' ) && !fieldHasValue )
+            {
+                /* Store information about Query Parameter Key in the canonical context. This query parameter has an associated value. */
+                setQueryParameterKey( currentParameter, &pQuery[ startOfFieldOrValue ], i - startOfFieldOrValue, pCanonicalRequest );
+                startOfFieldOrValue = i + 1U;
+                fieldHasValue = true;
+            }
             else
             {
                 /* Empty else. */
-            }
-
-            if( currentParameter >= SIGV4_MAX_QUERY_PAIR_COUNT )
-            {
-                returnStatus = SigV4MaxQueryPairCountExceeded;
-                LogError( ( "Failed to parse query string: Number of query parameters exceeds max threshold defined in config. "
-                            "SIGV4_MAX_QUERY_PAIR_COUNT=%lu", ( unsigned long ) SIGV4_MAX_QUERY_PAIR_COUNT ) );
-                break;
             }
         }
 
@@ -2469,16 +2471,13 @@ static SigV4Status_t generateCanonicalRequestUntilHeaders( const SigV4Parameters
     const char * pPath = NULL;
     size_t pathLen = 0U;
 
-    if( returnStatus == SigV4Success )
-    {
-        pCanonicalContext->pBufCur = ( char * ) pCanonicalContext->pBufProcessing;
-        pCanonicalContext->bufRemaining = SIGV4_PROCESSING_BUFFER_LENGTH;
+    pCanonicalContext->pBufCur = ( char * ) pCanonicalContext->pBufProcessing;
+    pCanonicalContext->bufRemaining = SIGV4_PROCESSING_BUFFER_LENGTH;
 
-        /* Write the HTTP Request Method to the canonical request. */
-        returnStatus = writeLineToCanonicalRequest( pParams->pHttpParameters->pHttpMethod,
-                                                    pParams->pHttpParameters->httpMethodLen,
-                                                    pCanonicalContext );
-    }
+    /* Write the HTTP Request Method to the canonical request. */
+    returnStatus = writeLineToCanonicalRequest( pParams->pHttpParameters->pHttpMethod,
+                                                pParams->pHttpParameters->httpMethodLen,
+                                                pCanonicalContext );
 
     /* Set defaults for path and algorithm. */
     if( ( pParams->pHttpParameters->pPath == NULL ) ||
@@ -2586,23 +2585,20 @@ static SigV4Status_t generateAuthorizationValuePrefix( const SigV4Parameters_t *
     /* Since the signed headers are required to be a part of final Authorization header value,
      * we copy the signed headers onto the auth buffer before continuing to generate the signature
      * in order to prevent an additional copy and/or usage of extra space. */
-    if( returnStatus == SigV4Success )
+    size_t encodedSignatureLen = ( pParams->pCryptoInterface->hashDigestLen * 2U );
+
+    /* Check if the authorization buffer has enough space to hold the final SigV4 Authorization header value. */
+    authPrefixLen = algorithmLen + SPACE_CHAR_LEN +                                            \
+                    AUTH_CREDENTIAL_PREFIX_LEN + pParams->pCredentials->accessKeyIdLen +       \
+                    CREDENTIAL_SCOPE_SEPARATOR_LEN + sizeNeededForCredentialScope( pParams ) + \
+                    AUTH_SEPARATOR_LEN + AUTH_SIGNED_HEADERS_PREFIX_LEN + signedHeadersLen +   \
+                    AUTH_SEPARATOR_LEN + AUTH_SIGNATURE_PREFIX_LEN;
+
+    if( *pAuthPrefixLen < ( authPrefixLen + encodedSignatureLen ) )
     {
-        size_t encodedSignatureLen = ( pParams->pCryptoInterface->hashDigestLen * 2U );
-
-        /* Check if the authorization buffer has enough space to hold the final SigV4 Authorization header value. */
-        authPrefixLen = algorithmLen + SPACE_CHAR_LEN +                                            \
-                        AUTH_CREDENTIAL_PREFIX_LEN + pParams->pCredentials->accessKeyIdLen +       \
-                        CREDENTIAL_SCOPE_SEPARATOR_LEN + sizeNeededForCredentialScope( pParams ) + \
-                        AUTH_SEPARATOR_LEN + AUTH_SIGNED_HEADERS_PREFIX_LEN + signedHeadersLen +   \
-                        AUTH_SEPARATOR_LEN + AUTH_SIGNATURE_PREFIX_LEN;
-
-        if( *pAuthPrefixLen < ( authPrefixLen + encodedSignatureLen ) )
-        {
-            LogError( ( "Insufficient memory provided to write the Authorization header value, bytesExceeded=%lu",
-                        ( unsigned long ) ( authPrefixLen + encodedSignatureLen - *pAuthPrefixLen ) ) );
-            returnStatus = SigV4InsufficientMemory;
-        }
+        LogError( ( "Insufficient memory provided to write the Authorization header value, bytesExceeded=%lu",
+                    ( unsigned long ) ( authPrefixLen + encodedSignatureLen - *pAuthPrefixLen ) ) );
+        returnStatus = SigV4InsufficientMemory;
     }
 
     /* START:  Writing of authorization value prefix. */
@@ -2611,7 +2607,8 @@ static SigV4Status_t generateAuthorizationValuePrefix( const SigV4Parameters_t *
     numOfBytesWritten += algorithmLen;
 
     /* Add space separator. */
-    pAuthBuf[ numOfBytesWritten++ ] = SPACE_CHAR;
+    pAuthBuf[ numOfBytesWritten ] = SPACE_CHAR;
+    numOfBytesWritten += SPACE_CHAR_LEN;
 
     /**************** Write "Credential=<access key ID>/<credential scope>, " ****************/
     ( void ) memcpy( ( pAuthBuf + numOfBytesWritten ), AUTH_CREDENTIAL_PREFIX, AUTH_CREDENTIAL_PREFIX_LEN );
@@ -2621,7 +2618,8 @@ static SigV4Status_t generateAuthorizationValuePrefix( const SigV4Parameters_t *
                      pParams->pCredentials->accessKeyIdLen );
     numOfBytesWritten += pParams->pCredentials->accessKeyIdLen;
 
-    pAuthBuf[ numOfBytesWritten++ ] = CREDENTIAL_SCOPE_SEPARATOR;
+    pAuthBuf[ numOfBytesWritten ] = CREDENTIAL_SCOPE_SEPARATOR;
+    numOfBytesWritten += CREDENTIAL_SCOPE_SEPARATOR_LEN;
     credentialScope.pData = ( pAuthBuf + numOfBytesWritten );
     /* #authBufLen is an overestimate but the validation was already done earlier. */
     credentialScope.dataLen = *pAuthPrefixLen;
@@ -2651,6 +2649,8 @@ static SigV4Status_t generateAuthorizationValuePrefix( const SigV4Parameters_t *
 
     if( returnStatus == SigV4Success )
     {
+        /* Avoid warnings from last write if asserts are disabled. */
+        ( void ) numOfBytesWritten;
         assert( authPrefixLen == numOfBytesWritten );
         *pAuthPrefixLen = authPrefixLen;
     }
