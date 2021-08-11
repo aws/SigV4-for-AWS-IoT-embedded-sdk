@@ -47,6 +47,7 @@
 /* A query string with paramater count exceeding SIGV4_MAX_HTTP_HEADER_COUNT=5. */
 #define QUERY_GT_MAX_PARAMS                                 "params&allowed&to&have&no&values"
 
+/* Query strings that represent different cases matching parameter names and values */
 #define QUERY_MATCHING_PARAMS                               "param=value2&param=value1&param1=test"
 #define QUERY_MATCHING_PARAMS_AND_MATCHING_VALUES_PREFIX    "param=valueXY&param=value&param1=test"
 #define QUERY_WITH_MATCHING_PARAM_PREFIX                    "para=value1&param1=&value2&param=value3"
@@ -68,6 +69,15 @@
 #define SECURITY_TOKEN_LENGTH                               ( sizeof( SECURITY_TOKEN ) - 1U )
 #define EXPIRATION                                          "20160930T123600Z"
 #define EXPIRATION_LENGTH                                   ( sizeof( EXPIRATION ) - 1U )
+
+#define STRING_TO_SIGN_LEN                                                  \
+    SIGV4_AWS4_HMAC_SHA256_LENGTH + 1U +                                    \
+    SIGV4_ISO_STRING_LEN + 1U +                                             \
+    ISO_DATE_SCOPE_LEN +                                                    \
+    CREDENTIAL_SCOPE_SEPARATOR_LEN + sizeof( REGION ) +                     \
+    CREDENTIAL_SCOPE_SEPARATOR_LEN + sizeof( SERVICE ) +                    \
+    CREDENTIAL_SCOPE_SEPARATOR_LEN + CREDENTIAL_SCOPE_TERMINATOR_LEN + 1U + \
+    SIGV4_HASH_MAX_DIGEST_LENGTH * 2
 
 #define EXPECTED_AUTH_DATA_NOMINAL
 #define EXPECTED_AUTH_DATA_SECRET_KEY_LONGER_THAN_DIGEST
@@ -571,7 +581,7 @@ void test_SigV4_GenerateHTTPAuthorization_Sorting_Query_Params_Corner_Cases()
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
 
     /* Test when the query string contains query parameters with exactly matching parameter names as well
-       as matching values for those parameters. The query values of matching parameters differ in length though. */
+     * as matching values for those parameters. The query values of matching parameters differ in length though. */
     params.pHttpParameters->pQuery = QUERY_MATCHING_PARAMS_AND_MATCHING_VALUES_PREFIX;
     params.pHttpParameters->queryLen = strlen( QUERY_MATCHING_PARAMS_AND_MATCHING_VALUES_PREFIX );
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
@@ -694,6 +704,33 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
     /* END: Coverage for writeLineToCanonicalRequest(). */
+
+    /* Test case of insufficient memory when "String to Sign" cannot be stored in processing buffer.
+     * This scenario is produced by using a long AWS Region string (which is one of the parameters of String To Sign). */
+    char longRegion[ SIGV4_PROCESSING_BUFFER_LENGTH ];
+    /* Fill gibbering string data in the buffer for region. */
+    memset( longRegion, 'x', sizeof( longRegion ) );
+    resetInputParams();
+    params.pRegion = longRegion;
+    params.regionLen = sizeof( longRegion );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+
+    /* Test case of insufficient memory when hexstring of hash cannot be stored in processing buffer.
+     * This case is created by using a long URI path that does not leave space for Payload
+     * hash in the processing buffer. */
+#define MINIMAL_HEADER    "Host:"
+    char longUriPath[ SIGV4_PROCESSING_BUFFER_LENGTH - SIGV4_HASH_MAX_DIGEST_LENGTH - ( strlen( MINIMAL_HEADER ) * 4 ) ];
+    longUriPath[ 0 ] = '/';
+    /* Fill gibbering string data in the buffer for region. */
+    memset( longUriPath + 1, 'P', sizeof( longUriPath - 1 ) );
+    resetInputParams();
+    params.pHttpParameters->pPath = longUriPath;
+    params.pHttpParameters->pathLen = sizeof( longUriPath );
+    params.pHttpParameters->pHeaders = MINIMAL_HEADER;
+    params.pHttpParameters->headersLen = strlen( MINIMAL_HEADER );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
 }
 
 /**

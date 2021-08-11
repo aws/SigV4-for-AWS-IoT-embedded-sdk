@@ -503,11 +503,8 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
  *
  * @param[in] pSigV4Params The application parameters defining the credential's scope.
  * @param[in, out] pCredScope The credential scope in the SigV4 format.
- *
- * @return SigV4InsufficientMemory if the length of @p pCredScope was insufficient to
- * fit the actual credential scope, #SigV4Success otherwise.
  */
-static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
+static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                                               SigV4String_t * pCredScope );
 
 /**
@@ -978,12 +975,12 @@ static size_t sizeNeededForCredentialScope( const SigV4Parameters_t * pSigV4Para
            CREDENTIAL_SCOPE_SEPARATOR_LEN + CREDENTIAL_SCOPE_TERMINATOR_LEN;
 }
 
-static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
+static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                                               SigV4String_t * pCredScope )
 {
     SigV4Status_t returnStatus = SigV4Success;
     char * pBufWrite = NULL;
-    size_t sizeNeeded = 0U;
+    size_t credScopeLen = sizeNeededForCredentialScope( pSigV4Params );
 
     assert( pSigV4Params != NULL );
     assert( pSigV4Params->pCredentials != NULL );
@@ -991,20 +988,11 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
     assert( pSigV4Params->pService != NULL );
     assert( pCredScope != NULL );
     assert( pCredScope->pData != NULL );
-
-    sizeNeeded = sizeNeededForCredentialScope( pSigV4Params );
+    assert( pCredScope->dataLen < credScopeLen );
 
     pBufWrite = pCredScope->pData;
 
-    if( pCredScope->dataLen < sizeNeeded )
-    {
-        returnStatus = SigV4InsufficientMemory;
-        LOG_INSUFFICIENT_MEMORY_ERROR( "write the credential scope",
-                                       ( sizeNeeded - pCredScope->dataLen ) );
-    }
     /* Each concatenated component is separated by a '/' character. */
-    else
-    {
         /* Concatenate first 8 characters from the provided ISO 8601 string (YYYYMMDD). */
         ( void ) memcpy( pBufWrite, pSigV4Params->pDateIso8601, ISO_DATE_SCOPE_LEN );
         pBufWrite += ISO_DATE_SCOPE_LEN;
@@ -1030,11 +1018,12 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         ( void ) memcpy( pBufWrite, CREDENTIAL_SCOPE_TERMINATOR, CREDENTIAL_SCOPE_TERMINATOR_LEN );
         pBufWrite += CREDENTIAL_SCOPE_TERMINATOR_LEN;
 
-        assert( ( size_t ) ( pBufWrite - pCredScope->pData ) == sizeNeeded );
-        pCredScope->dataLen = sizeNeeded;
-    }
+        /* Verify that the number of bytes written match the sizeNeededForCredentialScope()
+         * utility function for calculating size of credential scope. */
+        assert( ( size_t ) ( pBufWrite - pCredScope->pData ) == credScopeLen );
 
-    return returnStatus;
+        pCredScope->dataLen = credScopeLen;
+
 }
 
 /*-----------------------------------------------------------*/
