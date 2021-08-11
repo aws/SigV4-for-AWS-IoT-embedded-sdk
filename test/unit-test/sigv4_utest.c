@@ -34,35 +34,40 @@
 
 /* The number of invalid date inputs tested in
  * test_SigV4_AwsIotDateToIso8601_Formatting_Error() */
-#define SIGV4_TEST_INVALID_DATE_COUNT        24U
+#define SIGV4_TEST_INVALID_DATE_COUNT                       24U
 
-#define AUTH_BUF_LENGTH                      1000
-#define PATH                                 "/hi | world"
+#define AUTH_BUF_LENGTH                                     1000
+/*#define PATH                                       "/hi | world" */
+#define PATH                                                "/"
 /* Iterator must not read beyond the null-terminator. */
-#define NULL_TERMINATED_PATH                 "/pa\0th"
-#define NULL_TERMINATED_PATH_LEN             ( sizeof( NULL_TERMINATED_PATH ) - 1U )
+#define NULL_TERMINATED_PATH                                "/pa\0th"
+#define NULL_TERMINATED_PATH_LEN                            ( sizeof( NULL_TERMINATED_PATH ) - 1U )
 /* An equal in the query string value must be double-encoded. */
-#define QUERY_STRING_VALUE_HAS_EQUALS        "quantum==&->sha256=dead&maybe&&"
+#define QUERY_VALUE_HAS_EQUALS                              "quantum==&->sha256=dead&maybe&&"
 /* A query string with paramater count exceeding SIGV4_MAX_HTTP_HEADER_COUNT=5. */
-#define QUERY_STRING_GT_MAX_PARAMS           "params&allowed&to&have&no&values"
+#define QUERY_GT_MAX_PARAMS                                 "params&allowed&to&have&no&values"
 
-#define QUERY                                "Action=ListUsers&Version=2010-05-08"
-#define QUERY_LENGTH                         ( sizeof( QUERY ) - 1U )
-#define ACCESS_KEY_ID                        "AKIAIOSFODNN7EXAMPLE"
-#define SECRET_KEY                           "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"
-#define SECRET_KEY_LEN                       ( sizeof( SECRET_KEY ) - 1U )
-#define SECRET_KEY_LONGER_THAN_DIGEST        "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEYwJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEYwJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEYwJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"
-#define SECRET_KEY_LONGER_THAN_DIGEST_LEN    ( sizeof( SECRET_KEY_LONGER_THAN_DIGEST ) - 1U )
-#define DATE                                 "20210810T222315Z"
-#define REGION                               "us-east-1"
-#define SERVICE                              "iam"
-#define HEADERS                              "Host: iam.amazonaws.com\r\nContent-Type: application/x-www-form-urlencoded; charset=utf-8\r\nX-Amz-Date: "DATE "\r\n\r\n"
-#define PRECANON_HEADER                      "content-type:application/json;\nhost:iam.amazonaws.com\n"
-#define HEADERS_LENGTH                       ( sizeof( HEADERS ) - 1U )
-#define SECURITY_TOKEN                       "security-token"
-#define SECURITY_TOKEN_LENGTH                ( sizeof( SECURITY_TOKEN ) - 1U )
-#define EXPIRATION                           "20160930T123600Z"
-#define EXPIRATION_LENGTH                    ( sizeof( EXPIRATION ) - 1U )
+#define QUERY_MATCHING_PARAMS                               "param=value2&param=value1&param1=test"
+#define QUERY_MATCHING_PARAMS_AND_MATCHING_VALUES_PREFIX    "param=valueXY&param=value&param1=test"
+#define QUERY_WITH_MATCHING_PARAM_PREFIX                    "para=value1&param1=&value2&param=value3"
+
+#define QUERY                                               "Action=ListUsers&Version=2010-05-08"
+#define QUERY_LENGTH                                        ( sizeof( QUERY ) - 1U )
+#define ACCESS_KEY_ID                                       "AKIAIOSFODNN7EXAMPLE"
+#define SECRET_KEY                                          "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"
+#define SECRET_KEY_LEN                                      ( sizeof( SECRET_KEY ) - 1U )
+#define SECRET_KEY_LONGER_THAN_DIGEST                       "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEYwJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEYwJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEYwJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"
+#define SECRET_KEY_LONGER_THAN_DIGEST_LEN                   ( sizeof( SECRET_KEY_LONGER_THAN_DIGEST ) - 1U )
+#define DATE                                                "20210811T001558Z"
+#define REGION                                              "us-east-1"
+#define SERVICE                                             "iam"
+#define HEADERS                                             "Host: iam.amazonaws.com\r\nContent-Type: application/x-www-form-urlencoded; charset=utf-8\r\nX-Amz-Date: "DATE "\r\n\r\n"
+#define HEADERS_LENGTH                                      ( sizeof( HEADERS ) - 1U )
+#define PRECANON_HEADER                                     "content-type:application/json;\nhost:iam.amazonaws.com\n"
+#define SECURITY_TOKEN                                      "security-token"
+#define SECURITY_TOKEN_LENGTH                               ( sizeof( SECURITY_TOKEN ) - 1U )
+#define EXPIRATION                                          "20160930T123600Z"
+#define EXPIRATION_LENGTH                                   ( sizeof( EXPIRATION ) - 1U )
 
 #define EXPECTED_AUTH_DATA_NOMINAL
 #define EXPECTED_AUTH_DATA_SECRET_KEY_LONGER_THAN_DIGEST
@@ -540,11 +545,39 @@ void test_SigV4_GenerateHTTPAuthorization_Happy_Paths()
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
 
     /* Coverage for double-encoded equals in query string value. */
-    params.pHttpParameters->pQuery = QUERY_STRING_VALUE_HAS_EQUALS;
-    params.pHttpParameters->queryLen = STR_LIT_LEN( QUERY_STRING_VALUE_HAS_EQUALS );
+    params.pHttpParameters->pQuery = QUERY_VALUE_HAS_EQUALS;
+    params.pHttpParameters->queryLen = STR_LIT_LEN( QUERY_VALUE_HAS_EQUALS );
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
 }
+
+/* Test the API for handling corner cases of sorting the Query Parameters (when generating Canonical Query) */
+void test_SigV4_GenerateHTTPAuthorization_Sorting_Query_Params_Corner_Cases()
+{
+    SigV4Status_t returnStatus;
+
+    /* Test when the query string contains query parameters with exactly matching names. */
+    params.pHttpParameters->pQuery = QUERY_MATCHING_PARAMS;
+    params.pHttpParameters->queryLen = strlen( QUERY_MATCHING_PARAMS );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+    printf( "%.*s", authBufLen, authBuf );
+
+    /* Test when the query string contains query parameters which do not match in name length but match in
+     * the name data for the common length between 2 parameters. */
+    params.pHttpParameters->pQuery = QUERY_WITH_MATCHING_PARAM_PREFIX;
+    params.pHttpParameters->queryLen = strlen( QUERY_WITH_MATCHING_PARAM_PREFIX );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+
+    /* Test when the query string contains query parameters with exactly matching parameter names as well
+       as matching values for those parameters. The query values of matching parameters differ in length though. */
+    params.pHttpParameters->pQuery = QUERY_MATCHING_PARAMS_AND_MATCHING_VALUES_PREFIX;
+    params.pHttpParameters->queryLen = strlen( QUERY_MATCHING_PARAMS_AND_MATCHING_VALUES_PREFIX );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+}
+
 
 void test_SigV4_GenerateHTTPAuthorization_Default_Arguments()
 {
@@ -697,8 +730,8 @@ void test_SigV4_GenerateHTTPAuthorization_Greater_Than_Max_Header_Query_Count()
 {
     SigV4Status_t returnStatus;
 
-    params.pHttpParameters->pQuery = QUERY_STRING_GT_MAX_PARAMS;
-    params.pHttpParameters->queryLen = STR_LIT_LEN( QUERY_STRING_GT_MAX_PARAMS );
+    params.pHttpParameters->pQuery = QUERY_GT_MAX_PARAMS;
+    params.pHttpParameters->queryLen = STR_LIT_LEN( QUERY_GT_MAX_PARAMS );
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4MaxQueryPairCountExceeded, returnStatus );
 
