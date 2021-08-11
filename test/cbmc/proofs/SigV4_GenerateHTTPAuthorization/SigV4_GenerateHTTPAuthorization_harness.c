@@ -29,6 +29,40 @@
 #include "stdlib.h"
 #include "sigv4.h"
 
+static int32_t sha256_init( void * pHashContext )
+{
+    if( SHA256_Init( ( SHA256_CTX * ) pHashContext ) == 1 )
+    {
+        return 0;
+    }
+
+    return -1;
+}
+
+static int32_t sha256_update( void * pHashContext,
+                              const char * pInput,
+                              size_t inputLen )
+{
+    if( SHA256_Update( ( SHA256_CTX * ) pHashContext, pInput, inputLen ) )
+    {
+        return 0;
+    }
+
+    return -1;
+}
+
+static int32_t sha256_final( void * pHashContext,
+                             char * pOutput,
+                             size_t outputLen )
+{
+    if( SHA256_Final( pOutput, ( SHA256_CTX * ) pHashContext ) )
+    {
+        return 0;
+    }
+
+    return -1;
+}
+
 void harness()
 {
     SigV4Parameters_t * pSigV4Params;
