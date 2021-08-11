@@ -8,6 +8,18 @@ on:
   workflow_dispatch:
 
 jobs:
+  build-check-library:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone This Repo
+        uses: actions/checkout@v2
+      - name: Build in Release Mode
+        run: |
+          cmake -S test -B build/ \
+          -G "Unix Makefiles" \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_C_FLAGS='-Wall -Wextra -Werror'
+          make -C build/ all
   unittest:
     runs-on: ubuntu-latest
     steps:
@@ -19,8 +31,8 @@ jobs:
           cmake -S test -B build/ \
           -G "Unix Makefiles" \
           -DCMAKE_BUILD_TYPE=Debug \
-          -DBUILD_CLONE_SUBMODULES=ON \
-          -DCMAKE_C_FLAGS='--coverage -Wall -Wextra -DNDEBUG'
+          -DBUILD_UNIT_TESTS=ON \
+          -DCMAKE_C_FLAGS='--coverage -Wall -Wextra -DLOGGING_LEVEL_DEBUG=1'
           make -C build/ all
       - name: Test
         run: |
