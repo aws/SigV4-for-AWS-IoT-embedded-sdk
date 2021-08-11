@@ -34,41 +34,46 @@
 
 /* The number of invalid date inputs tested in
  * test_SigV4_AwsIotDateToIso8601_Formatting_Error() */
-#define SIGV4_TEST_INVALID_DATE_COUNT                       24U
+#define SIGV4_TEST_INVALID_DATE_COUNT                         24U
 
-#define AUTH_BUF_LENGTH                                     1000
+#define AUTH_BUF_LENGTH                                       1000
 /*#define PATH                                       "/hi | world" */
-#define PATH                                                "/"
+#define PATH                                                  "/"
 /* Iterator must not read beyond the null-terminator. */
-#define NULL_TERMINATED_PATH                                "/pa\0th"
-#define NULL_TERMINATED_PATH_LEN                            ( sizeof( NULL_TERMINATED_PATH ) - 1U )
+#define NULL_TERMINATED_PATH                                  "/pa\0th"
+#define NULL_TERMINATED_PATH_LEN                              ( sizeof( NULL_TERMINATED_PATH ) - 1U )
 /* An equal in the query string value must be double-encoded. */
-#define QUERY_VALUE_HAS_EQUALS                              "quantum==&->sha256=dead&maybe&&"
+#define QUERY_VALUE_HAS_EQUALS                                "quantum==&->sha256=dead&maybe&&"
 /* A query string with paramater count exceeding SIGV4_MAX_HTTP_HEADER_COUNT=5. */
-#define QUERY_GT_MAX_PARAMS                                 "params&allowed&to&have&no&values"
+#define QUERY_GT_MAX_PARAMS                                   "params&allowed&to&have&no&values"
 
 /* Query strings that represent different cases matching parameter names and values */
-#define QUERY_MATCHING_PARAMS                               "param=value2&param=value1&param1=test"
-#define QUERY_MATCHING_PARAMS_AND_MATCHING_VALUES_PREFIX    "param=valueXY&param=value&param1=test"
-#define QUERY_WITH_MATCHING_PARAM_PREFIX                    "para=value1&param1=&value2&param=value3"
+#define QUERY_MATCHING_PARAMS                                 "param=value2&param=value1&param1=test"
+#define QUERY_MATCHING_PARAMS_AND_MATCHING_VALUES_PREFIX_1    "param=valueXY&param=value&param1=test"
+#define QUERY_MATCHING_PARAMS_AND_MATCHING_VALUES_PREFIX_2    "param=value&param=valueXY&param1=test"
+#define QUERY_MATCHING_PARAMS_AND_VALUES                      "param=valueXY&param=valueXY&param1=test"
+#define QUERY_WITH_MATCHING_PARAM_PREFIX                      "para=value1&param1=&value2&param=value3"
 
-#define QUERY                                               "Action=ListUsers&Version=2010-05-08"
-#define QUERY_LENGTH                                        ( sizeof( QUERY ) - 1U )
-#define ACCESS_KEY_ID                                       "AKIAIOSFODNN7EXAMPLE"
-#define SECRET_KEY                                          "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"
-#define SECRET_KEY_LEN                                      ( sizeof( SECRET_KEY ) - 1U )
-#define SECRET_KEY_LONGER_THAN_DIGEST                       "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEYwJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEYwJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEYwJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"
-#define SECRET_KEY_LONGER_THAN_DIGEST_LEN                   ( sizeof( SECRET_KEY_LONGER_THAN_DIGEST ) - 1U )
-#define DATE                                                "20210811T001558Z"
-#define REGION                                              "us-east-1"
-#define SERVICE                                             "iam"
-#define HEADERS                                             "Host: iam.amazonaws.com\r\nContent-Type: application/x-www-form-urlencoded; charset=utf-8\r\nX-Amz-Date: "DATE "\r\n\r\n"
-#define HEADERS_LENGTH                                      ( sizeof( HEADERS ) - 1U )
-#define PRECANON_HEADER                                     "content-type:application/json;\nhost:iam.amazonaws.com\n"
-#define SECURITY_TOKEN                                      "security-token"
-#define SECURITY_TOKEN_LENGTH                               ( sizeof( SECURITY_TOKEN ) - 1U )
-#define EXPIRATION                                          "20160930T123600Z"
-#define EXPIRATION_LENGTH                                   ( sizeof( EXPIRATION ) - 1U )
+#define QUERY                                                 "Action=ListUsers&Version=2010-05-08"
+#define QUERY_LENGTH                                          ( sizeof( QUERY ) - 1U )
+#define ACCESS_KEY_ID                                         "AKIAIOSFODNN7EXAMPLE"
+#define SECRET_KEY                                            "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"
+#define SECRET_KEY_LEN                                        ( sizeof( SECRET_KEY ) - 1U )
+#define SECRET_KEY_LONGER_THAN_DIGEST                         "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEYwJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEYwJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEYwJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"
+#define SECRET_KEY_LONGER_THAN_DIGEST_LEN                     ( sizeof( SECRET_KEY_LONGER_THAN_DIGEST ) - 1U )
+#define DATE                                                  "20210811T001558Z"
+#define REGION                                                "us-east-1"
+#define SERVICE                                               "iam"
+#define HEADERS                                               "Host: iam.amazonaws.com\r\nContent-Type: application/x-www-form-urlencoded; charset=utf-8\r\nX-Amz-Date: "DATE "\r\n\r\n"
+#define HEADERS_LENGTH                                        ( sizeof( HEADERS ) - 1U )
+#define PRECANON_HEADER                                       "content-type:application/json;\nhost:iam.amazonaws.com\n"
+
+/* Header data containing leading, trailing and sequential trimmable spaces. */
+#define HEADERS_WITH_TRIMMABLE_SPACES                         "  Header-1 :  Value  -  1  \r\n"
+
+/* Examples with more header pairs than SIGV4_MAX_HTTP_HEADER_COUNT=5. */
+#define PRECAN_HEADERS_PAIRS_GT_THAN_MAX                      "H1:a\nH2:b\nH3:c\nH4:d\nH5:e\nH6:\n"
+#define HEADERS_PAIRS_GT_THAN_MAX                             "H1:a\r\nH2:b\r\nH3:c\r\nH4:d\r\nH5:e\r\nH6:\r\n\r\n"
 
 #define STRING_TO_SIGN_LEN                                                  \
     SIGV4_AWS4_HMAC_SHA256_LENGTH + 1U +                                    \
@@ -599,6 +604,11 @@ void test_SigV4_GenerateHTTPAuthorization_Invalid_Params()
     TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
 
     resetInputParams();
+    params.pCryptoInterface->hashFinal = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
     params.pCryptoInterface->hashBlockLen = SIGV4_HASH_MAX_BLOCK_LENGTH + 1;
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
@@ -683,7 +693,6 @@ void test_SigV4_GenerateHTTPAuthorization_Sorting_Query_Params_Corner_Cases()
     params.pHttpParameters->queryLen = strlen( QUERY_MATCHING_PARAMS );
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
-    printf( "%.*s", authBufLen, authBuf );
 
     /* Test when the query string contains query parameters which do not match in name length but match in
      * the name data for the common length between 2 parameters. */
@@ -694,12 +703,32 @@ void test_SigV4_GenerateHTTPAuthorization_Sorting_Query_Params_Corner_Cases()
 
     /* Test when the query string contains query parameters with exactly matching parameter names as well
      * as matching values for those parameters. The query values of matching parameters differ in length though. */
-    params.pHttpParameters->pQuery = QUERY_MATCHING_PARAMS_AND_MATCHING_VALUES_PREFIX;
-    params.pHttpParameters->queryLen = strlen( QUERY_MATCHING_PARAMS_AND_MATCHING_VALUES_PREFIX );
+    params.pHttpParameters->pQuery = QUERY_MATCHING_PARAMS_AND_MATCHING_VALUES_PREFIX_1;
+    params.pHttpParameters->queryLen = strlen( QUERY_MATCHING_PARAMS_AND_MATCHING_VALUES_PREFIX_1 );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+    params.pHttpParameters->pQuery = QUERY_MATCHING_PARAMS_AND_MATCHING_VALUES_PREFIX_2;
+    params.pHttpParameters->queryLen = strlen( QUERY_MATCHING_PARAMS_AND_MATCHING_VALUES_PREFIX_2 );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+
+    /* Test when the query string contains query parameters with exactly matching parameter names as well
+     * as matching values for those parameters. The query values of matching parameters differ in length though. */
+    params.pHttpParameters->pQuery = QUERY_MATCHING_PARAMS_AND_VALUES;
+    params.pHttpParameters->queryLen = strlen( QUERY_MATCHING_PARAMS_AND_VALUES );
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
 }
 
+/* Test that the library can handle HTTP headers data containing trimmable spaces. */
+void test_SigV4_GenerateAuthorization_Headers_With_Trimmable_Spaces()
+{
+    params.pHttpParameters->pHeaders = HEADERS_WITH_TRIMMABLE_SPACES;
+    params.pHttpParameters->headersLen = strlen( HEADERS_WITH_TRIMMABLE_SPACES );
+
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+}
 
 void test_SigV4_GenerateHTTPAuthorization_Default_Arguments()
 {
@@ -883,6 +912,22 @@ void test_SigV4_GenerateHTTPAuthorization_Greater_Than_Max_Header_Query_Count()
     params.pHttpParameters->queryLen = STR_LIT_LEN( QUERY_GT_MAX_PARAMS );
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4MaxQueryPairCountExceeded, returnStatus );
+}
 
-    resetInputParams();
+
+/* Test that the library returns error when the HTTP request data contains more Headers
+ * the configured maximum threshold in SIGV4_MAX_HTTP_HEADER_COUNT. */
+void test_SigV4_GenerateAuthorization_Headers_Greater_Than_Configured_Max()
+{
+    params.pHttpParameters->pHeaders = HEADERS_PAIRS_GT_THAN_MAX;
+    params.pHttpParameters->headersLen = strlen( HEADERS_PAIRS_GT_THAN_MAX );
+
+    TEST_ASSERT_EQUAL( SigV4MaxHeaderPairCountExceeded, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+
+    params.pHttpParameters->pHeaders = PRECAN_HEADERS_PAIRS_GT_THAN_MAX;
+    params.pHttpParameters->headersLen = strlen( PRECAN_HEADERS_PAIRS_GT_THAN_MAX );
+    params.pHttpParameters->flags = SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG;
+    TEST_ASSERT_EQUAL( SigV4MaxHeaderPairCountExceeded, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
 }
