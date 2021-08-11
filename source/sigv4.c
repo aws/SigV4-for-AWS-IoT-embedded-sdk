@@ -2485,14 +2485,6 @@ static SigV4Status_t generateCanonicalRequestUntilHeaders( const SigV4Parameters
     const char * pPath = NULL;
     size_t pathLen = 0U;
 
-    pCanonicalContext->pBufCur = ( char * ) pCanonicalContext->pBufProcessing;
-    pCanonicalContext->bufRemaining = SIGV4_PROCESSING_BUFFER_LENGTH;
-
-    /* Write the HTTP Request Method to the canonical request. */
-    returnStatus = writeLineToCanonicalRequest( pParams->pHttpParameters->pHttpMethod,
-                                                pParams->pHttpParameters->httpMethodLen,
-                                                pCanonicalContext );
-
     /* Set defaults for path and algorithm. */
     if( ( pParams->pHttpParameters->pPath == NULL ) ||
         ( pParams->pHttpParameters->pathLen == 0U ) )
@@ -2506,6 +2498,14 @@ static SigV4Status_t generateCanonicalRequestUntilHeaders( const SigV4Parameters
         pPath = pParams->pHttpParameters->pPath;
         pathLen = pParams->pHttpParameters->pathLen;
     }
+
+    pCanonicalContext->pBufCur = ( char * ) pCanonicalContext->pBufProcessing;
+    pCanonicalContext->bufRemaining = SIGV4_PROCESSING_BUFFER_LENGTH;
+
+    /* Write the HTTP Request Method to the canonical request. */
+    returnStatus = writeLineToCanonicalRequest( pParams->pHttpParameters->pHttpMethod,
+                                                pParams->pHttpParameters->httpMethodLen,
+                                                pCanonicalContext );
 
     if( returnStatus == SigV4Success )
     {
