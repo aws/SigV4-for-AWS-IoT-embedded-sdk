@@ -119,6 +119,11 @@
     }
 
 /**
+ * @brief A helper macro to test if a flag is set.
+ */
+#define FLAG_IS_SET( bits, flag )    ( ( ( bits ) & ( flag ) ) == ( flag ) )
+
+/**
  * @brief An aggregator representing the individually parsed elements of the
  * user-provided date parameter. This is used to verify the complete date
  * representation, and construct the final ISO 8601 string.

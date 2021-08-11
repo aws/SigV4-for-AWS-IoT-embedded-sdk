@@ -1400,7 +1400,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         {
             /* If the header field is not in canonical form already, we need to check
              * whether this character represents a trimmable space. */
-            if( !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) &&
+            if( !FLAG_IS_SET( flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) &&
                 isTrimmableSpace( pData, index, dataLen, numOfBytesCopied ) )
             {
                 /* Cannot copy trimmable space into canonical request buffer. */
@@ -1572,7 +1572,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
             }
             /* Look for header value part of a header field entry for both canonicalized and non-canonicalized forms. */
             /* Non-canonicalized headers will have header values ending with "\r\n". */
-            else if( ( !keyFlag ) && !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( ( index + 1U ) < headersDataLen ) &&
+            else if( ( !keyFlag ) && !FLAG_IS_SET( flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( ( index + 1U ) < headersDataLen ) &&
                      ( 0 == strncmp( pCurrLoc, "\r\n", strlen( "\r\n" ) ) ) )
             {
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = pKeyOrValStartLoc;
@@ -1583,7 +1583,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                 noOfHeaders++;
             }
             /* Canonicalized headers will have header values ending just with "\n". */
-            else if( ( !keyFlag ) && ( ( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( pHeaders[ index ] == '\n' ) ) )
+            else if( ( !keyFlag ) && ( FLAG_IS_SET( flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( pHeaders[ index ] == '\n' ) ) )
             {
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = pKeyOrValStartLoc;
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( pCurrLoc - pKeyOrValStartLoc );
@@ -1631,7 +1631,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                                                   &noOfHeaders,
                                                   canonicalRequest );
 
-        if( ( sigV4Status == SigV4Success ) && !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) )
+        if( ( sigV4Status == SigV4Success ) && !FLAG_IS_SET( flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) )
         {
             /* Sorting headers based on keys. */
             qsort( canonicalRequest->pHeadersLoc, noOfHeaders, sizeof( SigV4KeyValuePair_t ), cmpHeaderField );
@@ -1642,7 +1642,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         }
 
         /* The \n character must be written if provided headers are not already canonicalized. */
-        if( ( sigV4Status == SigV4Success ) && !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) )
+        if( ( sigV4Status == SigV4Success ) && !FLAG_IS_SET( flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) )
         {
             if( canonicalRequest->bufRemaining < 1U )
             {
@@ -2503,7 +2503,7 @@ static SigV4Status_t generateCanonicalRequestUntilHeaders( const SigV4Parameters
     if( returnStatus == SigV4Success )
     {
         /* Write the URI to the canonical request. */
-        if( pParams->pHttpParameters->flags & SIGV4_HTTP_PATH_IS_CANONICAL_FLAG )
+        if( FLAG_IS_SET( pParams->pHttpParameters->flags, SIGV4_HTTP_PATH_IS_CANONICAL_FLAG ) )
         {
             /* URI is already canonicalized, so just write it to the buffer as is. */
             returnStatus = writeLineToCanonicalRequest( pPath,
@@ -2529,7 +2529,7 @@ static SigV4Status_t generateCanonicalRequestUntilHeaders( const SigV4Parameters
     if( returnStatus == SigV4Success )
     {
         /* Write the query to the canonical request. */
-        if( pParams->pHttpParameters->flags & SIGV4_HTTP_QUERY_IS_CANONICAL_FLAG )
+        if( FLAG_IS_SET( pParams->pHttpParameters->flags, SIGV4_HTTP_QUERY_IS_CANONICAL_FLAG ) )
         {
             /* HTTP query is already canonicalized, so just write it to the buffer as is. */
             returnStatus = writeLineToCanonicalRequest( pParams->pHttpParameters->pQuery,
@@ -2545,7 +2545,7 @@ static SigV4Status_t generateCanonicalRequestUntilHeaders( const SigV4Parameters
     }
 
     if( ( returnStatus == SigV4Success ) &&
-        pParams->pHttpParameters->flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG )
+        FLAG_IS_SET( pParams->pHttpParameters->flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) )
     {
         /* Headers are already canonicalized, so just write it to the buffer as is. */
         returnStatus = writeLineToCanonicalRequest( pParams->pHttpParameters->pHeaders,
