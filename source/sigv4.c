@@ -2614,55 +2614,54 @@ static SigV4Status_t generateAuthorizationValuePrefix( const SigV4Parameters_t *
                     ( unsigned long ) ( authPrefixLen + encodedSignatureLen - *pAuthPrefixLen ) ) );
         returnStatus = SigV4InsufficientMemory;
     }
-
-    /* START:  Writing of authorization value prefix. */
-    /******************* Write <algorithm> *******************************************/
-    ( void ) memcpy( pAuthBuf, pAlgorithm, algorithmLen );
-    numOfBytesWritten += algorithmLen;
-
-    /* Add space separator. */
-    pAuthBuf[ numOfBytesWritten ] = SPACE_CHAR;
-    numOfBytesWritten += SPACE_CHAR_LEN;
-
-    /**************** Write "Credential=<access key ID>/<credential scope>, " ****************/
-    ( void ) memcpy( ( pAuthBuf + numOfBytesWritten ), AUTH_CREDENTIAL_PREFIX, AUTH_CREDENTIAL_PREFIX_LEN );
-    numOfBytesWritten += AUTH_CREDENTIAL_PREFIX_LEN;
-    ( void ) memcpy( ( pAuthBuf + numOfBytesWritten ),
-                     pParams->pCredentials->pAccessKeyId,
-                     pParams->pCredentials->accessKeyIdLen );
-    numOfBytesWritten += pParams->pCredentials->accessKeyIdLen;
-
-    pAuthBuf[ numOfBytesWritten ] = CREDENTIAL_SCOPE_SEPARATOR;
-    numOfBytesWritten += CREDENTIAL_SCOPE_SEPARATOR_LEN;
-    credentialScope.pData = ( pAuthBuf + numOfBytesWritten );
-    /* #authBufLen is an overestimate but the validation was already done earlier. */
-    credentialScope.dataLen = *pAuthPrefixLen;
-    ( void ) generateCredentialScope( pParams, &credentialScope );
-    numOfBytesWritten += credentialScope.dataLen;
-
-    /* Add separator before the Signed Headers information. */
-    ( void ) memcpy( pAuthBuf + numOfBytesWritten, AUTH_SEPARATOR, AUTH_SEPARATOR_LEN );
-    numOfBytesWritten += AUTH_SEPARATOR_LEN;
-
-
-    /************************ Write "SignedHeaders=<signedHeaders>, " *******************************/
-    ( void ) memcpy( pAuthBuf + numOfBytesWritten, AUTH_SIGNED_HEADERS_PREFIX, AUTH_SIGNED_HEADERS_PREFIX_LEN );
-    numOfBytesWritten += AUTH_SIGNED_HEADERS_PREFIX_LEN;
-    ( void ) memcpy( pAuthBuf + numOfBytesWritten, pSignedHeaders, signedHeadersLen );
-    numOfBytesWritten += signedHeadersLen;
-
-    /* Add separator before the Signature field name. */
-    ( void ) memcpy( pAuthBuf + numOfBytesWritten, AUTH_SEPARATOR, AUTH_SEPARATOR_LEN );
-    numOfBytesWritten += AUTH_SEPARATOR_LEN;
-
-    /****************************** Write "Signature=<signature>" *******************************/
-    ( void ) memcpy( pAuthBuf + numOfBytesWritten, AUTH_SIGNATURE_PREFIX, AUTH_SIGNATURE_PREFIX_LEN );
-    numOfBytesWritten += AUTH_SIGNATURE_PREFIX_LEN;
-
-    /* END: Writing of authorization value prefix. */
-
-    if( returnStatus == SigV4Success )
+    else
     {
+        /* START:  Writing of authorization value prefix. */
+        /******************* Write <algorithm> *******************************************/
+        ( void ) memcpy( pAuthBuf, pAlgorithm, algorithmLen );
+        numOfBytesWritten += algorithmLen;
+
+        /* Add space separator. */
+        pAuthBuf[ numOfBytesWritten ] = SPACE_CHAR;
+        numOfBytesWritten += SPACE_CHAR_LEN;
+
+        /**************** Write "Credential=<access key ID>/<credential scope>, " ****************/
+        ( void ) memcpy( ( pAuthBuf + numOfBytesWritten ), AUTH_CREDENTIAL_PREFIX, AUTH_CREDENTIAL_PREFIX_LEN );
+        numOfBytesWritten += AUTH_CREDENTIAL_PREFIX_LEN;
+        ( void ) memcpy( ( pAuthBuf + numOfBytesWritten ),
+                         pParams->pCredentials->pAccessKeyId,
+                         pParams->pCredentials->accessKeyIdLen );
+        numOfBytesWritten += pParams->pCredentials->accessKeyIdLen;
+
+        pAuthBuf[ numOfBytesWritten ] = CREDENTIAL_SCOPE_SEPARATOR;
+        numOfBytesWritten += CREDENTIAL_SCOPE_SEPARATOR_LEN;
+        credentialScope.pData = ( pAuthBuf + numOfBytesWritten );
+        /* #authBufLen is an overestimate but the validation was already done earlier. */
+        credentialScope.dataLen = *pAuthPrefixLen;
+        ( void ) generateCredentialScope( pParams, &credentialScope );
+        numOfBytesWritten += credentialScope.dataLen;
+
+        /* Add separator before the Signed Headers information. */
+        ( void ) memcpy( pAuthBuf + numOfBytesWritten, AUTH_SEPARATOR, AUTH_SEPARATOR_LEN );
+        numOfBytesWritten += AUTH_SEPARATOR_LEN;
+
+
+        /************************ Write "SignedHeaders=<signedHeaders>, " *******************************/
+        ( void ) memcpy( pAuthBuf + numOfBytesWritten, AUTH_SIGNED_HEADERS_PREFIX, AUTH_SIGNED_HEADERS_PREFIX_LEN );
+        numOfBytesWritten += AUTH_SIGNED_HEADERS_PREFIX_LEN;
+        ( void ) memcpy( pAuthBuf + numOfBytesWritten, pSignedHeaders, signedHeadersLen );
+        numOfBytesWritten += signedHeadersLen;
+
+        /* Add separator before the Signature field name. */
+        ( void ) memcpy( pAuthBuf + numOfBytesWritten, AUTH_SEPARATOR, AUTH_SEPARATOR_LEN );
+        numOfBytesWritten += AUTH_SEPARATOR_LEN;
+
+        /****************************** Write "Signature=<signature>" *******************************/
+        ( void ) memcpy( pAuthBuf + numOfBytesWritten, AUTH_SIGNATURE_PREFIX, AUTH_SIGNATURE_PREFIX_LEN );
+        numOfBytesWritten += AUTH_SIGNATURE_PREFIX_LEN;
+
+        /* END: Writing of authorization value prefix. */
+
         /* Avoid warnings from last write if asserts are disabled. */
         ( void ) numOfBytesWritten;
         assert( authPrefixLen == numOfBytesWritten );
