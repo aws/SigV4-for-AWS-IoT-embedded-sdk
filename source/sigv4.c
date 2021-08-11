@@ -884,7 +884,7 @@ static SigV4Status_t parseDate( const char * pDate,
             formatIndex++;
 
             /* Numerical value of length specifier character. */
-            lenToRead = ( ( uint32_t ) pFormat[ formatIndex ] - ( uint32_t ) '0' );
+            lenToRead = ( size_t ) ( pFormat[ formatIndex ] - '0' );
             formatIndex++;
 
             /* Ensure read is within buffer bounds. */
@@ -1206,8 +1206,8 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         {
             if( doubleEncodeEquals && ( *pUriLoc == '=' ) )
             {
-                if( ( bytesConsumed > SIZE_MAX - URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE ) ||
-                    ( bytesConsumed + URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE > bufferLen ) )
+                if( ( bytesConsumed > ( SIZE_MAX - URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE ) ) ||
+                    ( ( bytesConsumed + URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE ) > bufferLen ) )
                 {
                     returnStatus = SigV4InsufficientMemory;
                     LOG_INSUFFICIENT_MEMORY_ERROR( "encode the URI",
@@ -1227,7 +1227,8 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
             }
             else
             {
-                if( ( bytesConsumed > SIZE_MAX - URI_ENCODED_SPECIAL_CHAR_SIZE ) || ( bytesConsumed + URI_ENCODED_SPECIAL_CHAR_SIZE > bufferLen ) )
+                if( ( bytesConsumed > ( SIZE_MAX - URI_ENCODED_SPECIAL_CHAR_SIZE ) ) ||
+                    ( ( bytesConsumed + URI_ENCODED_SPECIAL_CHAR_SIZE ) > bufferLen ) )
                 {
                     returnStatus = SigV4InsufficientMemory;
                     LOG_INSUFFICIENT_MEMORY_ERROR( "encode the URI",
@@ -1865,7 +1866,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                 returnStatus = SigV4InsufficientMemory;
                 LOG_INSUFFICIENT_MEMORY_ERROR( "write the canonical query", 1U );
             }
-            else if( ( numberOfParameters != i + 1 ) && ( returnStatus == SigV4Success ) )
+            else if( ( numberOfParameters != ( i + 1U ) ) && ( returnStatus == SigV4Success ) )
             {
                 *pBufLoc = '&';
                 ++pBufLoc;
@@ -2131,7 +2132,7 @@ static int32_t hmacKey( HmacContext_t * pHmacContext,
 
     /* At the first time this function is called, it is important that pHmacContext->keyLen
      * is set to 0U so that the key can be copied to the start of the buffer. */
-    if( pHmacContext->keyLen + keyLen <= pCryptoInterface->hashBlockLen )
+    if( ( pHmacContext->keyLen + keyLen ) <= pCryptoInterface->hashBlockLen )
     {
         /* The key fits into the block so just append it. */
         ( void ) memcpy( pHmacContext->key + pHmacContext->keyLen, pKey, keyLen );
@@ -2309,7 +2310,7 @@ static SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
     assert( ( pLine != NULL ) && ( lineLen > 0 ) );
     assert( ( pCanonicalContext != NULL ) && ( pCanonicalContext->pBufCur != NULL ) );
 
-    if( pCanonicalContext->bufRemaining < lineLen + 1U )
+    if( pCanonicalContext->bufRemaining < ( lineLen + 1U ) )
     {
         returnStatus = SigV4InsufficientMemory;
         LOG_INSUFFICIENT_MEMORY_ERROR( "write the credential scope",
@@ -2422,7 +2423,7 @@ static SigV4Status_t writeStringToSign( const SigV4Parameters_t * pParams,
                                       sizeNeededForCredentialScope( pParams ) + 1U;
 
         /* Check if there is enough space for the string to sign. */
-        if( sizeNeededBeforeHash + ( pParams->pCryptoInterface->hashDigestLen * 2U ) >
+        if( ( sizeNeededBeforeHash + ( pParams->pCryptoInterface->hashDigestLen * 2U ) ) >
             SIGV4_PROCESSING_BUFFER_LENGTH )
         {
             returnStatus = SigV4InsufficientMemory;
@@ -2680,7 +2681,7 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
     /* To calculate the final signing key, this function needs at least enough
      * buffer to hold the length of two digests since one digest is used to
      * calculate the other. */
-    if( *pBytesRemaining < pSigV4Params->pCryptoInterface->hashDigestLen * 2U )
+    if( *pBytesRemaining < ( pSigV4Params->pCryptoInterface->hashDigestLen * 2U ) )
     {
         returnStatus = SigV4InsufficientMemory;
         LOG_INSUFFICIENT_MEMORY_ERROR( "generate signing key",
