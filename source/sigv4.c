@@ -362,7 +362,7 @@ static void setQueryParameterValue( size_t currentParameter,
  * @return Zero on success, all other return values are failures.
  */
 static int32_t hmacKey( HmacContext_t * pHmacContext,
-                        const char * pKey,
+                        const uint8_t * pKey,
                         size_t keyLen );
 
 /**
@@ -432,9 +432,9 @@ static int32_t completeHmac( HmacContext_t * pHmacContext,
  * @param[in] pCryptoInterface The interface used to call hash functions.
  * @return Zero on success, all other return values are failures.
  */
-static int32_t completeHash( const char * pInput,
+static int32_t completeHash( const uint8_t * pInput,
                              size_t inputLen,
-                             char * pOutput,
+                             uint8_t * pOutput,
                              size_t outputLen,
                              const SigV4CryptoInterface_t * pCryptoInterface );
 
@@ -1359,12 +1359,12 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         if( isspace( value[ index ] ) )
         {
             /* The last character is a trailing space. */
-            if( ( index + 1 ) == valLen )
+            if( ( index + 1U ) == valLen )
             {
                 ret = true;
             }
             /* Trim if the next character is also a space. */
-            else if( isspace( value[ index + 1 ] ) )
+            else if( isspace( value[ index + 1U ] ) )
             {
                 ret = true;
             }
@@ -1579,7 +1579,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
             }
             /* Look for header value part of a header field entry for both canonicalized and non-canonicalized forms. */
             /* Non-canonicalized headers will have header values ending with "\r\n". */
-            else if( ( !keyFlag ) && !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( ( index + 1 ) < headersDataLen ) &&
+            else if( ( !keyFlag ) && !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( ( index + 1U ) < headersDataLen ) &&
                      ( 0 == strncmp( pCurrLoc, "\r\n", strlen( "\r\n" ) ) ) )
             {
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = pKeyOrValStartLoc;
@@ -2045,9 +2045,9 @@ static SigV4Status_t verifySigV4Parameters( const SigV4Parameters_t * pParams )
 
 /*-----------------------------------------------------------*/
 
-static int32_t completeHash( const char * pInput,
+static int32_t completeHash( const uint8_t * pInput,
                              size_t inputLen,
-                             char * pOutput,
+                             uint8_t * pOutput,
                              size_t outputLen,
                              const SigV4CryptoInterface_t * pCryptoInterface )
 {
@@ -2087,7 +2087,7 @@ static SigV4Status_t completeHashAndHexEncode( const char * pInput,
 {
     SigV4Status_t returnStatus = SigV4Success;
     /* Used to store the hash of the request payload. */
-    char hashBuffer[ SIGV4_HASH_MAX_DIGEST_LENGTH ];
+    uint8_t hashBuffer[ SIGV4_HASH_MAX_DIGEST_LENGTH ];
     SigV4String_t originalHash;
     SigV4String_t hexEncodedHash;
 
@@ -2103,9 +2103,9 @@ static SigV4Status_t completeHashAndHexEncode( const char * pInput,
     hexEncodedHash.pData = pOutput;
     hexEncodedHash.dataLen = *pOutputLen;
 
-    if( completeHash( pInput,
+    if( completeHash( ( const uint8_t * ) pInput,
                       inputLen,
-                      hashBuffer,
+                      ( uint8_t * ) hashBuffer,
                       pCryptoInterface->hashDigestLen,
                       pCryptoInterface ) != 0 )
     {
@@ -2128,7 +2128,7 @@ static SigV4Status_t completeHashAndHexEncode( const char * pInput,
 }
 
 static int32_t hmacKey( HmacContext_t * pHmacContext,
-                        const char * pKey,
+                        const uint8_t * pKey,
                         size_t keyLen )
 {
     int32_t returnStatus = 0;
@@ -2219,7 +2219,7 @@ static int32_t hmacData( HmacContext_t * pHmacContext,
         for( i = 0U; i < pCryptoInterface->hashBlockLen; i++ )
         {
             /* XOR the key with the ipad. */
-            pHmacContext->key[ i ] ^= ( char ) 0x36;
+            pHmacContext->key[ i ] ^= ( uint8_t ) 0x36;
         }
 
         returnStatus = pCryptoInterface->hashInit( pCryptoInterface->pHashContext );
@@ -2278,7 +2278,7 @@ static int32_t hmacFinal( HmacContext_t * pHmacContext,
          * inner-padded key with (0x36 ^ 0x5c) = (ipad ^ opad) = 0x6a.  */
         for( i = 0U; i < pCryptoInterface->hashBlockLen; i++ )
         {
-            pHmacContext->key[ i ] ^= ( char ) ( 0x6a );
+            pHmacContext->key[ i ] ^= ( uint8_t ) ( 0x6a );
         }
 
         returnStatus = pCryptoInterface->hashInit( pCryptoInterface->pHashContext );

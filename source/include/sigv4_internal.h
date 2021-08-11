@@ -113,10 +113,10 @@
  * @brief A helper macro to print insufficient memory errors.
  */
 #define LOG_INSUFFICIENT_MEMORY_ERROR( purposeOfWrite, bytesExceeded )                       \
-    do {                                                                                     \
+    {                                                                                        \
         LogError( ( "Insufficient memory provided to " purposeOfWrite ", bytesExceeded=%lu", \
                     ( unsigned long ) ( bytesExceeded ) ) );                                 \
-    } while( 0 )
+    }
 
 /**
  * @brief An aggregator representing the individually parsed elements of the
@@ -196,7 +196,7 @@ typedef struct HmacContext
     /**
      * @brief All accumulated key data.
      */
-    char key[ SIGV4_HASH_MAX_BLOCK_LENGTH ];
+    uint8_t key[ SIGV4_HASH_MAX_BLOCK_LENGTH ];
 
     /**
      * @brief The length of the accumulated key data.
