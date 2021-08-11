@@ -947,6 +947,7 @@ static SigV4Status_t lowercaseHexEncode( const SigV4String_t * pInputStr,
     static const char digitArr[] = "0123456789abcdef";
     char * hex = NULL;
     size_t i = 0U;
+    const uint8_t * bytes;
 
     assert( pInputStr != NULL );
     assert( pHexOutput != NULL );
@@ -954,6 +955,7 @@ static SigV4Status_t lowercaseHexEncode( const SigV4String_t * pInputStr,
     assert( pHexOutput->pData != NULL );
 
     hex = pHexOutput->pData;
+    bytes = ( const uint8_t * ) pInputStr->pData;
 
     /* Hex string notification of binary data takes twice the size. */
     if( pHexOutput->dataLen < ( pInputStr->dataLen * 2U ) )
@@ -966,9 +968,9 @@ static SigV4Status_t lowercaseHexEncode( const SigV4String_t * pInputStr,
     {
         for( i = 0; i < pInputStr->dataLen; i++ )
         {
-            *hex = digitArr[ ( pInputStr->pData[ i ] & 0xF0 ) >> 4 ];
+            *hex = digitArr[ ( bytes[ i ] & 0xF0U ) >> 4 ];
             hex++;
-            *hex = digitArr[ ( pInputStr->pData[ i ] & 0x0F ) ];
+            *hex = digitArr[ ( bytes[ i ] & 0x0FU ) ];
             hex++;
         }
 
@@ -1132,22 +1134,13 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
 
 /*-----------------------------------------------------------*/
 
-    static char toUpperHexChar( char value )
+    static char toUpperHexChar( uint8_t value )
     {
-        char hexChar;
+        static const char upperHexArr[] = "0123456789ABCDEF";
 
-        assert( value < 16 );
+        assert( value < 16U );
 
-        if( value < 10 )
-        {
-            hexChar = '0' + value;
-        }
-        else
-        {
-            hexChar = ( 'A' + value ) - 10;
-        }
-
-        return hexChar;
+        return upperHexArr[ value ];
     }
 
 /*-----------------------------------------------------------*/
@@ -1163,8 +1156,8 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         ( void ) bufferLen;
 
         *pBuffer = '%';
-        *( pBuffer + 1U ) = toUpperHexChar( code >> 4 );
-        *( pBuffer + 2U ) = toUpperHexChar( code & 0x0F );
+        *( pBuffer + 1U ) = toUpperHexChar( ( ( uint8_t ) code ) >> 4U );
+        *( pBuffer + 2U ) = toUpperHexChar( ( ( uint8_t ) code ) & 0x0FU );
 
         return URI_ENCODED_SPECIAL_CHAR_SIZE;
     }
@@ -1413,7 +1406,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                 /* Cannot copy trimmable space into canonical request buffer. */
             }
             /* Remaining buffer space should at least accommodate the character to copy and the trailing separator character. */
-            else if( buffRemaining <= 1 )
+            else if( buffRemaining <= 1U )
             {
                 status = SigV4InsufficientMemory;
                 break;
@@ -1433,7 +1426,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
 
                 pCurrBufLoc++;
                 numOfBytesCopied++;
-                buffRemaining -= 1;
+                buffRemaining--;
             }
         }
 
@@ -1446,7 +1439,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
             *pCurrBufLoc = separator;
             pCurrBufLoc++;
             canonicalRequest->pBufCur = pCurrBufLoc;
-            canonicalRequest->bufRemaining = ( buffRemaining - 1 );
+            canonicalRequest->bufRemaining = ( buffRemaining - 1U );
         }
 
         return status;
@@ -1488,7 +1481,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         }
 
         /* Store the length of the "Signed Headers" data appended to the Canonical Request. */
-        *pSignedHeadersLen = ( size_t ) ( canonicalRequest->pBufCur - *pSignedHeaders - 1U );
+        *pSignedHeadersLen = ( ( size_t ) ( canonicalRequest->pBufCur - *pSignedHeaders ) - 1U );
 
         if( sigV4Status == SigV4Success )
         {
@@ -1651,7 +1644,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         /* The \n character must be written if provided headers are not already canonicalized. */
         if( ( sigV4Status == SigV4Success ) && !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) )
         {
-            if( canonicalRequest->bufRemaining < 1 )
+            if( canonicalRequest->bufRemaining < 1U )
             {
                 sigV4Status = SigV4InsufficientMemory;
                 LOG_INSUFFICIENT_MEMORY_ERROR( "write the canonical headers", 1U );
@@ -1894,7 +1887,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
             {
                 *pBufLoc = '&';
                 ++pBufLoc;
-                remainingLen -= 1;
+                remainingLen--;
             }
 
             pCanonicalRequest->pBufCur = pBufLoc;
@@ -2859,7 +2852,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
     authPrefixLen = *authBufLen;
 
     /* Default arguments. */
-    if( ( pParams->pAlgorithm == NULL ) || ( pParams->algorithmLen == 0 ) )
+    if( ( pParams->pAlgorithm == NULL ) || ( pParams->algorithmLen == 0U ) )
     {
         /* The default algorithm is AWS4-HMAC-SHA256. */
         pAlgorithm = SIGV4_AWS4_HMAC_SHA256;
@@ -2948,7 +2941,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
                                            &hexEncodedHmac );
         *pSignature = hexEncodedHmac.pData;
         *signatureLen = hexEncodedHmac.dataLen;
-        *authBufLen = authPrefixLen + ( pParams->pCryptoInterface->hashDigestLen * 2 );
+        *authBufLen = authPrefixLen + ( pParams->pCryptoInterface->hashDigestLen << 1U );
     }
 
     return returnStatus;
