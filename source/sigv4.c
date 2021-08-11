@@ -91,6 +91,17 @@
                                                  CanonicalContext_t * pCanonicalContext );
 
 /**
+ * @brief Determine if a character can be written without needing encoding.
+ *
+ * @param[in] c The character to evaluate.
+ * @param[in] encodeSlash Whether slashes may be encoded.
+ *
+ * @return `true` if the character does not need encoding, `false` if it does.
+ */
+    static bool isAllowedChar( char c,
+                               bool encodeSlash );
+
+/**
  * @brief Compare two SigV4 data structures lexicographically, without case-sensitivity.
  *
  * @param[in] pFirstVal SigV4 key value data structure to sort.
@@ -1180,6 +1191,14 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
 
 /*-----------------------------------------------------------*/
 
+    static bool isAllowedChar( char c,
+                               bool encodeSlash )
+    {
+        return( isalnum( c ) || ( c == '-' ) || ( c == '_' ) || ( c == '.' ) || ( c == '~' ) || ( ( c == '/' ) && !encodeSlash ) );
+    }
+
+/*-----------------------------------------------------------*/
+
     static SigV4Status_t encodeURI( const char * pUri,
                                     size_t uriLen,
                                     char * pCanonicalURI,
@@ -1218,8 +1237,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                     bytesConsumed += writeDoubleEncodedEquals( pBufLoc, bufferLen - bytesConsumed );
                 }
             }
-            else if( isalnum( *pUriLoc ) || ( *pUriLoc == '-' ) || ( *pUriLoc == '_' ) || ( *pUriLoc == '.' ) || ( *pUriLoc == '~' ) ||
-                     ( ( *pUriLoc == '/' ) && !encodeSlash ) )
+            else if( isAllowedChar( *pUriLoc, encodeSlash ) )
             {
                 *pBufLoc = *pUriLoc;
                 ++pBufLoc;
@@ -1861,31 +1879,26 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                 }
             }
 
-            if( ( remainingLen < 1U ) && ( numberOfParameters != ( i + 1 ) ) )
+            if( ( remainingLen < 1U ) && ( numberOfParameters != ( i + 1U ) ) )
             {
                 returnStatus = SigV4InsufficientMemory;
                 LOG_INSUFFICIENT_MEMORY_ERROR( "write the canonical query", 1U );
-            }
-            else if( ( numberOfParameters != ( i + 1U ) ) && ( returnStatus == SigV4Success ) )
-            {
-                *pBufLoc = '&';
-                ++pBufLoc;
-                remainingLen -= 1;
-            }
-            else
-            {
-                /* Empty else. */
             }
 
             if( returnStatus != SigV4Success )
             {
                 break;
             }
-            else
+
+            if( numberOfParameters != ( i + 1U ) )
             {
-                pCanonicalRequest->pBufCur = pBufLoc;
-                pCanonicalRequest->bufRemaining = remainingLen;
+                *pBufLoc = '&';
+                ++pBufLoc;
+                remainingLen -= 1;
             }
+
+            pCanonicalRequest->pBufCur = pBufLoc;
+            pCanonicalRequest->bufRemaining = remainingLen;
         }
 
         return returnStatus;
