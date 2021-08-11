@@ -29,62 +29,71 @@
 #include "stdlib.h"
 #include "sigv4.h"
 
-static int32_t sha256_init( void * pHashContext )
-{
-    if( SHA256_Init( ( SHA256_CTX * ) pHashContext ) == 1 )
-    {
-        return 0;
-    }
-
-    return -1;
-}
-
-static int32_t sha256_update( void * pHashContext,
-                              const char * pInput,
-                              size_t inputLen )
-{
-    if( SHA256_Update( ( SHA256_CTX * ) pHashContext, pInput, inputLen ) )
-    {
-        return 0;
-    }
-
-    return -1;
-}
-
-static int32_t sha256_final( void * pHashContext,
-                             char * pOutput,
-                             size_t outputLen )
-{
-    if( SHA256_Final( pOutput, ( SHA256_CTX * ) pHashContext ) )
-    {
-        return 0;
-    }
-
-    return -1;
-}
-
 void harness()
 {
     SigV4Parameters_t * pSigV4Params;
+    SigV4HttpParameters_t * pHttpParams;
+    SigV4CryptoInterface_t * pCryptoInterface;
+    SigV4Credentials_t * pCredentials;
     char * pAuthBuf;
     size_t * authBufLen;
     char ** pSignature;
     size_t * signatureLen;
     SigV4Status_t status;
 
+    pHttpParams = malloc( sizeof( SigV4CryptoInterface_t ) );
     pSigV4Params = malloc( sizeof( SigV4Parameters_t ) );
+    pCryptoInterface = malloc( sizeof( SigV4CryptoInterface_t ) );
+    pCredentials = malloc( sizeof( SigV4Credentials_t ) );
+
+    /* This property applies to all hash functions. */
+    if( pCryptoInterface != NULL )
+    {
+        __CPROVER_assume( pCryptoInterface->hashBlockLen <= pCryptoInterface->hashDigestLen );
+    }
+
+    if( pCredentials != NULL )
+    {
+        /* Make size assumptions for string-like types. */
+        __CPROVER_assume( pCredentials->accessKeyIdLen < CBMC_MAX_OBJECT_SIZE );
+        __CPROVER_assume( pCredentials->expirationLen < CBMC_MAX_OBJECT_SIZE );
+        __CPROVER_assume( pCredentials->secretAccessKeyLen < CBMC_MAX_OBJECT_SIZE );
+        __CPROVER_assume( pCredentials->securityTokenLen < CBMC_MAX_OBJECT_SIZE );
+        pCredentials->pAccessKeyId = malloc( pCredentials->accessKeyIdLen );
+        pCredentials->pExpiration = malloc( pCredentials->expirationLen );
+        pCredentials->pSecretAccessKey = malloc( pCredentials->secretAccessKeyLen );
+        pCredentials->pSecurityToken = malloc( pCredentials->securityTokenLen );
+    }
+
+    if( pHttpParams != NULL )
+    {
+        /* Make size assumptions for string-like types. */
+        __CPROVER_assume( pHttpParams->payloadLen < CBMC_MAX_OBJECT_SIZE );
+        __CPROVER_assume( pHttpParams->httpMethodLen < CBMC_MAX_OBJECT_SIZE );
+        __CPROVER_assume( pHttpParams->pathLen < CBMC_MAX_OBJECT_SIZE );
+        __CPROVER_assume( pHttpParams->queryLen < CBMC_MAX_OBJECT_SIZE );
+        __CPROVER_assume( pHttpParams->headersLen < CBMC_MAX_OBJECT_SIZE );
+        pHttpParams->pPayload = malloc( pHttpParams->payloadLen );
+        pHttpParams->pHttpMethod = malloc( pHttpParams->httpMethodLen );
+        pHttpParams->pPath = malloc( pHttpParams->pathLen );
+        pHttpParams->pQuery = malloc( pHttpParams->queryLen );
+        pHttpParams->pHeaders = malloc( pHttpParams->headersLen );
+    }
 
     if( pSigV4Params != NULL )
     {
+        /* Make size assumptions for string-like types. */
         __CPROVER_assume( pSigV4Params->regionLen < CBMC_MAX_OBJECT_SIZE );
-        pSigV4Params->pRegion = malloc( pSigV4Params->regionLen );
-
         __CPROVER_assume( pSigV4Params->serviceLen < CBMC_MAX_OBJECT_SIZE );
+        __CPROVER_assume( pSigV4Params->algorithmLen < CBMC_MAX_OBJECT_SIZE );
+        pSigV4Params->pRegion = malloc( pSigV4Params->regionLen );
         pSigV4Params->pService = malloc( pSigV4Params->serviceLen );
+        pSigV4Params->pAlgorithm = malloc( pSigV4Params->algorithmLen );
 
-        pSigV4Params->pCredentials = malloc( sizeof( SigV4Credentials_t ) );
-        pSigV4Params->pCryptoInterface = malloc( sizeof( SigV4CryptoInterface_t ) );
-        pSigV4Params->pHttpParameters = malloc( sizeof( SigV4HttpParameters_t ) );
+        /* Set other structs within SigV4Parameters_t. */
+        pSigV4Params->pCredentials = pCredentials;
+        pSigV4Params->pCryptoInterface = pCryptoInterface;
+        pSigV4Params->pHttpParameters = pHttpParams;
     }
 
     authBufLen = malloc( sizeof( size_t ) );
