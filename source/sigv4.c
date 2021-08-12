@@ -2125,14 +2125,14 @@ static SigV4Status_t completeHashAndHexEncode( const char * pInput,
     assert( pCryptoInterface->hashUpdate != NULL );
     assert( pCryptoInterface->hashFinal != NULL );
 
-    originalHash.pData = hashBuffer;
+    originalHash.pData = ( char * ) hashBuffer;
     originalHash.dataLen = pCryptoInterface->hashDigestLen;
     hexEncodedHash.pData = pOutput;
     hexEncodedHash.dataLen = *pOutputLen;
 
     if( completeHash( ( const uint8_t * ) pInput,
                       inputLen,
-                      ( uint8_t * ) hashBuffer,
+                      hashBuffer,
                       pCryptoInterface->hashDigestLen,
                       pCryptoInterface ) != 0 )
     {
@@ -2247,7 +2247,7 @@ static int32_t hmacData( HmacContext_t * pHmacContext,
         for( i = 0U; i < pCryptoInterface->hashBlockLen; i++ )
         {
             /* XOR the key with the ipad. */
-            pHmacContext->key[ i ] ^= ( uint8_t ) 0x36;
+            pHmacContext->key[ i ] ^= 0x36U;
         }
 
         returnStatus = pCryptoInterface->hashInit( pCryptoInterface->pHashContext );
@@ -2279,7 +2279,7 @@ static int32_t hmacFinal( HmacContext_t * pHmacContext,
                           size_t macLen )
 {
     int32_t returnStatus = -1;
-    char innerHashDigest[ SIGV4_HASH_MAX_DIGEST_LENGTH ];
+    uint8_t innerHashDigest[ SIGV4_HASH_MAX_DIGEST_LENGTH ];
     size_t i = 0U;
     const SigV4CryptoInterface_t * pCryptoInterface = NULL;
 
@@ -2306,7 +2306,7 @@ static int32_t hmacFinal( HmacContext_t * pHmacContext,
          * inner-padded key with (0x36 ^ 0x5c) = (ipad ^ opad) = 0x6a.  */
         for( i = 0U; i < pCryptoInterface->hashBlockLen; i++ )
         {
-            pHmacContext->key[ i ] ^= ( uint8_t ) ( 0x6a );
+            pHmacContext->key[ i ] ^= 0x6aU;
         }
 
         returnStatus = pCryptoInterface->hashInit( pCryptoInterface->pHashContext );
@@ -2332,7 +2332,7 @@ static int32_t hmacFinal( HmacContext_t * pHmacContext,
     {
         /* Write the final HMAC value. */
         returnStatus = pCryptoInterface->hashFinal( pCryptoInterface->pHashContext,
-                                                    pMac,
+                                                    ( uint8_t * ) pMac,
                                                     macLen );
     }
 
