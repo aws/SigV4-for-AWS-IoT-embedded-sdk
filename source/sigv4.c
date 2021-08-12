@@ -1246,8 +1246,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         {
             if( doubleEncodeEquals && ( *pUriLoc == '=' ) )
             {
-                if( ( bytesConsumed > ( SIZE_MAX - URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE ) ) ||
-                    ( ( bytesConsumed + URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE ) > bufferLen ) )
+                if( ( bufferLen - bytesConsumed ) < URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE )
                 {
                     returnStatus = SigV4InsufficientMemory;
                     LOG_INSUFFICIENT_MEMORY_ERROR( "encode the URI",
@@ -1260,14 +1259,21 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
             }
             else if( isAllowedChar( *pUriLoc, encodeSlash ) )
             {
-                *pBufLoc = *pUriLoc;
-                ++pBufLoc;
-                ++bytesConsumed;
+                if( bytesConsumed < bufferLen )
+                {
+                    *pBufLoc = *pUriLoc;
+                    ++pBufLoc;
+                    ++bytesConsumed;
+                }
+                else
+                {
+                    returnStatus = SigV4InsufficientMemory;
+                    LOG_INSUFFICIENT_MEMORY_ERROR( "encode the URI", bytesConsumed + 1U - bufferLen );
+                }
             }
             else
             {
-                if( ( bytesConsumed > ( SIZE_MAX - URI_ENCODED_SPECIAL_CHAR_SIZE ) ) ||
-                    ( ( bytesConsumed + URI_ENCODED_SPECIAL_CHAR_SIZE ) > bufferLen ) )
+                if( ( bufferLen - bytesConsumed ) < URI_ENCODED_SPECIAL_CHAR_SIZE )
                 {
                     returnStatus = SigV4InsufficientMemory;
                     LOG_INSUFFICIENT_MEMORY_ERROR( "encode the URI",
@@ -1277,12 +1283,6 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                 {
                     bytesConsumed += writeHexCodeOfChar( pBufLoc, bufferLen - bytesConsumed, *pUriLoc );
                 }
-            }
-
-            if( bytesConsumed > bufferLen )
-            {
-                returnStatus = SigV4InsufficientMemory;
-                LOG_INSUFFICIENT_MEMORY_ERROR( "encode the URI", bytesConsumed - bufferLen );
             }
 
             pUriLoc++;
