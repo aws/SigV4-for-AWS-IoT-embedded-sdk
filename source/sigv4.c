@@ -1202,7 +1202,6 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                                     bool encodeSlash,
                                     bool doubleEncodeEquals )
     {
-        const char * pUriLoc = NULL;
         size_t uriIndex = 0U, bytesConsumed = 0U;
         size_t bufferLen = 0U;
         SigV4Status_t returnStatus = SigV4Success;
@@ -1212,12 +1211,11 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         assert( canonicalURILen != NULL );
         assert( *canonicalURILen > 0U );
 
-        pUriLoc = pUri;
         bufferLen = *canonicalURILen;
 
-        while( ( uriIndex++ < uriLen ) && ( bytesConsumed < bufferLen ) && ( returnStatus == SigV4Success ) )
+        for( ; ( uriIndex < uriLen ) && ( returnStatus == SigV4Success ); uriIndex++ )
         {
-            if( doubleEncodeEquals && ( *pUriLoc == '=' ) )
+            if( doubleEncodeEquals && ( pUri[ uriIndex ] == '=' ) )
             {
                 if( ( bufferLen - bytesConsumed ) < URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE )
                 {
@@ -1230,13 +1228,13 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                     bytesConsumed += writeDoubleEncodedEquals( pCanonicalURI + bytesConsumed, bufferLen - bytesConsumed );
                 }
             }
-            else if( isAllowedChar( *pUriLoc, encodeSlash ) )
+            else if( isAllowedChar( pUri[ uriIndex ], encodeSlash ) )
             {
                 /* If the output buffer has space, add the character as-is in URI encoding as it
                  * is neither a special character nor an '=' character requiring double encoding. */
                 if( bytesConsumed < bufferLen )
                 {
-                    pCanonicalURI[ bytesConsumed ] = *pUriLoc;
+                    pCanonicalURI[ bytesConsumed ] = pUri[ uriIndex ];
                     ++bytesConsumed;
                 }
                 else
@@ -1255,11 +1253,9 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                 }
                 else
                 {
-                    bytesConsumed += writeHexCodeOfChar( pCanonicalURI + bytesConsumed, bufferLen - bytesConsumed, *pUriLoc );
+                    bytesConsumed += writeHexCodeOfChar( pCanonicalURI + bytesConsumed, bufferLen - bytesConsumed, pUri[ uriIndex - 1U ] );
                 }
             }
-
-            pUriLoc++;
         }
 
         if( returnStatus == SigV4Success )
