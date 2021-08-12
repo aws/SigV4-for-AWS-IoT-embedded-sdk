@@ -26,6 +26,7 @@ config
 const
 constness
 copydoc
+crypto
 currentparameter
 cyrpto
 datalen

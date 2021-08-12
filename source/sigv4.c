@@ -585,7 +585,11 @@ static SigV4Status_t parseDate( const char * pDate,
  * @brief Verify input parameters to the SigV4_GenerateHTTPAuthorization API.
  *
  * @param[in] pParams Complete SigV4 configurations passed by application.
- * @param[in]
+ * @param[in] pAuthBuf The user-supplied buffer for filling Authorization Header.
+ * @param[in] authBufLen The user-supplied size value of @p pAuthBuf buffer.
+ * @param[in] pSignature The user-supplied pointer memory to store starting location of
+ * Signature in Authorization Buffer.
+ * @param[in] signatureLen The user supplied pointer to store length of Signature.
  *
  * @return #SigV4Success if successful, #SigV4InvalidParameter otherwise.
  */
