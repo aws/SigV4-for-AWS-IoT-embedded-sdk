@@ -209,5 +209,10 @@ typedef struct HmacContext
     size_t keyLen;
 } HmacContext_t;
 
+/**
+ * @brief The comparison function used for sorting.
+ */
+typedef int32_t ( *ComparisonFunc_t )( const void * pFirstVal,
+                                       const void * pSecondVal );
 
 #endif /* ifndef SIGV4_INTERNAL_H_ */
