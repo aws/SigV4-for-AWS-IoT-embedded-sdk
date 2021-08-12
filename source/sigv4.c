@@ -1215,7 +1215,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
     static bool isAllowedChar( char c,
                                bool encodeSlash )
     {
-        return( isalnum( c ) || ( c == '-' ) || ( c == '_' ) || ( c == '.' ) || ( c == '~' ) || ( ( c == '/' ) && !encodeSlash ) );
+        return( ( isalnum( c ) != 0U ) || ( c == '-' ) || ( c == '_' ) || ( c == '.' ) || ( c == '~' ) || ( ( c == '/' ) && !encodeSlash ) );
     }
 
 /*-----------------------------------------------------------*/
@@ -1377,7 +1377,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         assert( ( value != NULL ) && ( index < valLen ) );
 
         /* Only trim spaces. */
-        if( isspace( value[ index ] ) )
+        if( isspace( value[ index ] ) != 0U )
         {
             /* The last character is a trailing space. */
             if( ( index + 1U ) == valLen )
@@ -1385,7 +1385,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                 ret = true;
             }
             /* Trim if the next character is also a space. */
-            else if( isspace( value[ index + 1U ] ) )
+            else if( isspace( value[ index + 1U ] ) != 0U )
             {
                 ret = true;
             }
@@ -1449,7 +1449,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                 }
                 else
                 {
-                    *pCurrBufLoc = tolower( pData[ index ] );
+                    *pCurrBufLoc = ( char ) tolower( ( int32_t ) ( uint8_t ) pData[ index ] );
                 }
 
                 pCurrBufLoc++;
