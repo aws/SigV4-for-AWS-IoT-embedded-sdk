@@ -1723,7 +1723,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
          * its contents in any way. */
 
         /* Set cursors to each field and value in the query string. */
-        for( i = 0U; i < queryLen; i++ )
+        for( i = 0U; i <= queryLen; i++ )
         {
             /* This test is at the beginning of the loop to ensure that
              * `pCanonicalRequest->pQueryLoc`is only accessed with a valid index.
