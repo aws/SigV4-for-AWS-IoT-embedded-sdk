@@ -28,7 +28,6 @@ constness
 copydoc
 crypto
 currentparameter
-cyrpto
 datalen
 datelen
 dd
