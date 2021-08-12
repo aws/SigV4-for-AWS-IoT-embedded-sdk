@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <memory.h>
 
 #include "sigv4.h"
 #include "sigv4_internal.h"
@@ -109,7 +110,7 @@
  *
  * @return Returns a value less than 0 if @pFirstVal < @pSecondVal, or
  * a value greater than 0 if @pSecondVal < @pFirstVal. 0 is never returned in
- * order to provide stability to qSort() calls.
+ * order to provide stability to quickSort() calls.
  */
     static int cmpHeaderField( const void * pFirstVal,
                                const void * pSecondVal );
@@ -573,6 +574,53 @@ static SigV4Status_t scanValue( const char * pDate,
                                 size_t readLoc,
                                 size_t lenToRead,
                                 SigV4DateTime_t * pDateElements );
+
+/**
+ * @brief A helper function to partition a subarray using the last element
+ * of the array as the pivot. All items smaller than the pivot end up
+ * at its left while all items greater than end up at its right.
+ *
+ * @param[in] pArray The array to be sorted.
+ * @param[in] low The low index of the array.
+ * @param[in] high The high index of the array.
+ * @param[in] itemSize The amount of memory per entry in the array.
+ * @param[out] comparator The comparison function to determine if one item is less than another.
+ * 
+ * @return The index of the pivot
+ */
+static size_t partition( void * pArray,
+                         size_t low,
+                         size_t high,
+                         size_t itemSize,
+                         ComparisonFunc_t comparator );
+
+/**
+ * @brief A helper function to perform quicksort on a subarray.
+ *
+ * @param[in] pArray The array to be sorted.
+ * @param[in] low The low index of the array.
+ * @param[in] high The high index of the array.
+ * @param[in] itemSize The amount of memory per entry in the array.
+ * @param[out] comparator The comparison function to determine if one item is less than another.
+ */
+static void quickSortHelper( void * pArray,
+                             int low,
+                             int high,
+                             size_t itemSize,
+                             ComparisonFunc_t comparator );
+
+/**
+ * @brief Perform quicksort on an array.
+ *
+ * @param[in] pArray The array to be sorted.
+ * @param[in] numItems The number of items in an array.
+ * @param[in] itemSize The amount of memory per entry in the array.
+ * @param[out] comparator The comparison function to determine if one item is less than another.
+ */
+static void quickSort( void * pArray,
+                       size_t numItems,
+                       size_t itemSize,
+                       ComparisonFunc_t comparator );
 
 /**
  * @brief Parses date according to format string parameter, and populates date
@@ -1118,8 +1166,8 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
 
 /*-----------------------------------------------------------*/
 
-    static int cmpQueryFieldValue( const void * pFirstVal,
-                                   const void * pSecondVal )
+    static int32_t cmpQueryFieldValue( const void * pFirstVal,
+                                       const void * pSecondVal )
     {
         const SigV4KeyValuePair_t * pFirst, * pSecond = NULL;
         size_t lenSmall = 0U;
@@ -1673,7 +1721,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         if( ( sigV4Status == SigV4Success ) && !FLAG_IS_SET( flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) )
         {
             /* Sorting headers based on keys. */
-            qsort( canonicalRequest->pHeadersLoc, noOfHeaders, sizeof( SigV4KeyValuePair_t ), cmpHeaderField );
+            quickSort( canonicalRequest->pHeadersLoc, noOfHeaders, sizeof( SigV4KeyValuePair_t ), cmpHeaderField );
 
             /* If the headers are canonicalized, we will copy them directly into the buffer as they do not
              * need processing, else we need to call the following function. */
@@ -1954,7 +2002,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         {
             /* Sort the parameter names by character code point in ascending order.
              * Parameters with duplicate names should be sorted by value. */
-            qsort( pCanonicalContext->pQueryLoc, numberOfParameters, sizeof( SigV4KeyValuePair_t ), cmpQueryFieldValue );
+            quickSort( pCanonicalContext->pQueryLoc, numberOfParameters, sizeof( SigV4KeyValuePair_t ), cmpQueryFieldValue );
 
             /* URI-encode each parameter name and value according to the following rules specified for SigV4:
              *  - Do not URI-encode any of the unreserved characters that RFC 3986 defines:
@@ -2793,6 +2841,86 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
     return returnStatus;
 }
 
+/* A utility function to swap two elements */
+void swap( void * a,
+           void * b,
+           size_t itemSize )
+{
+    void * t = malloc( itemSize );
+
+    assert( t != NULL );
+
+    memcpy( t, a, itemSize );
+    memcpy( a, b, itemSize );
+    memcpy( b, t, itemSize );
+
+    free( t );
+}
+
+/* This function takes last element as pivot, places
+ * the pivot element at its correct position in sorted
+ * array, and places all smaller (smaller than pivot)
+ * to left of pivot and all greater elements to right
+ * of pivot */
+static size_t partition( void * pArray,
+                         size_t low,
+                         size_t high,
+                         size_t itemSize,
+                         ComparisonFunc_t comparator )
+{
+    void * pivot = pArray + high * itemSize;
+    size_t i = low - 1, j = low;
+
+    for( ; j <= high - 1; j++ )
+    {
+        /* Use comparator function to check if
+         * current element is smaller than the pivot */
+        if( comparator( pArray + j * itemSize, pivot ) < 0 )
+        {
+            swap( pArray + ( i++ ) * itemSize, pArray + j * itemSize, itemSize );
+        }
+    }
+
+    swap( pArray + ( ( i + 1 ) * itemSize ), pivot, itemSize );
+    return i + 1;
+}
+
+/* The main function that implements QuickSort
+ * arr[] --> Array to be sorted,
+ * low --> Starting index,
+ * high --> Ending index */
+static void quickSortHelper( void * pArray,
+                             int low,
+                             int high,
+                             size_t itemSize,
+                             ComparisonFunc_t comparator )
+{
+    size_t partitonIndex;
+
+    if( low < high )
+    {
+        /* pi is partitioning index, arr[p] is now
+         * at right place */
+        partitonIndex = partition( pArray, low, high, itemSize, comparator );
+
+        /* Separately sort elements before */
+        /* partition and after partition */
+        quickSortHelper( pArray, low, partitonIndex - 1, itemSize, comparator );
+        quickSortHelper( pArray, partitonIndex + 1, high, itemSize, comparator );
+    }
+}
+
+static void quickSort( void * pArray,
+                       size_t numItems,
+                       size_t itemSize,
+                       ComparisonFunc_t comparator )
+{
+    if( ( numItems != 0 ) && ( pArray != NULL ) )
+    {
+        quickSortHelper( pArray, 0, numItems - 1U, itemSize, comparator );
+    }
+}
+
 SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
                                          size_t dateLen,
                                          char * pDateISO8601,
@@ -2884,7 +3012,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
     SigV4String_t signingKey;
     ptrdiff_t bufferLen;
 
-    returnStatus = verifySigV4Parameters( pParams );
+    /*returnStatus = verifySigV4Parameters( pParams ); */
 
     authPrefixLen = *authBufLen;
 
