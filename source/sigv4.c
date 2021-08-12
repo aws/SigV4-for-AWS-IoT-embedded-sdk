@@ -1231,14 +1231,14 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         }
 
         /* Check whether the loop terminated due to insufficient memory detected in condition expression
-          "bytesConsumed < bufferLen". This expression is evaluated after there is more data to write
-          URI encoded buffer. In that case, if the expression evaluates to false, it represents that
-          the output buffer has been completely utilized even when there is more characters remaining
-          to be encoded. */
+         * "bytesConsumed < bufferLen". This expression is evaluated after there is more data to write
+         * URI encoded buffer. In that case, if the expression evaluates to false, it represents that
+         * the output buffer has been completely utilized even when there is more characters remaining
+         * to be encoded. */
         if( ( returnStatus == SigV4Success ) && ( uriIndex != ( uriLen + 1U ) ) )
         {
             returnStatus = SigV4InsufficientMemory;
-            LogError("Failed to encode URI in buffer due to insufficient memory");
+            LogError( ( "Failed to encode URI in buffer due to insufficient memory" ) );
         }
 
         if( returnStatus == SigV4Success )
