@@ -992,7 +992,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
     assert( pSigV4Params->pService != NULL );
     assert( pCredScope != NULL );
     assert( pCredScope->pData != NULL );
-    assert( pCredScope->dataLen < credScopeLen );
+    assert( pCredScope->dataLen >= credScopeLen );
 
     pBufWrite = pCredScope->pData;
 
@@ -1194,15 +1194,14 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         pBufLoc = pCanonicalURI;
         bufferLen = *canonicalURILen;
 
-        while( ( i++ < uriLen ) && ( returnStatus == SigV4Success ) )
+        while( ( i++ < uriLen ) && ( bytesConsumed < bufferLen ) && ( returnStatus == SigV4Success ) )
         {
             if( doubleEncodeEquals && ( *pUriLoc == '=' ) )
             {
-                if( ( bytesConsumed > SIZE_MAX - URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE ) ||
-                    ( bytesConsumed + URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE > bufferLen ) )
+                if( ( bufferLen - bytesConsumed ) < URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE )
                 {
                     returnStatus = SigV4InsufficientMemory;
-                    LOG_INSUFFICIENT_MEMORY_ERROR( "encode the URI",
+                    LOG_INSUFFICIENT_MEMORY_ERROR( "double encode '=' character in canonical query",
                                                    ( bytesConsumed + URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE - bufferLen ) );
                 }
                 else
@@ -1219,10 +1218,10 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             }
             else
             {
-                if( ( bytesConsumed > SIZE_MAX - URI_ENCODED_SPECIAL_CHAR_SIZE ) || ( bytesConsumed + URI_ENCODED_SPECIAL_CHAR_SIZE > bufferLen ) )
+                if( ( bufferLen - bytesConsumed ) < URI_ENCODED_SPECIAL_CHAR_SIZE )
                 {
                     returnStatus = SigV4InsufficientMemory;
-                    LOG_INSUFFICIENT_MEMORY_ERROR( "encode the URI",
+                    LOG_INSUFFICIENT_MEMORY_ERROR( "encode special character in canonical URI",
                                                    ( bytesConsumed + URI_ENCODED_SPECIAL_CHAR_SIZE - bufferLen ) );
                 }
                 else
@@ -1231,16 +1230,21 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                 }
             }
 
-            if( bytesConsumed > bufferLen )
-            {
-                returnStatus = SigV4InsufficientMemory;
-                LOG_INSUFFICIENT_MEMORY_ERROR( "encode the URI", bytesConsumed - bufferLen );
-            }
-
             pUriLoc++;
         }
 
-        *canonicalURILen = bytesConsumed;
+        if( bytesConsumed == bufferLen )
+        {
+            returnStatus = SigV4InsufficientMemory;
+            LOG_INSUFFICIENT_MEMORY_ERROR( "encode the URI", bytesConsumed - bufferLen );
+        }
+
+        if( returnStatus == SigV4Success )
+        {
+            /* Set the output parameter of the number of URI encoded bytes written
+             * to the buffer. */
+            *canonicalURILen = bytesConsumed;
+        }
 
         return returnStatus;
     }
@@ -1304,7 +1308,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             if( pCanonicalRequest->bufRemaining < 1U )
             {
                 returnStatus = SigV4InsufficientMemory;
-                LOG_INSUFFICIENT_MEMORY_ERROR( "write the credential scope", 1U );
+                LOG_INSUFFICIENT_MEMORY_ERROR( "write newline character after canonical URI", 1U );
             }
             else
             {

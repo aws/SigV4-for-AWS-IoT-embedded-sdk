@@ -54,6 +54,9 @@
 #define QUERY_MATCHING_PARAMS_AND_VALUES                      "param=valueXY&param=valueXY&param1=test"
 #define QUERY_WITH_MATCHING_PARAM_PREFIX                      "para=value1&param1=&value2&param=value3"
 
+#define QUERY_WITH_NON_ALPHA_NUMBERIC_CHARS                   "param=-_.~/"
+#define QUERY_WITH_SPECIAL_CHARS                              "param=/"
+
 #define QUERY                                                 "Action=ListUsers&Version=2010-05-08"
 #define QUERY_LENGTH                                          ( sizeof( QUERY ) - 1U )
 #define ACCESS_KEY_ID                                         "AKIAIOSFODNN7EXAMPLE"
@@ -858,20 +861,74 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
     TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
 
     /* Test case of insufficient memory when hexstring of hash cannot be stored in processing buffer.
-     * This case is created by using a long URI path that does not leave space for Payload
+     * This case is created by using long pre-canonicalized headers that does not leave space for Payload
      * hash in the processing buffer. */
-#define MINIMAL_HEADER    "Host:"
-    char longUriPath[ SIGV4_PROCESSING_BUFFER_LENGTH - SIGV4_HASH_MAX_DIGEST_LENGTH - ( strlen( MINIMAL_HEADER ) * 4 ) ];
-    longUriPath[ 0 ] = '/';
-    /* Fill gibbering string data in the buffer for region. */
-    memset( longUriPath + 1, 'P', sizeof( longUriPath - 1 ) );
+    size_t headersLen = SIGV4_PROCESSING_BUFFER_LENGTH - ( SIGV4_HASH_MAX_DIGEST_LENGTH * 2 );
+    char longPrecanonHeader[ headersLen ];
+    longPrecanonHeader[ 0 ] = 'H';
+    longPrecanonHeader[ 1 ] = ':';
+    /* Fill gibbering string data in the buffer for the precanonical header. */
+    memset( longPrecanonHeader + 2, ( char ) 'V', headersLen - 3 );
+    longPrecanonHeader[ headersLen - 1 ] = '\n';
     resetInputParams();
-    params.pHttpParameters->pPath = longUriPath;
-    params.pHttpParameters->pathLen = sizeof( longUriPath );
-    params.pHttpParameters->pHeaders = MINIMAL_HEADER;
-    params.pHttpParameters->headersLen = strlen( MINIMAL_HEADER );
+    params.pHttpParameters->pPath = NULL;
+    params.pHttpParameters->pathLen = 0;
+    params.pHttpParameters->pHeaders = longPrecanonHeader;
+    params.pHttpParameters->headersLen = headersLen;
+    params.pHttpParameters->pQuery = NULL;
+    params.pHttpParameters->queryLen = 0;
+    params.pHttpParameters->flags = SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG;
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+
+    /* Test case of insufficient memory from failure to encode a special character when
+     * writing canonical path. This is achieved by using a long path that ends with the special
+     * character for which there doesn't exist space in the processing buffer. */
+    size_t longPathLen = SIGV4_PROCESSING_BUFFER_LENGTH - httpParams.httpMethodLen - LINEFEED_CHAR_LEN;
+    char specialCharAtEndOfLongPath[ longPathLen ];
+    specialCharAtEndOfLongPath[ 0 ] = '/';
+    memset( specialCharAtEndOfLongPath + 1, ( int ) '-', longPathLen );
+    specialCharAtEndOfLongPath[ longPathLen - 1 ] = '*';
+    resetInputParams();
+    params.pHttpParameters->pPath = specialCharAtEndOfLongPath;
+    params.pHttpParameters->pathLen = longPathLen;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+
+    /* Test case of insufficient memory when there is no space in the processing buffer for encoding
+     * '=' character while creating canonical query. */
+    size_t longQueryLen = SIGV4_PROCESSING_BUFFER_LENGTH - httpParams.httpMethodLen -
+                          LINEFEED_CHAR_LEN - HTTP_EMPTY_PATH_LEN - LINEFEED_CHAR_LEN;
+    char longQueryEndingWithEquals[ longQueryLen ];
+    longQueryEndingWithEquals[ 0 ] = 'P';
+    longQueryEndingWithEquals[ 1 ] = '=';
+    memset( longQueryEndingWithEquals + 2, ( int ) 'V', longQueryLen - 2 );
+    /* Use '=' as the second last URI query value character. */
+    longQueryEndingWithEquals[ longQueryLen - 2 ] = '=';
+    resetInputParams();
+    params.pHttpParameters->pPath = NULL;
+    params.pHttpParameters->pathLen = 0;
+    params.pHttpParameters->pQuery = longQueryEndingWithEquals;
+    params.pHttpParameters->queryLen = longQueryLen;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+}
+
+/* Test that the library can encode non-alphanumeric characters in a query string. */
+void test_SigV4_GenerateHTTPAuthorization_Encode_URI_Non_AlphaNumeric()
+{
+    SigV4Status_t returnStatus;
+
+    resetInputParams();
+    params.pHttpParameters->pQuery = QUERY_WITH_NON_ALPHA_NUMBERIC_CHARS;
+    params.pHttpParameters->queryLen = strlen( QUERY_WITH_NON_ALPHA_NUMBERIC_CHARS );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+
+    params.pHttpParameters->pQuery = QUERY_WITH_SPECIAL_CHARS;
+    params.pHttpParameters->queryLen = strlen( QUERY_WITH_SPECIAL_CHARS );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
 }
 
 /**
