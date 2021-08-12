@@ -1180,8 +1180,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                                     bool doubleEncodeEquals )
     {
         const char * pUriLoc = NULL;
-        char * pBufLoc = NULL;
-        size_t i = 0U, bytesConsumed = 0U;
+        size_t uriIndex = 0U, bytesConsumed = 0U;
         size_t bufferLen = 0U;
         SigV4Status_t returnStatus = SigV4Success;
 
@@ -1191,10 +1190,9 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         assert( *canonicalURILen > 0U );
 
         pUriLoc = pUri;
-        pBufLoc = pCanonicalURI;
         bufferLen = *canonicalURILen;
 
-        while( ( i++ < uriLen ) && ( bytesConsumed < bufferLen ) && ( returnStatus == SigV4Success ) )
+        while( ( uriIndex++ < uriLen ) && ( bytesConsumed < bufferLen ) && ( returnStatus == SigV4Success ) )
         {
             if( doubleEncodeEquals && ( *pUriLoc == '=' ) )
             {
@@ -1206,14 +1204,13 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                 }
                 else
                 {
-                    bytesConsumed += writeDoubleEncodedEquals( pBufLoc, bufferLen - bytesConsumed );
+                    bytesConsumed += writeDoubleEncodedEquals( pCanonicalURI + bytesConsumed, bufferLen - bytesConsumed );
                 }
             }
             else if( isalnum( *pUriLoc ) || ( *pUriLoc == '-' ) || ( *pUriLoc == '_' ) || ( *pUriLoc == '.' ) || ( *pUriLoc == '~' ) ||
                      ( ( *pUriLoc == '/' ) && !encodeSlash ) )
             {
-                *pBufLoc = *pUriLoc;
-                ++pBufLoc;
+                pCanonicalURI[ bytesConsumed ] = *pUriLoc;
                 ++bytesConsumed;
             }
             else
@@ -1226,17 +1223,22 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                 }
                 else
                 {
-                    bytesConsumed += writeHexCodeOfChar( pBufLoc, bufferLen - bytesConsumed, *pUriLoc );
+                    bytesConsumed += writeHexCodeOfChar( pCanonicalURI + bytesConsumed, bufferLen - bytesConsumed, *pUriLoc );
                 }
             }
 
             pUriLoc++;
         }
 
-        if( bytesConsumed == bufferLen )
+        /* Check whether the loop terminated due to insufficient memory detected in condition expression
+          "bytesConsumed < bufferLen". This expression is evaluated after there is more data to write
+          URI encoded buffer. In that case, if the expression evaluates to false, it represents that
+          the output buffer has been completely utilized even when there is more characters remaining
+          to be encoded. */
+        if( ( returnStatus == SigV4Success ) && ( uriIndex != ( uriLen + 1U ) ) )
         {
             returnStatus = SigV4InsufficientMemory;
-            LOG_INSUFFICIENT_MEMORY_ERROR( "encode the URI", bytesConsumed - bufferLen );
+            LogError("Failed to encode URI in buffer due to insufficient memory");
         }
 
         if( returnStatus == SigV4Success )
