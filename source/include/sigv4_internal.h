@@ -83,39 +83,42 @@
  * @brief Default value when HttpParameters_t.pPath == NULL.
  */
 #define HTTP_EMPTY_PATH                        "/"
-#define HTTP_EMPTY_PATH_LEN                    ( sizeof( HTTP_EMPTY_PATH ) - 1U )               /**< The length of #HTTP_EMPTY_PATH. */
+#define HTTP_EMPTY_PATH_LEN                    ( sizeof( HTTP_EMPTY_PATH ) - 1U )                 /**< The length of #HTTP_EMPTY_PATH. */
 
-#define URI_ENCODED_SPECIAL_CHAR_SIZE          3U                                               /**< The size of an encoded URI special character. */
-#define URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE    5U                                               /**< The size of the double-encoded "=" character. */
+#define URI_ENCODED_SPECIAL_CHAR_SIZE          3U                                                 /**< The size of an encoded URI special character. */
+#define URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE    5U                                                 /**< The size of the double-encoded "=" character. */
 
-#define LINEFEED_CHAR                          '\n'                                             /**< A linefeed character used to build the canonical request. */
-#define LINEFEED_CHAR_LEN                      1U                                               /**< The length of #LINEFEED_CHAR. */
+#define LINEFEED_CHAR                          '\n'                                               /**< A linefeed character used to build the canonical request. */
+#define LINEFEED_CHAR_LEN                      1U                                                 /**< The length of #LINEFEED_CHAR. */
 
-#define SPACE_CHAR                             ' '                                              /**< A linefeed character used to build the Authorization header value. */
-#define SPACE_CHAR_LEN                         1U                                               /**< The length of #SPACE_CHAR. */
+#define CARRIAGE_RETURN_LINEFEED_STRING        "\r\n"                                             /**< The string used in non-canonicalized HTTP headers to separate header entries in HTTP request. */
+#define CARRIAGE_RETURN_LINEFEED_STRING_LEN    ( sizeof( CARRIAGE_RETURN_LINEFEED_STRING ) - 1U ) /**< The length of #CARRIAGE_RETURN_LINEFEED_STRING. */
 
-#define S3_SERVICE_NAME                        "s3"                                             /**< S3 is the only service where the URI must only be encoded once. */
-#define S3_SERVICE_NAME_LEN                    ( sizeof( S3_SERVICE_NAME ) - 1U )               /**< The length of #S3_SERVICE_NAME. */
+#define SPACE_CHAR                             ' '                                                /**< A linefeed character used to build the Authorization header value. */
+#define SPACE_CHAR_LEN                         1U                                                 /**< The length of #SPACE_CHAR. */
 
-#define SIGV4_HMAC_SIGNING_KEY_PREFIX          "AWS4"                                           /**< HMAC signing key prefix. */
-#define SIGV4_HMAC_SIGNING_KEY_PREFIX_LEN      ( sizeof( SIGV4_HMAC_SIGNING_KEY_PREFIX ) - 1U ) /**< The length of #SIGV4_HMAC_SIGNING_KEY_PREFIX. */
+#define S3_SERVICE_NAME                        "s3"                                               /**< S3 is the only service where the URI must only be encoded once. */
+#define S3_SERVICE_NAME_LEN                    ( sizeof( S3_SERVICE_NAME ) - 1U )                 /**< The length of #S3_SERVICE_NAME. */
 
-#define AUTH_CREDENTIAL_PREFIX                 "Credential="                                    /**< The prefix that goes before the credential value in the Authorization header value. */
-#define AUTH_CREDENTIAL_PREFIX_LEN             ( sizeof( AUTH_CREDENTIAL_PREFIX ) - 1U )        /**< The length of #AUTH_CREDENTIAL_PREFIX. */
-#define AUTH_SEPARATOR                         ", "                                             /**< The separator between each component in the Authorization header value. */
-#define AUTH_SEPARATOR_LEN                     ( sizeof( AUTH_SEPARATOR ) - 1U )                /**< The length of #AUTH_SEPARATOR. */
-#define AUTH_SIGNED_HEADERS_PREFIX             "SignedHeaders="                                 /**< The prefix that goes before the signed headers in the Authorization header value. */
-#define AUTH_SIGNED_HEADERS_PREFIX_LEN         ( sizeof( AUTH_SIGNED_HEADERS_PREFIX ) - 1U )    /**< The length of #AUTH_SIGNED_HEADERS_PREFIX. */
-#define AUTH_SIGNATURE_PREFIX                  "Signature="                                     /**< The prefix that goes before the signature in the Authorization header value. */
-#define AUTH_SIGNATURE_PREFIX_LEN              ( sizeof( AUTH_SIGNATURE_PREFIX ) - 1U )         /**< The length of #AUTH_SIGNATURE_PREFIX. */
+#define SIGV4_HMAC_SIGNING_KEY_PREFIX          "AWS4"                                             /**< HMAC signing key prefix. */
+#define SIGV4_HMAC_SIGNING_KEY_PREFIX_LEN      ( sizeof( SIGV4_HMAC_SIGNING_KEY_PREFIX ) - 1U )   /**< The length of #SIGV4_HMAC_SIGNING_KEY_PREFIX. */
+
+#define AUTH_CREDENTIAL_PREFIX                 "Credential="                                      /**< The prefix that goes before the credential value in the Authorization header value. */
+#define AUTH_CREDENTIAL_PREFIX_LEN             ( sizeof( AUTH_CREDENTIAL_PREFIX ) - 1U )          /**< The length of #AUTH_CREDENTIAL_PREFIX. */
+#define AUTH_SEPARATOR                         ", "                                               /**< The separator between each component in the Authorization header value. */
+#define AUTH_SEPARATOR_LEN                     ( sizeof( AUTH_SEPARATOR ) - 1U )                  /**< The length of #AUTH_SEPARATOR. */
+#define AUTH_SIGNED_HEADERS_PREFIX             "SignedHeaders="                                   /**< The prefix that goes before the signed headers in the Authorization header value. */
+#define AUTH_SIGNED_HEADERS_PREFIX_LEN         ( sizeof( AUTH_SIGNED_HEADERS_PREFIX ) - 1U )      /**< The length of #AUTH_SIGNED_HEADERS_PREFIX. */
+#define AUTH_SIGNATURE_PREFIX                  "Signature="                                       /**< The prefix that goes before the signature in the Authorization header value. */
+#define AUTH_SIGNATURE_PREFIX_LEN              ( sizeof( AUTH_SIGNATURE_PREFIX ) - 1U )           /**< The length of #AUTH_SIGNATURE_PREFIX. */
 
 /**
  * @brief A helper macro to print insufficient memory errors.
  */
-#define LOG_INSUFFICIENT_MEMORY_ERROR( purposeOfWrite, bytesExceeded )                       \
-    do {                                                                                     \
-        LogError( ( "Insufficient memory provided to " purposeOfWrite ", bytesExceeded=%lu", \
-                    ( unsigned long ) ( bytesExceeded ) ) );                                 \
+#define LOG_INSUFFICIENT_MEMORY_ERROR( purposeOfWrite, bytesExceeded )                                                                             \
+    do {                                                                                                                                           \
+        LogError( ( "Unable to " purposeOfWrite ": Insufficient memory configured in \"SIGV4_PROCESSING_BUFFER_LENGTH\" macro. BytesExceeded=%lu", \
+                    ( unsigned long ) ( bytesExceeded ) ) );                                                                                       \
     } while( 0 )
 
 /**

@@ -185,7 +185,15 @@ typedef enum SigV4Status
      * Functions that may return this value:
      * - #SigV4_GenerateHTTPAuthorization
      */
-    SigV4HashError
+    SigV4HashError,
+
+    /**
+     * @brief HTTP headers parsed to the library are invalid.
+     *
+     * Functions that may return this value:
+     * - #SigV4_GenerateHTTPAuthorization
+     */
+    SigV4InvalidHttpHeaders
 } SigV4Status_t;
 
 /**

@@ -1479,6 +1479,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 
             if( sigV4Status != SigV4Success )
             {
+                LogError( ( "Unable to write Signed Headers for Canonical Request: Insufficient memory configured in \"SIGV4_PROCESSING_BUFFER_LENGTH\"" ) );
                 break;
             }
         }
@@ -1576,7 +1577,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             /* Look for header value part of a header field entry for both canonicalized and non-canonicalized forms. */
             /* Non-canonicalized headers will have header values ending with "\r\n". */
             else if( ( !keyFlag ) && !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( ( index + 1 ) < headersDataLen ) &&
-                     ( 0 == strncmp( pCurrLoc, "\r\n", strlen( "\r\n" ) ) ) )
+                     ( 0 == strncmp( pCurrLoc, CARRIAGE_RETURN_LINEFEED_STRING, CARRIAGE_RETURN_LINEFEED_STRING_LEN ) ) )
             {
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = pKeyOrValStartLoc;
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( pCurrLoc - pKeyOrValStartLoc );
@@ -1606,7 +1607,16 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         /* Ensure each key has its corresponding value. */
         assert( keyFlag == true );
 
-        *headerCount = noOfHeaders;
+        /* If no header was found OR header value was not found for a header key, 
+        that represents incorrect HTTP headers data passed by the application. */
+        if(( noOfHeaders == 0U ) || (keyFlag == false))
+        {
+            sigV4Status = SigV4InvalidHttpHeaders;
+        }
+        else
+        {
+            *headerCount = noOfHeaders;
+        }
 
         return sigV4Status;
     }
