@@ -1089,7 +1089,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
 #if ( SIGV4_USE_CANONICAL_SUPPORT == 1 )
 
     static int32_t cmpHeaderField( const void * pFirstVal,
-                               const void * pSecondVal )
+                                   const void * pSecondVal )
     {
         const SigV4KeyValuePair_t * pFirst, * pSecond = NULL;
         size_t lenSmall = 0U;
