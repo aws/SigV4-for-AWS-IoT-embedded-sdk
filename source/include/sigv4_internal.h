@@ -126,7 +126,7 @@
 /**
  * @brief A helper macro to determine if a character is whitespace.
  * @note The ctype function isspace() returns true for the following characters:
- * ' ', '\t', '\n', '\v', '\f', '\r'. However, according to RFC5234:
+ * ` `, `\t`, `\n`, `\v`, `\f`, `\r`. However, according to RFC5234:
  * https://datatracker.ietf.org/doc/html/rfc5234#appendix-B.1
  * the only whitespace characters in an HTTP header are spaces and
  * horizontal tabs.
