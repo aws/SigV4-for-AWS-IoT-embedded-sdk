@@ -86,7 +86,7 @@
  * be sure to update this value based on the formula above.
  */
 #ifndef SIGV4_WORST_CASE_SORT_STACK_SIZE
-    #define SIGV4_WORST_CASE_SORT_STACK_SIZE   7U
+    #define SIGV4_WORST_CASE_SORT_STACK_SIZE    7U
 #endif
 
 /**
