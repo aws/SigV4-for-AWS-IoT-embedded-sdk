@@ -236,6 +236,18 @@ static SigV4Status_t copyHeaderStringToCanonicalBuffer( const char * pData,
                                                         CanonicalContext_t * canonicalRequest );
 
 /**
+ * @brief Helper function to determine if a character is whitespace.
+ * @note The only whitespaces in an HTTP header are spaces or horizontal tabs,
+ * according to RFC 5234:
+ * https://datatracker.ietf.org/doc/html/rfc5234#appendix-B.1
+ *
+ * @param[in] c Character to test.
+ *
+ * @return `true` if a character is whitespace, else `false`.
+ */
+static bool isWhiteSpace( char c );
+
+/**
  * @brief Helper function to determine whether a header string character represents a space
  * that can be trimmed when creating "Canonical Headers".
  * All leading and trailing spaces in the header strings need to be trimmed. Also, sequential spaces
@@ -1220,7 +1232,38 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
     static bool isAllowedChar( char c,
                                bool encodeSlash )
     {
-        return( ( isalnum( c ) != 0U ) || ( c == '-' ) || ( c == '_' ) || ( c == '.' ) || ( c == '~' ) || ( ( c == '/' ) && ( encodeSlash == false ) ) );
+        bool ret = false;
+
+        /* Lowercase. */
+        if( ( c >= 'a' ) && ( c <= 'z' ) )
+        {
+            ret = true;
+        }
+        /* Uppercase. */
+        else if( ( c >= 'A' ) && ( c <= 'Z' ) )
+        {
+            ret = true;
+        }
+        /* Numeric. */
+        else if( ( c >= '0' ) && ( c <= '9' ) )
+        {
+            ret = true;
+        }
+        /* Other characters. */
+        else if( ( c == '-' ) || ( c == '_' ) || ( c == '.' ) || ( c == '~' ) )
+        {
+            ret = true;
+        }
+        else if( ( c == '/' ) )
+        {
+            ret = !encodeSlash;
+        }
+        else
+        {
+            ret = false;
+        }
+
+        return ret;
     }
 
 /*-----------------------------------------------------------*/
@@ -1372,6 +1415,18 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
 
 /*-----------------------------------------------------------*/
 
+    static bool isWhiteSpace( char c )
+    {
+        /* The ctype function isspace() returns true for the following characters:
+         * ' ', '\t', '\n', '\v', '\f', '\r'. However, according to RFC5234:
+         * https://datatracker.ietf.org/doc/html/rfc5234#appendix-B.1
+         * the only whitespace characters in an HTTP header are spaces and
+         * horizontal tabs. */
+        return ( c == ' ' ) || ( c == '\t' );
+    }
+
+/*-----------------------------------------------------------*/
+
     static bool isTrimmableSpace( const char * value,
                                   size_t index,
                                   size_t valLen,
@@ -1382,7 +1437,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         assert( ( value != NULL ) && ( index < valLen ) );
 
         /* Only trim spaces. */
-        if( isspace( value[ index ] ) != 0U )
+        if( isWhiteSpace( value[ index ] ) )
         {
             /* The last character is a trailing space. */
             if( ( index + 1U ) == valLen )
@@ -1390,7 +1445,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                 ret = true;
             }
             /* Trim if the next character is also a space. */
-            else if( isspace( value[ index + 1U ] ) != 0U )
+            else if( isWhiteSpace( value[ index + 1U ] ) )
             {
                 ret = true;
             }
