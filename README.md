@@ -2,7 +2,7 @@
 
 **Note** This library is currently under development.
 
-The AWS IoT SigV4 Library is a standalone library for generating authorization headers and signatures according to the specifications of the [Signature Version 4](https://docs.aws.amazon.com/general/latest/gr/signature-version-4.html) signing process. Authorization headers are required for authentication when sending HTTP requests to AWS. This library can optionally be used by applications sending direct HTTP requests to AWS services requiring SigV4 authentication. This library has no dependencies on any additional libraries other than the standard C library. This library is distributed under the MIT Open Source License.
+The AWS SigV4 Library is a standalone library for generating authorization headers and signatures according to the specifications of the [Signature Version 4](https://docs.aws.amazon.com/general/latest/gr/signature-version-4.html) signing process. Authorization headers are required for authentication when sending HTTP requests to AWS. This library can optionally be used by applications sending direct HTTP requests to AWS services requiring SigV4 authentication. This library has no dependencies on any additional libraries other than the standard C library. This library is distributed under the MIT Open Source License.
 
 This library has gone through code quality checks including verification that no function has a GNU Complexity score over 8, and checks against deviations from mandatory rules in the MISRA coding standard. Deviations from the MISRA C:2012 guidelines are documented under MISRA Deviations. This library has also undergone static code analysis using Coverity static analysis, and validation of memory safety through the CBMC automated reasoning tool.
 
