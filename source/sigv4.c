@@ -632,10 +632,15 @@ static size_t sizeNeededForCredentialScope( const SigV4Parameters_t * pSigV4Para
  * @note This function can be used to copy a string literal without
  * MISRA warnings.
  *
+ * @note This function assumes the destination buffer is large enough to hold
+ * the string to copy, so will always write @p length bytes.
+ *
  * @param[in] destination The buffer to write.
  * @param[in] source String to copy.
  * @param[in] length Number of characters to copy.
- * @return @p length
+ *
+ * @return @p length The number of characters written from @p source into
+ * @p destination.
  */
 static size_t copyString( char * destination,
                           const char * source,
