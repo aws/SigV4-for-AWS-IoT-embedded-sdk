@@ -50,7 +50,7 @@
  *
  * <b>Default value</b>: SIGV4_DO_NOT_USE_CUSTOM_CONFIG is
  * <b>not</b> defined by default and the library expects a
- * fleet_provisioning_config.h file.
+ * sigv4_config.h file.
  */
 #ifdef DOXYGEN
     #define SIGV4_DO_NOT_USE_CUSTOM_CONFIG
