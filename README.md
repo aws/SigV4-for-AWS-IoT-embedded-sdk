@@ -11,14 +11,14 @@ See memory requirements for this library [here][memory_table].
 [memory_table]: ./docs/doxygen/include/size_table.md
 
 ## AWS IoT SigV4 Library Config File
-The AWS IoT SigV4 Library exposes build configuration
+The AWS IoT SigV4 library exposes build configuration
 macros that are required for building the library. A list of all the
 configurations and their default values are defined in
-[sigv4_config_defaults.h][b1]. To provide custom values for the
+[sigv4_config_defaults.h][default_config]. To provide custom values for the
 configuration macros, a config file named `sigv4_config.h` can be
 provided by the application to the library.
 
-[b1]: source/include/sigv4_config_defaults.h
+[default_config]: source/include/sigv4_config_defaults.h
 
 By default, a `sigv4_config.h` config file is required to build
 the library. To disable this requirement and build the library with default
