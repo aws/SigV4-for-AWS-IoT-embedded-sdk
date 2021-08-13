@@ -92,8 +92,10 @@ static void swap( void * pFirstItem,
         while( itemSize-- )
         {
             uint8_t tmp = *pFirstByte;
-            *pFirstByte++ = *pSecondByte;
-            *pSecondByte++ = tmp;
+            *pFirstByte = *pSecondByte;
+            ++pFirstByte;
+            *pSecondByte = tmp;
+            ++pSecondByte;
         }
     }
 }
@@ -108,16 +110,20 @@ static void quickSortHelper( void * pArray,
     /* Low and high are first two items on the stack. */
     size_t top = 0;
 
-    stack[ top++ ] = low;
-    stack[ top++ ] = high;
+    stack[ top ] = low;
+    ++top;
+    stack[ top ] = high;
+    ++top;
 
     while( top > 0 )
     {
         size_t partitionIndex;
         size_t lo1, lo2, hi1, hi2;
         size_t len1, len2;
-        high = stack[ --top ];
-        low = stack[ --top ];
+        --top;
+        high = stack[ top ];
+        --top;
+        low = stack[ top ];
 
         partitionIndex = partition( pArray, low, high, itemSize, comparator );
 
@@ -145,14 +151,18 @@ static void quickSortHelper( void * pArray,
 
         if( len1 > 0U )
         {
-            stack[ top++ ] = lo1;
-            stack[ top++ ] = hi1;
+            stack[ top ] = lo1;
+            ++top;
+            stack[ top ] = hi1;
+            ++top;
         }
 
         if( len2 > 0U )
         {
-            stack[ top++ ] = lo2;
-            stack[ top++ ] = hi2;
+            stack[ top ] = lo2;
+            ++top;
+            stack[ top ] = hi2;
+            ++top;
         }
     }
 }

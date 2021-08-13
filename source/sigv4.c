@@ -112,8 +112,8 @@
  * a value greater than 0 if @pSecondVal < @pFirstVal. 0 is never returned in
  * order to provide stability to quickSort() calls.
  */
-    static int cmpHeaderField( const void * pFirstVal,
-                               const void * pSecondVal );
+    static int32_t cmpHeaderField( const void * pFirstVal,
+                                   const void * pSecondVal );
 
 #endif /* #if (SIGV4_USE_CANONICAL_SUPPORT == 1) */
 
