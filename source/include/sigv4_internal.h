@@ -124,6 +124,16 @@
 #define FLAG_IS_SET( bits, flag )    ( ( ( bits ) & ( flag ) ) == ( flag ) )
 
 /**
+ * @brief A helper macro to determine if a character is whitespace.
+ * @note The ctype function isspace() returns true for the following characters:
+ * ' ', '\t', '\n', '\v', '\f', '\r'. However, according to RFC5234:
+ * https://datatracker.ietf.org/doc/html/rfc5234#appendix-B.1
+ * the only whitespace characters in an HTTP header are spaces and
+ * horizontal tabs.
+ */
+#define isWhitespace( c )            ( ( ( c ) == ' ' ) || ( ( c ) == '\t' ) )
+
+/**
  * @brief An aggregator representing the individually parsed elements of the
  * user-provided date parameter. This is used to verify the complete date
  * representation, and construct the final ISO 8601 string.
