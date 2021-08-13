@@ -41,7 +41,7 @@ void harness()
     size_t * signatureLen;
     SigV4Status_t status;
 
-    pHttpParams = malloc( sizeof( SigV4CryptoInterface_t ) );
+    pHttpParams = malloc( sizeof( SigV4HttpParameters_t ) );
     pSigV4Params = malloc( sizeof( SigV4Parameters_t ) );
     pCryptoInterface = malloc( sizeof( SigV4CryptoInterface_t ) );
     pCredentials = malloc( sizeof( SigV4Credentials_t ) );
