@@ -42,10 +42,10 @@
 /**
  * @brief Pop a value from the stack.
  */
-#define POP_STACK( valueToPop, stack, index ) \
-    {                                         \
-        --( index );                          \
-        ( valueToPop ) = stack[ ( index ) ];  \
+#define POP_STACK( valueToPop, stack, index )     \
+    {                                             \
+        --( index );                              \
+        ( valueToPop ) = ( stack ) [ ( index ) ]; \
     }
 
 /*-----------------------------------------------------------*/
@@ -144,8 +144,8 @@ static void quickSortHelper( void * pArray,
 
         partitionIndex = partition( pArray, lo, hi, itemSize, comparator );
 
-        len1 = ( ( partitionIndex != 0U ) && ( partitionIndex - 1U > lo ) ) ? ( partitionIndex - 1U - lo ) : 0U;
-        len2 = ( partitionIndex + 1U < hi ) ? ( hi - partitionIndex - 1U ) : 0U;
+        len1 = ( ( partitionIndex != 0U ) && ( ( partitionIndex - 1U ) > lo ) ) ? ( partitionIndex - 1U - lo ) : 0U;
+        len2 = ( ( partitionIndex + 1U ) < hi ) ? ( hi - partitionIndex - 1U ) : 0U;
 
         if( len1 > len2 )
         {
@@ -188,7 +188,7 @@ static size_t partition( void * pArray,
 
     pivot = pArray + ( high * itemSize );
 
-    for( ; j <= ( high - 1 ); j++ )
+    for( ; j <= ( high - 1U ); j++ )
     {
         /* Use comparator function to check current element is smaller than the pivot */
         if( comparator( pArray + ( j * itemSize ), pivot ) < 0 )
