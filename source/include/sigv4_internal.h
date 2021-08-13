@@ -163,7 +163,7 @@ typedef struct SigV4ConstString
 /**
  * @brief A key-value pair data structure that allows for sorting of SigV4
  * string values using internal comparison functions, and provides additional
- * stability to qSort(), to comply with Misra rule 21.9.
+ * stability to quickSort(), to comply with Misra rule 21.9.
  */
 typedef struct SigV4KeyValuePair
 {
