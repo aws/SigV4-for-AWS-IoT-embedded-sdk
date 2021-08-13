@@ -34,6 +34,7 @@ dd
 deconstructed
 defgroup
 doubleencodeequals
+doxygen
 encodeslash
 encodetwice
 endif
