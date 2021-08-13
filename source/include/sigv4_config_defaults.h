@@ -74,14 +74,14 @@
  * <b>Default value:</b> `100`
  */
 #ifndef SIGV4_MAX_QUERY_PAIR_COUNT
-    #define SIGV4_MAX_QUERY_PAIR_COUNT    128U
+    #define SIGV4_MAX_QUERY_PAIR_COUNT    100U
 #endif
 
 /**
  * @brief Macro used to compute the worst-case stack size when sorting elements
  * associated with #SIGV4_MAX_QUERY_PAIR_COUNT or #SIGV4_MAX_HTTP_HEADER_COUNT.
  * Suppose the max of the two aforementioned macros is X, then the macro
- * below must be set to log(X)/log(2).
+ * below must be set to ceil( log(X)/log(2) ).
  * @note If updating #SIGV4_MAX_QUERY_PAIR_COUNT or #SIGV4_MAX_HTTP_HEADER_COUNT,
  * be sure to update this value based on the formula above.
  */
