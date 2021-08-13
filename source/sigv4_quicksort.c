@@ -42,10 +42,10 @@
 /**
  * @brief Pop a value from the stack.
  */
-#define POP_STACK( valueToPop, stack, index )     \
-    {                                             \
-        --( index );                              \
-        ( valueToPop ) = ( stack ) [ ( index ) ]; \
+#define POP_STACK( valueToPop, stack, index )    \
+    {                                            \
+        --( index );                             \
+        ( valueToPop ) = ( stack )[ ( index ) ]; \
     }
 
 /*-----------------------------------------------------------*/
