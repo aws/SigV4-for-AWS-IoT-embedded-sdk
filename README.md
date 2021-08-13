@@ -6,9 +6,9 @@ The AWS IoT SigV4 Library is a standalone library for generating authorization h
 
 This library has gone through code quality checks including verification that no function has a GNU Complexity score over 8, and checks against deviations from mandatory rules in the MISRA coding standard. Deviations from the MISRA C:2012 guidelines are documented under MISRA Deviations. This library has also undergone static code analysis using Coverity static analysis, and validation of memory safety through the CBMC automated reasoning tool.
 
-See memory requirements for this library [here][a9].
+See memory requirements for this library [here][memory_table].
 
-[a9]: ./docs/doxygen/include/size_table.md
+[memory_table]: ./docs/doxygen/include/size_table.md
 
 ## AWS IoT SigV4 Library Config File
 The AWS IoT SigV4 Library exposes build configuration
