@@ -37,7 +37,7 @@ a compile time preprocessor macro.
   
 ## Building the SigV4 Library
 
-The sigV4FilePaths.cmake file contains the information of all source files and the header include paths required to build the SigV4 library.
+The sigV4FilePaths.cmake file contains information of all the source files and header include paths required to build the SigV4 library.
 
 As mentioned in the previous section, either a custom config file (i.e.
 `sigv4_config.h`) or `SIGV4_DO_NOT_USE_CUSTOM_CONFIG`
