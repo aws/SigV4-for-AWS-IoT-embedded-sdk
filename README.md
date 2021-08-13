@@ -1,12 +1,47 @@
-# AWS IoT SigV4 Utility Library
+# AWS IoT SigV4 Library
 
 **Note** This library is currently under development.
 
-The AWS IoT SigV4 Library is a standalone utility for generating a signature and authorization header according to the specifications of the [Signature Version 4](https://docs.aws.amazon.com/general/latest/gr/signature-version-4.html) signing process. This utility is an optional addition to applications sending direct HTTP requests to AWS services requiring SigV4 authentication.
+The AWS SigV4 Library is a standalone library for generating authorization headers and signatures according to the specifications of the [Signature Version 4](https://docs.aws.amazon.com/general/latest/gr/signature-version-4.html) signing process. Authorization headers are required for authentication when sending HTTP requests to AWS. This library can optionally be used by applications sending direct HTTP requests to AWS services requiring SigV4 authentication. This library has no dependencies on any additional libraries other than the standard C library. This library is distributed under the MIT Open Source License.
 
+This library has gone through code quality checks including verification that no function has a GNU Complexity score over 8, and checks against deviations from mandatory rules in the MISRA coding standard. Deviations from the MISRA C:2012 guidelines are documented under MISRA Deviations. This library has also undergone static code analysis using Coverity static analysis, and validation of memory safety through the CBMC automated reasoning tool.
+
+See memory requirements for this library [here][memory_table].
+
+[memory_table]: ./docs/doxygen/include/size_table.md
+
+## AWS IoT SigV4 Library Config File
+The AWS IoT SigV4 library exposes build configuration
+macros that are required for building the library. A list of all the
+configurations and their default values are defined in
+[sigv4_config_defaults.h][default_config]. To provide custom values for the
+configuration macros, a config file named `sigv4_config.h` can be
+provided by the application to the library.
+
+[default_config]: source/include/sigv4_config_defaults.h
+
+By default, a `sigv4_config.h` config file is required to build
+the library. To disable this requirement and build the library with default
+configuration values, provide `SIGV4_DO_NOT_USE_CUSTOM_CONFIG` as
+a compile time preprocessor macro.
+
+**Thus, the SigV4 library can be built by either**:
+
+* Defining a `sigv4_config.h` file in the application, and adding
+  it to the include directories list of the library.
+
+**OR**
+
+* Defining the `SIGV4_DO_NOT_USE_CUSTOM_CONFIG` preprocessor macro
+  for the library build.
+  
 ## Building the SigV4 Library
 
-The [source](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/tree/main/source) directory contains all of the source files required to build the SigV4 Library. The [source/include](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/tree/main/source/include) folder should be added to the compiler's include path.
+The sigV4FilePaths.cmake file contains information of all the source files and header include paths required to build the SigV4 library.
+
+As mentioned in the previous section, either a custom config file (i.e.
+`sigv4_config.h`) or `SIGV4_DO_NOT_USE_CUSTOM_CONFIG`
+macro needs to be provided to build the SigV4 library.
 
 To use CMake, please refer to the [sigV4FilePaths.cmake](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/blob/main/sigv4FilePaths.cmake) file, which contains the relevant information regarding source files and header include paths required to build this library.
 
@@ -34,7 +69,7 @@ To use CMake, please refer to the [sigV4FilePaths.cmake](https://github.com/aws/
 
 ## Reference examples
 
-The AWS IoT Embedded C-SDK repository contains [demos](https://github.com/aws/aws-iot-device-sdk-embedded-C/tree/main/demos/http) showing the use of the AWS IoT SigV4 Client Library on a POSIX platform.
+The AWS IoT Embedded C-SDK repository contains [HTTP demos](https://github.com/aws/aws-iot-device-sdk-embedded-C/tree/main/demos/http) showing the use of the AWS SigV4 Library on a POSIX platform to authenticate HTTP requests to AWS S3 service.
 
 ## Generating documentation
 
