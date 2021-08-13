@@ -22,9 +22,11 @@ chunked
 com
 completehashandhexencode
 config
+configpagestyle
 const
 constness
 copydoc
+css
 currentparameter
 datalen
 datelen
@@ -40,6 +42,7 @@ expirationlen
 feb
 formatchar
 formatlen
+gcc
 github
 gmt
 gr
@@ -79,6 +82,10 @@ ksecret
 leninput
 lentoread
 linelen
+logdebug
+logerror
+loginfo
+logwarn
 lv
 maclen
 mainpage
@@ -138,6 +145,7 @@ ppath
 ppayload
 pquery
 pqueryloc
+pre
 pregion
 psecondval
 psecretaccesskey
