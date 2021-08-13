@@ -41,7 +41,7 @@ The sigV4FilePaths.cmake file contains the information of all source files and t
 
 As mentioned in the previous section, either a custom config file (i.e.
 `sigv4_config.h`) or `SIGV4_DO_NOT_USE_CUSTOM_CONFIG`
-macro needs to be provided to build the Fleet Provisioning client library.
+macro needs to be provided to build the SigV4 library.
 
 To use CMake, please refer to the [sigV4FilePaths.cmake](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/blob/main/sigv4FilePaths.cmake) file, which contains the relevant information regarding source files and header include paths required to build this library.
 
