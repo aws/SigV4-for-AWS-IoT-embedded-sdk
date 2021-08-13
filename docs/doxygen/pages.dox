@@ -13,7 +13,7 @@ HTTP requests to AWS services requiring SigV4 authentication. The library is wri
 @section sigv4_memory_requirements Memory Requirements
 @brief Memory requirements of the SigV4 Utility library.
 
-@include{doc} size_table.html
+@include{doc} size_table.md
 
 @section sigv4_design Design
 @brief SigV4 Library Design
