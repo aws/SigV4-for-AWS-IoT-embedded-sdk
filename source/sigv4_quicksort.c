@@ -33,10 +33,10 @@
 /**
  * @brief Push a value to the stack.
  */
-#define PUSH_STACK( valueToPush, stack, index ) \
-    {                                           \
-        (stack)[ (index) ] = (valueToPush);           \
-        ++(index);                                \
+#define PUSH_STACK( valueToPush, stack, index )   \
+    {                                             \
+        ( stack )[ ( index ) ] = ( valueToPush ); \
+        ++( index );                              \
     }
 
 /**
@@ -44,8 +44,8 @@
  */
 #define POP_STACK( valueToPop, stack, index ) \
     {                                         \
-        --(index);                              \
-        (valueToPop) = stack[ (index) ];          \
+        --( index );                          \
+        ( valueToPop ) = stack[ ( index ) ];  \
     }
 
 /*-----------------------------------------------------------*/
@@ -127,6 +127,7 @@ static void quickSortHelper( void * pArray,
                              ComparisonFunc_t comparator )
 {
     size_t stack[ SIGV4_WORST_CASE_SORT_STACK_SIZE ];
+
     /* Low and high are first two items on the stack. Note
      * that we use an intermediary variable for MISRA compliance. */
     size_t top = 0, lo = low, hi = high;
@@ -143,8 +144,8 @@ static void quickSortHelper( void * pArray,
 
         partitionIndex = partition( pArray, lo, hi, itemSize, comparator );
 
-        len1 = ( ( partitionIndex != 0U ) && ( partitionIndex - 1U > lo ) ) ? (partitionIndex - 1U - lo) : 0U;
-        len2 = ( partitionIndex + 1U < hi ) ? (hi - partitionIndex - 1U) : 0U;
+        len1 = ( ( partitionIndex != 0U ) && ( partitionIndex - 1U > lo ) ) ? ( partitionIndex - 1U - lo ) : 0U;
+        len2 = ( partitionIndex + 1U < hi ) ? ( hi - partitionIndex - 1U ) : 0U;
 
         if( len1 > len2 )
         {
@@ -187,7 +188,7 @@ static size_t partition( void * pArray,
 
     pivot = pArray + ( high * itemSize );
 
-    for( ; j <= (high - 1); j++ )
+    for( ; j <= ( high - 1 ); j++ )
     {
         /* Use comparator function to check current element is smaller than the pivot */
         if( comparator( pArray + ( j * itemSize ), pivot ) < 0 )
