@@ -8,13 +8,22 @@ HARNESS_FILE = SigV4_GenerateHTTPAuthorization_harness
 # Litani dashboard. It can be human-readable and contain spaces if you wish.
 PROOF_UID = SigV4_GenerateHTTPAuthorization
 
-DEFINES +=
-INCLUDES +=
+MAX_QUERY_LEN=6
+MAX_HEADERS_LEN=6
+MAX_PATH_LEN=6
+MAX_ENCODED_PATH_LEN=$(shell expr $(MAX_PATH_LEN) \* 5)
+MAX_URI_LEN=6
 
+DEFINES += -DMAX_QUERY_LEN=$(MAX_QUERY_LEN)
+DEFINES += -DMAX_HEADERS_LEN=$(MAX_HEADERS_LEN)
+DEFINES += -DMAX_URI_LEN=$(MAX_URI_LEN)
+INCLUDES +=
 
 REMOVE_FUNCTION_BODY += memcpy
 REMOVE_FUNCTION_BODY += memmove
-UNWINDSET +=
+UNWINDSET += setQueryStringFieldsAndValues.0:$(MAX_QUERY_LEN)
+UNWINDSET += parseHeaderKeyValueEntries.0:$(MAX_HEADERS_LEN)
+UNWINDSET += encodeURI.0:$(MAX_ENCODED_PATH_LEN)
 
 PROOF_SOURCES += $(PROOFDIR)/$(HARNESS_FILE).c
 PROOF_SOURCES += $(SRCDIR)/test/cbmc/stubs/sigv4_stubs.c
@@ -28,4 +37,4 @@ include ../Makefile-json.common
 
 # Substitution command to pass to sed for patching sigv4.c. The
 # characters " and # must be escaped with backslash.
-SIGV4_SED_EXPR = 1s/^/\#include \"sigv4_stubs.h\" /; s/^static //; s/SigV4Status_t scanValue\b/&_/
+SIGV4_SED_EXPR = 1s/^/\#include \"sigv4_stubs.h\" /; s/^static //; s/SigV4Status_t writeLineToCanonicalRequest\b/&_/

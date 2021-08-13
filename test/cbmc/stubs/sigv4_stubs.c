@@ -127,3 +127,22 @@ void addToDate( const char formatChar,
             break;
     }
 }
+
+SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
+                                           size_t lineLen,
+                                           CanonicalContext_t * pCanonicalContext )
+{
+    SigV4Status_t ret = SigV4InsufficientMemory;
+
+    assert( ( pLine != NULL ) && ( lineLen > 0 ) );
+    assert( ( pCanonicalContext != NULL ) && ( pCanonicalContext->pBufCur != NULL ) );
+
+    if( pCanonicalContext->bufRemaining >= ( lineLen + 1U ) )
+    {
+        assert( __CPROVER_r_ok( pLine, lineLen ) );
+        assert( __CPROVER_w_ok( pCanonicalContext->pBufCur, ( lineLen + 1U ) ) );
+        ret = SigV4Success;
+    }
+
+    return ret;
+}

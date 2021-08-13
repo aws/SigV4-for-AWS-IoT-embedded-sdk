@@ -74,9 +74,9 @@ void harness()
         /* Make size assumptions for string-like types. */
         __CPROVER_assume( pHttpParams->payloadLen < CBMC_MAX_OBJECT_SIZE );
         __CPROVER_assume( pHttpParams->httpMethodLen < CBMC_MAX_OBJECT_SIZE );
-        __CPROVER_assume( pHttpParams->pathLen < CBMC_MAX_OBJECT_SIZE );
-        __CPROVER_assume( pHttpParams->queryLen < CBMC_MAX_OBJECT_SIZE );
-        __CPROVER_assume( pHttpParams->headersLen < CBMC_MAX_OBJECT_SIZE );
+        __CPROVER_assume( pHttpParams->pathLen < MAX_URI_LEN );
+        __CPROVER_assume( pHttpParams->queryLen < MAX_QUERY_LEN );
+        __CPROVER_assume( pHttpParams->headersLen < MAX_HEADERS_LEN );
         pHttpParams->pPayload = malloc( pHttpParams->payloadLen );
         pHttpParams->pHttpMethod = malloc( pHttpParams->httpMethodLen );
         pHttpParams->pPath = malloc( pHttpParams->pathLen );

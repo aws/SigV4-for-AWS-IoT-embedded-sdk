@@ -42,4 +42,8 @@ SigV4Status_t scanValue( const char * pDate,
                          size_t lenToRead,
                          SigV4DateTime_t * pDateElements );
 
+SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
+                                           size_t lineLen,
+                                           CanonicalContext_t * pCanonicalContext );
+
 #endif /* ifndef SIGV4_STUBS_H_ */
