@@ -351,6 +351,7 @@ static void setQueryParameterValue( size_t currentParameter,
 
 /**
  * @brief Update the HMAC using an input key.
+ *
  * @note This function can be called multiple times before calling
  * #hmacData. Appending multiple substrings, then calling #hmacKey
  * on the appended string is also equivalent to calling #hmacKey on
@@ -369,14 +370,16 @@ static int32_t hmacKey( HmacContext_t * pHmacContext,
 
 /**
  * @brief Update the HMAC using input data.
- * @note Must only be called after #hmacKey and leads to undefined
- * behavior otherwise. Likewise, one should not call #hmacKey after
+ *
+ * @note Must only be called after #hmacKey; otherwise results in
+ * undefined behavior. Likewise, one should not call #hmacKey after
  * calling #hmacData. One must call #hmacFinal first before calling
  * #hmacKey again.
  *
  * @param[in] pHmacContext The context used for HMAC calculation.
  * @param[in] pData The data used as input for HMAC calculation.
  * @param[in] dataLen The length of @p pData.
+ *
  * @return Zero on success, all other return values are failures.
  */
 static int32_t hmacData( HmacContext_t * pHmacContext,
@@ -1943,7 +1946,10 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                 ++pBufLoc;
                 remainingLen -= 1;
             }
-            else if( ( thereExistsNextParameter && ( remainingLen == 0U ) ) )
+
+            /* There is at least another query parameter entry to encode
+             * but no space in the buffer. */
+            else if( thereExistsNextParameter )
             {
                 returnStatus = SigV4InsufficientMemory;
                 LogError( ( "Unable to write canonical query: Insufficient memory configured in \"SIGV4_PROCESSING_BUFFER_LENGTH\"" ) );
@@ -2729,6 +2735,7 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
     SigV4Status_t returnStatus = SigV4Success;
     int32_t hmacStatus = 0;
     char * pSigningKeyStart = NULL;
+    bool isBufferSpaceSufficient = true;
 
     assert( pSigV4Params != NULL );
     assert( pHmacContext != NULL );
@@ -2744,12 +2751,12 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
      * calculate the other. */
     if( *pBytesRemaining < ( pSigV4Params->pCryptoInterface->hashDigestLen * 2U ) )
     {
-        returnStatus = SigV4InsufficientMemory;
+        isBufferSpaceSufficient = false;
         LOG_INSUFFICIENT_MEMORY_ERROR( "generate signing key",
                                        ( pSigV4Params->pCryptoInterface->hashDigestLen * 2U ) - *pBytesRemaining );
     }
 
-    if( hmacStatus == 0 )
+    if( isBufferSpaceSufficient && ( hmacStatus == 0 ) )
     {
         hmacStatus = completeHmac( pHmacContext,
                                    pSigV4Params->pCredentials->pSecretAccessKey,
@@ -2762,7 +2769,7 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
         *pBytesRemaining -= pSigV4Params->pCryptoInterface->hashDigestLen;
     }
 
-    if( hmacStatus == 0 )
+    if( isBufferSpaceSufficient && ( hmacStatus == 0 ) )
     {
         pSigningKeyStart = pSigningKey->pData + pSigV4Params->pCryptoInterface->hashDigestLen + 1U;
         hmacStatus = completeHmac( pHmacContext,
@@ -2776,7 +2783,7 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
         *pBytesRemaining -= pSigV4Params->pCryptoInterface->hashDigestLen;
     }
 
-    if( hmacStatus == 0 )
+    if( isBufferSpaceSufficient && ( hmacStatus == 0 ) )
     {
         hmacStatus = completeHmac( pHmacContext,
                                    pSigningKeyStart,
@@ -2788,7 +2795,7 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
                                    pSigV4Params->pCryptoInterface );
     }
 
-    if( hmacStatus == 0 )
+    if( isBufferSpaceSufficient && ( hmacStatus == 0 ) )
     {
         hmacStatus = completeHmac( pHmacContext,
                                    pSigningKey->pData,
@@ -2800,14 +2807,24 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
                                    pSigV4Params->pCryptoInterface );
     }
 
-    if( hmacStatus == 0 )
+    if( isBufferSpaceSufficient && ( hmacStatus == 0 ) )
     {
         pSigningKey->pData = pSigningKeyStart;
         pSigningKey->dataLen = pSigV4Params->pCryptoInterface->hashDigestLen;
     }
-    else
+
+    /* Set the appropriate error code for failures. */
+    if( !isBufferSpaceSufficient )
+    {
+        returnStatus = SigV4InsufficientMemory;
+    }
+    else if( hmacStatus != 0 )
     {
         returnStatus = SigV4HashError;
+    }
+    else
+    {
+        /* Empty else for MISRA C:2012 compliance. */
     }
 
     return returnStatus;
@@ -2933,15 +2950,6 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
                                                              &signedHeadersLen );
     }
 
-    /* Write the prefix of the Authorizaton header value. */
-    if( returnStatus == SigV4Success )
-    {
-        returnStatus = generateAuthorizationValuePrefix( pParams,
-                                                         pAlgorithm, algorithmLen,
-                                                         pSignedHeaders, signedHeadersLen,
-                                                         pAuthBuf, &authPrefixLen );
-    }
-
     /* Hash and hex-encode the canonical request to the buffer. */
     if( returnStatus == SigV4Success )
     {
@@ -2951,6 +2959,15 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
                                                  canonicalContext.pBufCur,
                                                  &encodedLen,
                                                  pParams->pCryptoInterface );
+    }
+
+    /* Write the prefix of the Authorizaton header value. */
+    if( returnStatus == SigV4Success )
+    {
+        returnStatus = generateAuthorizationValuePrefix( pParams,
+                                                         pAlgorithm, algorithmLen,
+                                                         pSignedHeaders, signedHeadersLen,
+                                                         pAuthBuf, &authPrefixLen );
     }
 
     /* Write string to sign. */

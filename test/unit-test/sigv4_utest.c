@@ -90,12 +90,12 @@
 #define INVALID_HEADERS_NO_HEADER_KEY                         "Header=Value\r\n"
 #define INVALID_PRECANON_HEADERS_NO_HEADER_KEY                "Header=Value\n"
 
-#define STRING_TO_SIGN_LEN                                                  \
+#define STRING_TO_SIGN_LEN_WITH_DEFAULT_REGION                              \
     SIGV4_AWS4_HMAC_SHA256_LENGTH + 1U +                                    \
     SIGV4_ISO_STRING_LEN + 1U +                                             \
     ISO_DATE_SCOPE_LEN +                                                    \
-    CREDENTIAL_SCOPE_SEPARATOR_LEN + sizeof( REGION ) +                     \
-    CREDENTIAL_SCOPE_SEPARATOR_LEN + sizeof( SERVICE ) +                    \
+    CREDENTIAL_SCOPE_SEPARATOR_LEN + sizeof( REGION ) - 1U +                \
+    CREDENTIAL_SCOPE_SEPARATOR_LEN + sizeof( SERVICE ) - 1U +               \
     CREDENTIAL_SCOPE_SEPARATOR_LEN + CREDENTIAL_SCOPE_TERMINATOR_LEN + 1U + \
     SIGV4_HASH_MAX_DIGEST_LENGTH * 2
 
@@ -921,14 +921,15 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
 
     /* Test case of insufficient memory when "String to Sign" cannot be stored in processing buffer.
      * This scenario is produced by using a long AWS Region string (which is one of the parameters of String To Sign). */
-    char longRegion[ SIGV4_PROCESSING_BUFFER_LENGTH ];
+    char * longRegion = malloc( SIGV4_PROCESSING_BUFFER_LENGTH );
     /* Fill gibberish string data in the buffer for region. */
-    memset( longRegion, 'x', sizeof( longRegion ) );
+    memset( longRegion, 'x', SIGV4_PROCESSING_BUFFER_LENGTH );
     resetInputParams();
     params.pRegion = longRegion;
-    params.regionLen = sizeof( longRegion );
+    params.regionLen = SIGV4_PROCESSING_BUFFER_LENGTH;
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    free( longRegion );
 
     /* Test case of insufficient memory when hexstring of hash cannot be stored in processing buffer.
      * This case is created by using long pre-canonicalized headers that does not leave space for Payload
@@ -1134,6 +1135,22 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
     free( longQuery );
+
+    /* Test case when there is insufficient processing buffer space for writing signing key.
+     * This case is created by using a long Region value that causes the "String to Sign" data
+     * to crowd out space for the Signing Key. */
+    size_t lenOfStringToSignWithoutRegion = ( STRING_TO_SIGN_LEN_WITH_DEFAULT_REGION ) -strlen( REGION );
+    size_t longRegionLen = SIGV4_PROCESSING_BUFFER_LENGTH - lenOfStringToSignWithoutRegion;
+    /*size_t longRegionLen = SIGV4_PROCESSING_BUFFER_LENGTH - 4 * SIGV4_HASH_MAX_DIGEST_LENGTH; */
+    longRegion = malloc( longRegionLen );
+    /* Fill gibberish in the long region name. */
+    memset( longRegion, ( int ) 'R', longRegionLen );
+    resetInputParams();
+    params.pRegion = longRegion;
+    params.regionLen = longRegionLen;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    free( longRegion );
 }
 
 /* Test that the library can encode non-alphanumeric characters in a query string. */
