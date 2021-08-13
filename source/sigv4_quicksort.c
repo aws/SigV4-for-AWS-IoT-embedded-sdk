@@ -22,7 +22,7 @@
 
 /**
  * @file sigv4_quicksort.c
- * @brief Implements Quicksort
+ * @brief Implements an Iterative Quicksort Algorithm for the SigV4 Client Utility Library.
  */
 
 #include "sigv4_quicksort.h"

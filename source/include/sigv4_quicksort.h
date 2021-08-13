@@ -22,7 +22,7 @@
 
 /**
  * @file sigv4_quicksort.h
- * @brief Quicksort functions for the SigV4 Client Utility Library.
+ * @brief Declaration of Quicksort function for the SigV4 Client Utility Library.
  */
 
 #ifndef SIGV4_QUICKSORT_H_
