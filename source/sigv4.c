@@ -632,7 +632,7 @@ static size_t sizeNeededForCredentialScope( const SigV4Parameters_t * pSigV4Para
  * @note This function can be used to copy a string literal without
  * MISRA warnings.
  *
- * @param[in] destination The buffer to write
+ * @param[in] destination The buffer to write.
  * @param[in] source String to copy.
  * @param[in] length Number of characters to copy.
  * @return @p length
@@ -1215,7 +1215,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
     static bool isAllowedChar( char c,
                                bool encodeSlash )
     {
-        return( ( isalnum( c ) != 0U ) || ( c == '-' ) || ( c == '_' ) || ( c == '.' ) || ( c == '~' ) || ( ( c == '/' ) && !encodeSlash ) );
+        return( ( isalnum( c ) != 0U ) || ( c == '-' ) || ( c == '_' ) || ( c == '.' ) || ( c == '~' ) || ( ( c == '/' ) && ( encodeSlash == false ) ) );
     }
 
 /*-----------------------------------------------------------*/
