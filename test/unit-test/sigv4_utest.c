@@ -55,8 +55,12 @@
 #define QUERY_MATCHING_PARAMS_AND_VALUES                      "param=valueXY&param=valueXY&param1=test"
 #define QUERY_WITH_MATCHING_PARAM_PREFIX                      "para=value1&param1=&value2&param=value3"
 
+/* Examples of Query Strings containing non-alphnumeric characters. */
 #define QUERY_WITH_NON_ALPHA_NUMBERIC_CHARS                   "param=-_.~/"
 #define QUERY_WITH_SPECIAL_CHARS                              "param=/"
+
+#define QUERY_STRING_NO_PARAM_VALUE                           "param=&param2="
+#define QUERY_STRING_STARTING_WITH_AMPERSANT                  "&param2="
 
 #define QUERY                                                 "Action=ListUsers&Version=2010-05-08"
 #define QUERY_LENGTH                                          ( sizeof( QUERY ) - 1U )
@@ -739,6 +743,22 @@ void test_SigV4_GenerateAuthorization_Headers_With_Trimmable_Spaces()
                            &params, authBuf, &authBufLen, &signature, &signatureLen ) );
 }
 
+/* Test that the library can handle query string that contains empty values for its parameters. */
+void test_SigV4_GenerateAuthorization_Query_With_No_Param_Values()
+{
+    params.pHttpParameters->pQuery = QUERY_STRING_NO_PARAM_VALUE;
+    params.pHttpParameters->queryLen = strlen( QUERY_STRING_NO_PARAM_VALUE );
+
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+
+    params.pHttpParameters->pQuery = QUERY_STRING_STARTING_WITH_AMPERSANT;
+    params.pHttpParameters->queryLen = strlen( QUERY_STRING_STARTING_WITH_AMPERSANT );
+
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+}
+
 void test_SigV4_GenerateHTTPAuthorization_Default_Arguments()
 {
     SigV4Status_t returnStatus;
@@ -929,23 +949,26 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
 
-    /* Test case of insufficient memory when there is no space in the processing buffer for encoding
-     * '=' character while creating canonical query. */
+    /* Test case of insufficient memory when there is no space in the processing buffer for
+     * double encoding '=' character, that is part of query parameter value, while creating
+     * canonical query. */
     size_t longQueryLen = SIGV4_PROCESSING_BUFFER_LENGTH - httpParams.httpMethodLen -
                           LINEFEED_CHAR_LEN - HTTP_EMPTY_PATH_LEN - LINEFEED_CHAR_LEN;
-    char longQueryEndingWithEquals[ longQueryLen ];
-    longQueryEndingWithEquals[ 0 ] = 'P';
-    longQueryEndingWithEquals[ 1 ] = '=';
-    memset( longQueryEndingWithEquals + 2, ( int ) 'V', longQueryLen - 2 );
+    char * longQuery = malloc( longQueryLen );
+    TEST_ASSERT_NOT_NULL( longQuery );
+    longQuery[ 0 ] = 'P';
+    longQuery[ 1 ] = '=';
+    memset( longQuery + 2, ( int ) 'V', longQueryLen - 2 );
     /* Use '=' as the second last URI query value character. */
-    longQueryEndingWithEquals[ longQueryLen - 2 ] = '=';
+    longQuery[ longQueryLen - 2 ] = '=';
     resetInputParams();
     params.pHttpParameters->pPath = NULL;
     params.pHttpParameters->pathLen = 0;
-    params.pHttpParameters->pQuery = longQueryEndingWithEquals;
+    params.pHttpParameters->pQuery = longQuery;
     params.pHttpParameters->queryLen = longQueryLen;
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    free( longQuery );
 
     /* Case of insufficient memory when adding Header part of Canonical Header to processing buffer.
      * This case is created by using a long header name that causes space to run out when adding
@@ -959,6 +982,7 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
                   * empty value and newline character. */
                  4U;
     char * longHeader = malloc( headersLen );
+    TEST_ASSERT_NOT_NULL( longHeader );
     /* Set gibberish header key data. */
     memset( longHeader, ( int ) 'H', headersLen - 4 );
     longHeader[ headersLen - 4 ] = ':';
@@ -986,6 +1010,7 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
                  /* The carriage return character that is trimmed in canonical form. */
                  1U;
     longHeader = malloc( headersLen );
+    TEST_ASSERT_NOT_NULL( longHeader );
     /* Set gibberish header key data. */
     memset( longHeader, ( int ) 'H', headersLen - 3 );
     longHeader[ headersLen - 3 ] = ':';
@@ -1012,6 +1037,7 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
                  /* New line after Canonical Headers just before writing Signed Headers. */
                  LINEFEED_CHAR_LEN;
     longPrecanonHeader = malloc( headersLen );
+    TEST_ASSERT_NOT_NULL( longPrecanonHeader );
     /* Set gibberish header key data. */
     memset( longPrecanonHeader, ( int ) 'H', headersLen - 2 );
     longPrecanonHeader[ headersLen - 2 ] = ':';
@@ -1027,6 +1053,69 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
     free( longPrecanonHeader );
+
+    /* Case of insufficient memory when adding '=' character between query parameter and value.
+    * This case is created by using a long query parameter that causes the processing buffer
+    * to have no space when writing the equals to separator after the query parameter name.  */
+    longQueryLen = SIGV4_PROCESSING_BUFFER_LENGTH - httpParams.httpMethodLen - LINEFEED_CHAR_LEN -
+                   HTTP_EMPTY_PATH_LEN - LINEFEED_CHAR_LEN +
+                   /* '=' separate and parameter value. */
+                   2U;
+    longQuery = malloc( longQueryLen );
+    TEST_ASSERT_NOT_NULL( longQuery );
+    /* Set gibberish query parameter name data. */
+    memset( longQuery, ( int ) 'P', longQueryLen - 2 );
+    longQuery[ longQueryLen - 2 ] = '=';
+    longQuery[ longQueryLen - 1 ] = 'V';
+    resetInputParams();
+    params.pHttpParameters->pPath = NULL;
+    params.pHttpParameters->pathLen = 0U;
+    params.pHttpParameters->pQuery = longQuery;
+    params.pHttpParameters->queryLen = longQueryLen;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    free( longQuery );
+
+    /* Case of insufficient memory when adding '&' character between query parameter entries.
+     * This case is created by using a long query parameter that causes the processing buffer
+     * to have no space when encoding the '&' character for the second query parameter.  */
+    longQueryLen = SIGV4_PROCESSING_BUFFER_LENGTH - httpParams.httpMethodLen - LINEFEED_CHAR_LEN -
+                   HTTP_EMPTY_PATH_LEN - LINEFEED_CHAR_LEN +
+                   /* 2nd query parameter entry. */
+                   4U;
+    longQuery = malloc( longQueryLen );
+    TEST_ASSERT_NOT_NULL( longQuery );
+    /* Populate a long query parameter name for 1st entry. */
+    memset( longQuery, ( int ) 'P', longQueryLen - 6 );
+    /* Populate the value for the 1st param and a second parameter entry. */
+    memcpy( longQuery + longQueryLen - 6, "=V&Q=X", 6 );
+    resetInputParams();
+    params.pHttpParameters->pPath = NULL;
+    params.pHttpParameters->pathLen = 0U;
+    params.pHttpParameters->pQuery = longQuery;
+    params.pHttpParameters->queryLen = longQueryLen;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    free( longQuery );
+
+    /* Case of insufficient memory when adding newline character after query canonical data in processing
+     * buffer.
+     * This case is created by using a long query parameter that leaves no space for the newline character
+     * after the canonical query data. */
+    longQueryLen = SIGV4_PROCESSING_BUFFER_LENGTH - httpParams.httpMethodLen - LINEFEED_CHAR_LEN -
+                   HTTP_EMPTY_PATH_LEN - LINEFEED_CHAR_LEN;
+    longQuery = malloc(longQueryLen);
+    TEST_ASSERT_NOT_NULL( longQuery );
+    /* Populate a long query parameter name. */
+    memset( longQuery, ( int ) 'P', longQueryLen);
+    resetInputParams();
+    params.pHttpParameters->pPath = NULL;
+    params.pHttpParameters->pathLen = 0U;
+    params.pHttpParameters->pQuery = longQuery;
+    params.pHttpParameters->queryLen = longQueryLen;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    free( longQuery );
 }
 
 /* Test that the library can encode non-alphanumeric characters in a query string. */
