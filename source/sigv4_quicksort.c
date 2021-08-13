@@ -32,6 +32,26 @@
 #include <assert.h>
 
 /**
+ * @brief Push a value to the stack.
+ */
+#define PUSH_STACK( valueToPush, stack, index ) \
+    {                                           \
+        stack[ index ] = valueToPush;           \
+        ++index;                                \
+    }
+
+/**
+ * @brief Pop a value from the stack.
+ */
+#define POP_STACK( valueToPop, stack, index ) \
+    {                                         \
+        --index;                              \
+        valueToPop = stack[ index ];          \
+    }
+
+/*-----------------------------------------------------------*/
+
+/**
  * @brief A helper function to swap the value of two pointers
  * given their sizes.
  *
@@ -110,20 +130,16 @@ static void quickSortHelper( void * pArray,
     /* Low and high are first two items on the stack. */
     size_t top = 0;
 
-    stack[ top ] = low;
-    ++top;
-    stack[ top ] = high;
-    ++top;
+    PUSH_STACK( low, stack, top );
+    PUSH_STACK( high, stack, top );
 
     while( top > 0 )
     {
         size_t partitionIndex;
         size_t lo1, lo2, hi1, hi2;
         size_t len1, len2;
-        --top;
-        high = stack[ top ];
-        --top;
-        low = stack[ top ];
+        POP_STACK( high, stack, top );
+        POP_STACK( low, stack, top );
 
         partitionIndex = partition( pArray, low, high, itemSize, comparator );
 
@@ -151,18 +167,14 @@ static void quickSortHelper( void * pArray,
 
         if( len1 > 0U )
         {
-            stack[ top ] = lo1;
-            ++top;
-            stack[ top ] = hi1;
-            ++top;
+            PUSH_STACK( lo1, stack, top );
+            PUSH_STACK( hi1, stack, top );
         }
 
         if( len2 > 0U )
         {
-            stack[ top ] = lo2;
-            ++top;
-            stack[ top ] = hi2;
-            ++top;
+            PUSH_STACK( lo2, stack, top );
+            PUSH_STACK( hi2, stack, top );
         }
     }
 }
