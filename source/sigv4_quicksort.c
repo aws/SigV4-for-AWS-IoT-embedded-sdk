@@ -198,8 +198,8 @@ static size_t partition( void * pArray,
         }
     }
 
-    swap( pArray + ( ( i + 1 ) * itemSize ), pivot, itemSize );
-    return i + 1;
+    swap( pArray + ( ( i + 1U ) * itemSize ), pivot, itemSize );
+    return i + 1U;
 }
 
 void quickSort( void * pArray,
