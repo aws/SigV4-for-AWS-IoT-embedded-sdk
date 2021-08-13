@@ -1607,9 +1607,9 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         /* Ensure each key has its corresponding value. */
         assert( keyFlag == true );
 
-        /* If no header was found OR header value was not found for a header key, 
-        that represents incorrect HTTP headers data passed by the application. */
-        if(( noOfHeaders == 0U ) || (keyFlag == false))
+        /* If no header was found OR header value was not found for a header key,
+         *  that represents incorrect HTTP headers data passed by the application. */
+        if( ( noOfHeaders == 0U ) || ( keyFlag == false ) )
         {
             sigV4Status = SigV4InvalidHttpHeaders;
         }
@@ -1644,14 +1644,24 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                                                   &noOfHeaders,
                                                   canonicalRequest );
 
-        if( ( sigV4Status == SigV4Success ) && !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) )
+        if( sigV4Status == SigV4Success )
         {
-            /* Sorting headers based on keys. */
-            qsort( canonicalRequest->pHeadersLoc, noOfHeaders, sizeof( SigV4KeyValuePair_t ), cmpHeaderField );
+            if( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG )
+            {
+                /* Headers are already canonicalized, so just write it to the buffer as is. */
+                sigV4Status = writeLineToCanonicalRequest( pHeaders,
+                                                           headersLen,
+                                                           canonicalRequest );
+            }
+            else
+            {
+                /* Sorting headers based on keys. */
+                qsort( canonicalRequest->pHeadersLoc, noOfHeaders, sizeof( SigV4KeyValuePair_t ), cmpHeaderField );
 
-            /* If the headers are canonicalized, we will copy them directly into the buffer as they do not
-             * need processing, else we need to call the following function. */
-            sigV4Status = appendCanonicalizedHeaders( noOfHeaders, flags, canonicalRequest );
+                /* If the headers are canonicalized, we will copy them directly into the buffer as they do not
+                 * need processing, else we need to call the following function. */
+                sigV4Status = appendCanonicalizedHeaders( noOfHeaders, flags, canonicalRequest );
+            }
         }
 
         /* The \n character must be written if provided headers are not already canonicalized. */
@@ -1660,7 +1670,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             if( canonicalRequest->bufRemaining < 1 )
             {
                 sigV4Status = SigV4InsufficientMemory;
-                LOG_INSUFFICIENT_MEMORY_ERROR( "write the canonical headers", 1U );
+                LOG_INSUFFICIENT_MEMORY_ERROR( "write the newline character after canonical headers", 1U );
             }
             else
             {
@@ -2552,15 +2562,6 @@ static SigV4Status_t generateCanonicalRequestUntilHeaders( const SigV4Parameters
                                                    pParams->pHttpParameters->queryLen,
                                                    pCanonicalContext );
         }
-    }
-
-    if( ( returnStatus == SigV4Success ) &&
-        pParams->pHttpParameters->flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG )
-    {
-        /* Headers are already canonicalized, so just write it to the buffer as is. */
-        returnStatus = writeLineToCanonicalRequest( pParams->pHttpParameters->pHeaders,
-                                                    pParams->pHttpParameters->headersLen,
-                                                    pCanonicalContext );
     }
 
     if( returnStatus == SigV4Success )

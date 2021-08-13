@@ -80,7 +80,7 @@
 #define HEADERS_PAIRS_GT_THAN_MAX                             "H1:a\r\nH2:b\r\nH3:c\r\nH4:d\r\nH5:e\r\nH6:\r\n\r\n"
 
 /* Examples of invalid HTTP headers data. */
-#define INVALID_HEADERS_NO_HEADER_VAL                         "Header: Value\n"
+#define INVALID_HEADERS_NO_HEADER_VAL                         "Header1: Value1\r\nHeader2: Value2\n"
 #define INVALID_HEADERS_NO_HEADER_KEY                         "Header=Value\r\n"
 #define INVALID_PRECANON_HEADERS_NO_HEADER_KEY                "Header=Value\n"
 
@@ -947,32 +947,6 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
 
-    /* Case of insufficient memory when adding signed headers to processing buffer.
-     * This case is created by using a long header name that causes the Signed Header part of the
-     * Canonical Request run out of memory.  */
-    headersLen = SIGV4_PROCESSING_BUFFER_LENGTH - httpParams.httpMethodLen - LINEFEED_CHAR_LEN -
-                 HTTP_EMPTY_PATH_LEN - LINEFEED_CHAR_LEN -
-                 /* Empty Query*/
-                 LINEFEED_CHAR_LEN -
-                 /* New line after Canonical Headers just before writing Signed Headers. */
-                 LINEFEED_CHAR_LEN;
-    longPrecanonHeader = malloc( headersLen );
-    /* Set gibberish header key data. */
-    memset( longPrecanonHeader, ( int ) 'H', headersLen - 2 );
-    longPrecanonHeader[ headersLen - 2 ] = ':';
-    longPrecanonHeader[ headersLen - 1 ] = LINEFEED_CHAR;
-    resetInputParams();
-    params.pHttpParameters->pPath = NULL;
-    params.pHttpParameters->pathLen = 0U;
-    params.pHttpParameters->pQuery = NULL;
-    params.pHttpParameters->queryLen = 0U;
-    params.pHttpParameters->pHeaders = longPrecanonHeader;
-    params.pHttpParameters->headersLen = headersLen;
-    params.pHttpParameters->flags = SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG;
-    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
-    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
-    free( longPrecanonHeader );
-
     /* Case of insufficient memory when adding Header part of Canonical Header to processing buffer.
      * This case is created by using a long header name that causes space to run out when adding
      * Canonical Headers.  */
@@ -1001,6 +975,58 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
     free( longHeader );
+
+    /* Case of insufficient memory when newline character after Canonical Headers to processing buffer.
+     * This case is created by using a long header name that causes no space availability for the
+     * new line character after the Canonical headers in the processing buffer .  */
+    headersLen = SIGV4_PROCESSING_BUFFER_LENGTH - httpParams.httpMethodLen - LINEFEED_CHAR_LEN -
+                 HTTP_EMPTY_PATH_LEN - LINEFEED_CHAR_LEN -
+                 /* Empty Query*/
+                 LINEFEED_CHAR_LEN +
+                 /* The carriage return character that is trimmed in canonical form. */
+                 1U;
+    longHeader = malloc( headersLen );
+    /* Set gibberish header key data. */
+    memset( longHeader, ( int ) 'H', headersLen - 3 );
+    longHeader[ headersLen - 3 ] = ':';
+    longHeader[ headersLen - 2 ] = '\r';
+    longHeader[ headersLen - 1 ] = LINEFEED_CHAR;
+    resetInputParams();
+    params.pHttpParameters->pPath = NULL;
+    params.pHttpParameters->pathLen = 0U;
+    params.pHttpParameters->pQuery = NULL;
+    params.pHttpParameters->queryLen = 0U;
+    params.pHttpParameters->pHeaders = longHeader;
+    params.pHttpParameters->headersLen = headersLen;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    free( longHeader );
+
+    /* Case of insufficient memory when adding signed headers to processing buffer.
+     * This case is created by using a long header name that causes the Signed Header part of the
+     * Canonical Request run out of memory.  */
+    headersLen = SIGV4_PROCESSING_BUFFER_LENGTH - httpParams.httpMethodLen - LINEFEED_CHAR_LEN -
+                 HTTP_EMPTY_PATH_LEN - LINEFEED_CHAR_LEN -
+                 /* Empty Query*/
+                 LINEFEED_CHAR_LEN -
+                 /* New line after Canonical Headers just before writing Signed Headers. */
+                 LINEFEED_CHAR_LEN;
+    longPrecanonHeader = malloc( headersLen );
+    /* Set gibberish header key data. */
+    memset( longPrecanonHeader, ( int ) 'H', headersLen - 2 );
+    longPrecanonHeader[ headersLen - 2 ] = ':';
+    longPrecanonHeader[ headersLen - 1 ] = LINEFEED_CHAR;
+    resetInputParams();
+    params.pHttpParameters->pPath = NULL;
+    params.pHttpParameters->pathLen = 0U;
+    params.pHttpParameters->pQuery = NULL;
+    params.pHttpParameters->queryLen = 0U;
+    params.pHttpParameters->pHeaders = longPrecanonHeader;
+    params.pHttpParameters->headersLen = headersLen;
+    params.pHttpParameters->flags = SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    free( longPrecanonHeader );
 }
 
 /* Test that the library can encode non-alphanumeric characters in a query string. */
