@@ -27,7 +27,6 @@
 
 #include "sigv4_quicksort.h"
 
-#include <math.h>
 #include <string.h>
 #include <assert.h>
 
