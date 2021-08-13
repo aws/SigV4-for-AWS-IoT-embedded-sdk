@@ -36,8 +36,8 @@
  */
 #define PUSH_STACK( valueToPush, stack, index ) \
     {                                           \
-        stack[ index ] = valueToPush;           \
-        ++index;                                \
+        (stack)[ (index) ] = (valueToPush);           \
+        ++(index);                                \
     }
 
 /**
@@ -45,8 +45,8 @@
  */
 #define POP_STACK( valueToPop, stack, index ) \
     {                                         \
-        --index;                              \
-        valueToPop = stack[ index ];          \
+        --(index);                              \
+        (valueToPop) = stack[ (index) ];          \
     }
 
 /*-----------------------------------------------------------*/
@@ -105,11 +105,12 @@ static void swap( void * pFirstItem,
 {
     uint8_t * pFirstByte = pFirstItem;
     uint8_t * pSecondByte = pSecondItem;
+    size_t dataSize = itemSize;
 
     if( ( pFirstItem != NULL ) && ( pSecondItem != NULL ) )
     {
         /* Swap one byte at a time. */
-        while( itemSize-- )
+        while( dataSize-- )
         {
             uint8_t tmp = *pFirstByte;
             *pFirstByte = *pSecondByte;
@@ -127,54 +128,49 @@ static void quickSortHelper( void * pArray,
                              ComparisonFunc_t comparator )
 {
     size_t stack[ SIGV4_WORST_CASE_SORT_STACK_SIZE ];
-    /* Low and high are first two items on the stack. */
-    size_t top = 0;
+    /* Low and high are first two items on the stack. Note
+     * that we use an intermediary variable for MISRA compliance. */
+    size_t top = 0, lo = low, hi = high;
 
-    PUSH_STACK( low, stack, top );
-    PUSH_STACK( high, stack, top );
+    PUSH_STACK( lo, stack, top );
+    PUSH_STACK( hi, stack, top );
 
-    while( top > 0 )
+    while( top > 0U )
     {
         size_t partitionIndex;
-        size_t lo1, lo2, hi1, hi2;
         size_t len1, len2;
-        POP_STACK( high, stack, top );
-        POP_STACK( low, stack, top );
+        POP_STACK( hi, stack, top );
+        POP_STACK( lo, stack, top );
 
-        partitionIndex = partition( pArray, low, high, itemSize, comparator );
+        partitionIndex = partition( pArray, lo, hi, itemSize, comparator );
 
-        len1 = ( ( partitionIndex != 0U ) && ( partitionIndex - 1U > low ) ) ? partitionIndex - 1U - low : 0U;
-        len2 = ( partitionIndex + 1U < high ) ? high - partitionIndex - 1U : 0U;
+        len1 = ( ( partitionIndex != 0U ) && ( partitionIndex - 1U > lo ) ) ? (partitionIndex - 1U - lo) : 0U;
+        len2 = ( partitionIndex + 1U < hi ) ? (hi - partitionIndex - 1U) : 0U;
 
-        if( len1 >= len2 )
+        if( len1 > len2 )
         {
-            lo1 = low;
-            hi1 = partitionIndex - 1U;
-            lo2 = partitionIndex + 1U;
-            hi2 = high;
+            PUSH_STACK( lo, stack, top );
+            PUSH_STACK( partitionIndex - 1U, stack, top );
+
+            if( len2 > 0U )
+            {
+                PUSH_STACK( partitionIndex + 1U, stack, top );
+                PUSH_STACK( hi, stack, top );
+            }
         }
         else
         {
-            lo1 = partitionIndex + 1U;
-            hi1 = high;
-            lo2 = low;
-            hi2 = partitionIndex - 1U;
-            /* Also swap the lengths so len1 > len2. */
-            len1 ^= len2;
-            len2 ^= len1;
-            len1 ^= len2;
-        }
+            if( len2 > 0U )
+            {
+                PUSH_STACK( partitionIndex + 1U, stack, top );
+                PUSH_STACK( hi, stack, top );
+            }
 
-        if( len1 > 0U )
-        {
-            PUSH_STACK( lo1, stack, top );
-            PUSH_STACK( hi1, stack, top );
-        }
-
-        if( len2 > 0U )
-        {
-            PUSH_STACK( lo2, stack, top );
-            PUSH_STACK( hi2, stack, top );
+            if( len1 > 0U )
+            {
+                PUSH_STACK( lo, stack, top );
+                PUSH_STACK( partitionIndex - 1U, stack, top );
+            }
         }
     }
 }
@@ -192,12 +188,13 @@ static size_t partition( void * pArray,
 
     pivot = pArray + ( high * itemSize );
 
-    for( ; j <= high - 1; j++ )
+    for( ; j <= (high - 1); j++ )
     {
         /* Use comparator function to check current element is smaller than the pivot */
         if( comparator( pArray + ( j * itemSize ), pivot ) < 0 )
         {
-            swap( pArray + ( ++i * itemSize ), pArray + ( j * itemSize ), itemSize );
+            ++i;
+            swap( pArray + ( i * itemSize ), pArray + ( j * itemSize ), itemSize );
         }
     }
 
@@ -210,8 +207,8 @@ void quickSort( void * pArray,
                 size_t itemSize,
                 ComparisonFunc_t comparator )
 {
-    if( ( numItems != 0 ) && ( pArray != NULL ) )
+    if( ( numItems != 0U ) && ( pArray != NULL ) )
     {
-        quickSortHelper( pArray, 0, numItems - 1U, itemSize, comparator );
+        quickSortHelper( pArray, 0U, numItems - 1U, itemSize, comparator );
     }
 }
