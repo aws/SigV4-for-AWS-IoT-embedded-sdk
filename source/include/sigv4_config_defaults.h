@@ -81,13 +81,13 @@
  * @brief Macro used to compute the worst-case stack size when sorting elements
  * associated with #SIGV4_MAX_QUERY_PAIR_COUNT or #SIGV4_MAX_HTTP_HEADER_COUNT.
  * Suppose the max of the two aforementioned macros is X, then the macro
- * below must be set to ceiling( log(X)/log(2) ) where ceiling rounds up
+ * below must be set to 2 * ceiling(log(X)/log(2)) where ceiling rounds up
  * the ones digit if the decimal is greater than 0.
  * @note If updating #SIGV4_MAX_QUERY_PAIR_COUNT or #SIGV4_MAX_HTTP_HEADER_COUNT,
  * be sure to update this value based on the formula above.
  */
 #ifndef SIGV4_WORST_CASE_SORT_STACK_SIZE
-    #define SIGV4_WORST_CASE_SORT_STACK_SIZE    7U
+    #define SIGV4_WORST_CASE_SORT_STACK_SIZE    14U
 #endif
 
 /**
