@@ -36,12 +36,12 @@
  * @brief The comparison function used for sorting.
  * @param[in] pFirstVal The first value to compare
  * @param[in] pSecondVal The second value to compare
- * 
+ *
  * @return A value less than 0 if @p pFirstVal is less than
  * @p pSecondVal. Otherwise, greater than 0.
  */
-typedef int32_t ( *ComparisonFunc_t )( const void * pFirstVal,
-                                       const void * pSecondVal );
+typedef int32_t ( * ComparisonFunc_t )( const void * pFirstVal,
+                                        const void * pSecondVal );
 
 /**
  * @brief Perform quicksort on an array.
@@ -52,8 +52,8 @@ typedef int32_t ( *ComparisonFunc_t )( const void * pFirstVal,
  * @param[out] comparator The comparison function to determine if one item is less than another.
  */
 void quickSort( void * pArray,
-                       size_t numItems,
-                       size_t itemSize,
-                       ComparisonFunc_t comparator );
+                size_t numItems,
+                size_t itemSize,
+                ComparisonFunc_t comparator );
 
-#endif
+#endif /* ifndef SIGV4_QUICKSORT_H_ */

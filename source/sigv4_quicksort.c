@@ -39,8 +39,8 @@
  * @param[in] itemSize The amount of memory per entry in the array.
  */
 static void swap( void * pFirstItem,
-           void * pSecondItem,
-           size_t itemSize );
+                  void * pSecondItem,
+                  size_t itemSize );
 
 /**
  * @brief A helper function to perform quicksort on a subarray.
@@ -67,7 +67,7 @@ static void quickSortHelper( void * pArray,
  * @param[in] high The high index of the array.
  * @param[in] itemSize The amount of memory per entry in the array.
  * @param[out] comparator The comparison function to determine if one item is less than another.
- * 
+ *
  * @return The index of the pivot
  */
 static size_t partition( void * pArray,
@@ -79,15 +79,16 @@ static size_t partition( void * pArray,
 /*-----------------------------------------------------------*/
 
 static void swap( void * pFirstItem,
-           void * pSecondItem,
-           size_t itemSize )
+                  void * pSecondItem,
+                  size_t itemSize )
 {
     uint8_t * pFirstByte = pFirstItem;
     uint8_t * pSecondByte = pSecondItem;
-    if(pFirstItem != NULL && pSecondItem != NULL)
+
+    if( ( pFirstItem != NULL ) && ( pSecondItem != NULL ) )
     {
         /* Swap one byte at a time. */
-        while(itemSize--) 
+        while( itemSize-- )
         {
             uint8_t tmp = *pFirstByte;
             *pFirstByte++ = *pSecondByte;
@@ -102,27 +103,31 @@ static void quickSortHelper( void * pArray,
                              size_t itemSize,
                              ComparisonFunc_t comparator )
 {
-    size_t stack[high - low + 1];
+    size_t stack[ high - low + 1 ];
     /* Low and high are first two items on the stack. */
     size_t top = 0;
-    stack[top++] = low;
-    stack[top++] = high;
- 
-    while (top > 0) {
+
+    stack[ top++ ] = low;
+    stack[ top++ ] = high;
+
+    while( top > 0 )
+    {
         size_t partitionIndex;
-        high = stack[--top];
-        low = stack[--top];
- 
-        partitionIndex = partition(pArray, low, high, itemSize, comparator);
- 
-        if (partitionIndex != 0U && partitionIndex - 1U > low) {
-            stack[top++] = low;
-            stack[top++] = partitionIndex - 1U;
+        high = stack[ --top ];
+        low = stack[ --top ];
+
+        partitionIndex = partition( pArray, low, high, itemSize, comparator );
+
+        if( ( partitionIndex != 0U ) && ( partitionIndex - 1U > low ) )
+        {
+            stack[ top++ ] = low;
+            stack[ top++ ] = partitionIndex - 1U;
         }
- 
-        if (partitionIndex + 1U < high) {
-            stack[top++] = partitionIndex + 1U;
-            stack[top++] = high;
+
+        if( partitionIndex + 1U < high )
+        {
+            stack[ top++ ] = partitionIndex + 1U;
+            stack[ top++ ] = high;
         }
     }
 }
@@ -136,17 +141,17 @@ static size_t partition( void * pArray,
     void * pivot;
     size_t i = low - 1U, j = low;
 
-    assert(pArray != NULL);
+    assert( pArray != NULL );
 
-    pivot = pArray + (high * itemSize);
+    pivot = pArray + ( high * itemSize );
 
     for( ; j <= high - 1; j++ )
     {
         /* Use comparator function to check if
          * current element is smaller than the pivot */
-        if( comparator( pArray + (j * itemSize), pivot ) < 0 )
+        if( comparator( pArray + ( j * itemSize ), pivot ) < 0 )
         {
-            swap( pArray + ( ++i * itemSize ) , pArray + (j * itemSize), itemSize );
+            swap( pArray + ( ++i * itemSize ), pArray + ( j * itemSize ), itemSize );
         }
     }
 
@@ -155,9 +160,9 @@ static size_t partition( void * pArray,
 }
 
 void quickSort( void * pArray,
-                       size_t numItems,
-                       size_t itemSize,
-                       ComparisonFunc_t comparator )
+                size_t numItems,
+                size_t itemSize,
+                ComparisonFunc_t comparator )
 {
     if( ( numItems != 0 ) && ( pArray != NULL ) )
     {

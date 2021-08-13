@@ -2886,7 +2886,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
     SigV4String_t signingKey;
     ptrdiff_t bufferLen;
 
-    /*returnStatus = verifySigV4Parameters( pParams ); */
+    returnStatus = verifySigV4Parameters( pParams );
 
     authPrefixLen = *authBufLen;
 
