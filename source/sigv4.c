@@ -31,7 +31,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include <memory.h>
 
 #include "sigv4.h"
 #include "sigv4_internal.h"
