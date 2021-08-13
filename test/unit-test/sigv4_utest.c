@@ -38,8 +38,10 @@
 #define SIGV4_TEST_INVALID_DATE_COUNT                         24U
 
 #define AUTH_BUF_LENGTH                                       1000
-/*#define PATH                                       "/hi | world" */
 #define PATH                                                  "/"
+
+#define PRECANON_PATH                                         "/path-%20"
+
 /* Iterator must not read beyond the null-terminator. */
 #define NULL_TERMINATED_PATH                                  "/pa\0th"
 #define NULL_TERMINATED_PATH_LEN                              ( sizeof( NULL_TERMINATED_PATH ) - 1U )
@@ -788,9 +790,15 @@ void test_SigV4_GenerateHTTPAuthorization_Precanonicalized()
 {
     SigV4Status_t returnStatus;
 
+    params.pHttpParameters->pPath = PRECANON_PATH;
+    params.pHttpParameters->pathLen = strlen( PRECANON_PATH );
+    params.pHttpParameters->flags = SIGV4_HTTP_PATH_IS_CANONICAL_FLAG;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+
     params.pHttpParameters->pHeaders = PRECANON_HEADER;
     params.pHttpParameters->headersLen = STR_LIT_LEN( PRECANON_HEADER );
-    params.pHttpParameters->flags = SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG;
+    params.pHttpParameters->flags |= SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG;
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
 }
@@ -828,12 +836,22 @@ void test_SigV4_GenerateHTTPAuthorization_InvalidHTTPHeaders()
  */
 void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
 {
-    /* The authorization buffer must be at least the size of the hash digest. */
     SigV4Status_t returnStatus;
 
     authBufLen = params.pCryptoInterface->hashDigestLen * 2;
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+
+    /* Insufficient memory error when there is not enough space to write the 
+    Method data in the processing buffer. This case is created by using a method string
+     longer than the processing buffer length. */
+    char *pMethodData = malloc(SIGV4_PROCESSING_BUFFER_LENGTH);
+    memset(pMethodData, (int)'M', SIGV4_PROCESSING_BUFFER_LENGTH);
+    params.pHttpParameters->pHttpMethod = pMethodData;
+    params.pHttpParameters->httpMethodLen = SIGV4_PROCESSING_BUFFER_LENGTH;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    free(pMethodData);
 
     /* BEGIN: Coverage for generateCanonicalURI(). */
     /* The path here will cause the error for the first time the path is encoded. */
@@ -1104,10 +1122,10 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
      * after the canonical query data. */
     longQueryLen = SIGV4_PROCESSING_BUFFER_LENGTH - httpParams.httpMethodLen - LINEFEED_CHAR_LEN -
                    HTTP_EMPTY_PATH_LEN - LINEFEED_CHAR_LEN;
-    longQuery = malloc(longQueryLen);
+    longQuery = malloc( longQueryLen );
     TEST_ASSERT_NOT_NULL( longQuery );
     /* Populate a long query parameter name. */
-    memset( longQuery, ( int ) 'P', longQueryLen);
+    memset( longQuery, ( int ) 'P', longQueryLen );
     resetInputParams();
     params.pHttpParameters->pPath = NULL;
     params.pHttpParameters->pathLen = 0U;

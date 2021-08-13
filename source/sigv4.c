@@ -2353,11 +2353,10 @@ static SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
     assert( ( pLine != NULL ) && ( lineLen > 0 ) );
     assert( ( pCanonicalContext != NULL ) && ( pCanonicalContext->pBufCur != NULL ) );
 
+    /* Make sure that there is space for the Method and the newline character.*/
     if( pCanonicalContext->bufRemaining < ( lineLen + 1U ) )
     {
         returnStatus = SigV4InsufficientMemory;
-        LOG_INSUFFICIENT_MEMORY_ERROR( "write the credential scope",
-                                       lineLen - pCanonicalContext->bufRemaining );
     }
     else
     {
