@@ -69,7 +69,7 @@ To use CMake, please refer to the [sigV4FilePaths.cmake](https://github.com/aws/
 
 ## Reference examples
 
-The AWS IoT Embedded C-SDK repository contains [demos](https://github.com/aws/aws-iot-device-sdk-embedded-C/tree/main/demos/http/http_demo_s3_download) showing the use of the AWS IoT SigV4 Client Library on a POSIX platform.
+The AWS IoT Embedded C-SDK repository contains [HTTP demos](https://github.com/aws/aws-iot-device-sdk-embedded-C/tree/main/demos/http) showing the use of the AWS SigV4 Library on a POSIX platform to authenticate HTTP requests to AWS S3 service.
 
 ## Generating documentation
 
