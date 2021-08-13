@@ -12,12 +12,15 @@ DEFINES +=
 INCLUDES +=
 
 
-REMOVE_FUNCTION_BODY +=
+REMOVE_FUNCTION_BODY += memcpy
+REMOVE_FUNCTION_BODY += memmove
 UNWINDSET +=
 
 PROOF_SOURCES += $(PROOFDIR)/$(HARNESS_FILE).c
 PROOF_SOURCES += $(SRCDIR)/test/cbmc/stubs/sigv4_stubs.c
 PROOF_SOURCES += $(SRCDIR)/test/cbmc/stubs/hash_stubs.c
+PROOF_SOURCES += $(SRCDIR)/test/cbmc/stubs/memcpy.c
+PROOF_SOURCES += $(SRCDIR)/test/cbmc/stubs/memmove.c
 
 PROJECT_SOURCES += $(SRCDIR)/source/sigv4.c
 
