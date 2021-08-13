@@ -57,7 +57,7 @@
 #define QUERY_MATCHING_PARAMS_AND_VALUES                      "param=valueXY&param=valueXY&param1=test"
 #define QUERY_WITH_MATCHING_PARAM_PREFIX                      "para=value1&param1=&value2&param=value3"
 
-/* Examples of Query Strings containing non-alphnumeric characters. */
+/* Examples of Query Strings containing non-alphanumeric characters. */
 #define QUERY_WITH_NON_ALPHA_NUMBERIC_CHARS                   "param=-_.~/"
 #define QUERY_WITH_SPECIAL_CHARS                              "param=/"
 
@@ -218,7 +218,7 @@ static int32_t valid_sha256_init( void * pHashContext )
 }
 
 static int32_t valid_sha256_update( void * pHashContext,
-                                    const char * pInput,
+                                    const uint8_t * pInput,
                                     size_t inputLen )
 {
     if( SHA256_Update( ( SHA256_CTX * ) pHashContext, pInput, inputLen ) )
@@ -230,7 +230,7 @@ static int32_t valid_sha256_update( void * pHashContext,
 }
 
 static int32_t valid_sha256_final( void * pHashContext,
-                                   char * pOutput,
+                                   uint8_t * pOutput,
                                    size_t outputLen )
 {
     if( SHA256_Final( ( uint8_t * ) pOutput, ( SHA256_CTX * ) pHashContext ) )
@@ -243,7 +243,7 @@ static int32_t valid_sha256_final( void * pHashContext,
 
 /*==================== Echo Implementation of Crypto Interface ===================== */
 
-static hashEchoBuffer[ SIGV4_HASH_MAX_BLOCK_LENGTH ];
+static uint8_t hashEchoBuffer[ SIGV4_HASH_MAX_BLOCK_LENGTH ];
 static size_t hashInputLen;
 
 /* These hash functions simply take the input and write it back to the output.
@@ -255,7 +255,7 @@ static int32_t echo_hash_init( void * pHashContext )
 }
 
 static int32_t echo_hash_update( void * pHashContext,
-                                 const char * pInput,
+                                 const uint8_t * pInput,
                                  size_t inputLen )
 {
     hashInputLen = inputLen;
@@ -263,7 +263,7 @@ static int32_t echo_hash_update( void * pHashContext,
 }
 
 static int32_t echo_hash_final( void * pHashContext,
-                                char * pOutput,
+                                uint8_t * pOutput,
                                 size_t outputLen )
 {
     ( void ) memcpy( pOutput, hashEchoBuffer, hashInputLen );
@@ -297,7 +297,7 @@ static int32_t hash_init_failable( void * pHashContext )
 }
 
 static int32_t hash_update_failable( void * pHashContext,
-                                     const char * pInput,
+                                     const uint8_t * pInput,
                                      size_t inputLen )
 {
     int32_t ret = 0;
@@ -311,7 +311,7 @@ static int32_t hash_update_failable( void * pHashContext,
 }
 
 static int32_t hash_final_failable( void * pHashContext,
-                                    char * pOutput,
+                                    uint8_t * pOutput,
                                     size_t outputLen )
 {
     int32_t ret = 0;
@@ -842,16 +842,16 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
 
-    /* Insufficient memory error when there is not enough space to write the 
-    Method data in the processing buffer. This case is created by using a method string
-     longer than the processing buffer length. */
-    char *pMethodData = malloc(SIGV4_PROCESSING_BUFFER_LENGTH);
-    memset(pMethodData, (int)'M', SIGV4_PROCESSING_BUFFER_LENGTH);
+    /* Insufficient memory error when there is not enough space to write the
+     * Method data in the processing buffer. This case is created by using a method string
+     * longer than the processing buffer length. */
+    char * pMethodData = malloc( SIGV4_PROCESSING_BUFFER_LENGTH );
+    memset( pMethodData, ( int ) 'M', SIGV4_PROCESSING_BUFFER_LENGTH );
     params.pHttpParameters->pHttpMethod = pMethodData;
     params.pHttpParameters->httpMethodLen = SIGV4_PROCESSING_BUFFER_LENGTH;
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
-    free(pMethodData);
+    free( pMethodData );
 
     /* BEGIN: Coverage for generateCanonicalURI(). */
     /* The path here will cause the error for the first time the path is encoded. */
