@@ -32,6 +32,18 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/* SIGV4_DO_NOT_USE_CUSTOM_CONFIG allows building of the SigV4 library without a
+ * config file. If a config file is provided, the SIGV4_DO_NOT_USE_CUSTOM_CONFIG
+ * macro must not be defined.
+ */
+#ifndef SIGV4_DO_NOT_USE_CUSTOM_CONFIG
+    #include "sigv4_config.h"
+#endif
+
+/* Include config defaults header to get default values of configurations not
+ * defined in sigv4_config.h file. */
+#include "sigv4_config_defaults.h"
+
 /**
  * @brief The comparison function used for sorting.
  * @param[in] pFirstVal The first value to compare

@@ -27,6 +27,7 @@
 
 #include "sigv4_quicksort.h"
 
+#include <math.h>
 #include <string.h>
 #include <assert.h>
 
@@ -103,7 +104,7 @@ static void quickSortHelper( void * pArray,
                              size_t itemSize,
                              ComparisonFunc_t comparator )
 {
-    size_t stack[ high - low + 1 ];
+    size_t stack[ SIGV4_WORST_CASE_SORT_STACK_SIZE ];
     /* Low and high are first two items on the stack. */
     size_t top = 0;
 
@@ -113,21 +114,45 @@ static void quickSortHelper( void * pArray,
     while( top > 0 )
     {
         size_t partitionIndex;
+        size_t lo1, lo2, hi1, hi2;
+        size_t len1, len2;
         high = stack[ --top ];
         low = stack[ --top ];
 
         partitionIndex = partition( pArray, low, high, itemSize, comparator );
 
-        if( ( partitionIndex != 0U ) && ( partitionIndex - 1U > low ) )
+        len1 = ( ( partitionIndex != 0U ) && ( partitionIndex - 1U > low ) ) ? partitionIndex - 1U - low : 0U;
+        len2 = ( partitionIndex + 1U < high ) ? high - partitionIndex - 1U : 0U;
+
+        if( len1 >= len2 )
         {
-            stack[ top++ ] = low;
-            stack[ top++ ] = partitionIndex - 1U;
+            lo1 = low;
+            hi1 = partitionIndex - 1U;
+            lo2 = partitionIndex + 1U;
+            hi2 = high;
+        }
+        else
+        {
+            lo1 = partitionIndex + 1U;
+            hi1 = high;
+            lo2 = low;
+            hi2 = partitionIndex - 1U;
+            /* Also swap the lengths so len1 > len2. */
+            len1 ^= len2;
+            len2 ^= len1;
+            len1 ^= len2;
         }
 
-        if( partitionIndex + 1U < high )
+        if( len1 > 0U )
         {
-            stack[ top++ ] = partitionIndex + 1U;
-            stack[ top++ ] = high;
+            stack[ top++ ] = lo1;
+            stack[ top++ ] = hi1;
+        }
+
+        if( len2 > 0U )
+        {
+            stack[ top++ ] = lo2;
+            stack[ top++ ] = hi2;
         }
     }
 }
@@ -147,8 +172,7 @@ static size_t partition( void * pArray,
 
     for( ; j <= high - 1; j++ )
     {
-        /* Use comparator function to check if
-         * current element is smaller than the pivot */
+        /* Use comparator function to check current element is smaller than the pivot */
         if( comparator( pArray + ( j * itemSize ), pivot ) < 0 )
         {
             swap( pArray + ( ++i * itemSize ), pArray + ( j * itemSize ), itemSize );
