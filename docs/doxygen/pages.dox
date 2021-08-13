@@ -64,7 +64,7 @@ compiler option such as -D in gcc.
 
 /**
 @page sigv4_functions Functions
-@brief Primary functions of the AWS IoT Sigv4 library:<br><br>
+@brief Primary functions of the AWS IoT SigV4 library:<br><br>
 @subpage sigV4_generateHTTPAuthorization_function <br>
 @subpage sigV4_awsIotDateToIso8601_function <br>
 
