@@ -35,6 +35,7 @@
 
 #include "sigv4.h"
 #include "sigv4_internal.h"
+#include "sigv4_quicksort.h"
 
 /*-----------------------------------------------------------*/
 
