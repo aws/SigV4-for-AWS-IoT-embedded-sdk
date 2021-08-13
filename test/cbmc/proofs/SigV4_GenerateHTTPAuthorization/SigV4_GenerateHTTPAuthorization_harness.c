@@ -28,6 +28,7 @@
 /* Include paths for public enums, structures, and macros. */
 #include "stdlib.h"
 #include "sigv4.h"
+#include "hash_stubs.h"
 
 void harness()
 {
@@ -50,6 +51,9 @@ void harness()
     if( pCryptoInterface != NULL )
     {
         __CPROVER_assume( pCryptoInterface->hashBlockLen <= pCryptoInterface->hashDigestLen );
+        pCryptoInterface->hashInit = HashInitStub;
+        pCryptoInterface->hashUpdate = HashUpdateStub;
+        pCryptoInterface->hashFinal = HashFinalStub;
     }
 
     if( pCredentials != NULL )

@@ -17,6 +17,7 @@ UNWINDSET +=
 
 PROOF_SOURCES += $(PROOFDIR)/$(HARNESS_FILE).c
 PROOF_SOURCES += $(SRCDIR)/test/cbmc/stubs/sigv4_stubs.c
+PROOF_SOURCES += $(SRCDIR)/test/cbmc/stubs/hash_stubs.c
 
 PROJECT_SOURCES += $(SRCDIR)/source/sigv4.c
 

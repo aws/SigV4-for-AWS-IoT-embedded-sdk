@@ -26,9 +26,6 @@
  * Please see sigv4.c for documentation.
  */
 
-#ifndef HASH_STUBS_H_
-#define HASH_STUBS_H_
-
 /* Standard includes. */
 #include "hash_stubs.h"
 
@@ -53,5 +50,3 @@ int32_t HashFinalStub( void * pHashContext,
     int32_t ret;
     return ret;
 }
-
-#endif /* ifndef HASH_STUBS_H_ */
