@@ -109,7 +109,7 @@ static void swap( void * pFirstItem,
     if( ( pFirstItem != NULL ) && ( pSecondItem != NULL ) )
     {
         /* Swap one byte at a time. */
-        while( dataSize-- )
+        while( dataSize-- > 0U )
         {
             uint8_t tmp = *pFirstByte;
             *pFirstByte = *pSecondByte;
