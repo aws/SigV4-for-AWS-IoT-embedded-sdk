@@ -224,7 +224,7 @@ typedef struct SigV4CryptoInterface
      * @return Zero on success, all other return values are failures.
      */
     int32_t ( * hashUpdate )( void * pHashContext,
-                              const char * pInput,
+                              const uint8_t * pInput,
                               size_t inputLen );
 
     /**
@@ -241,7 +241,7 @@ typedef struct SigV4CryptoInterface
      * @return Zero on success, all other return values are failures.
      */
     int32_t ( * hashFinal )( void * pHashContext,
-                             char * pOutput,
+                             uint8_t * pOutput,
                              size_t outputLen );
 
     /**
