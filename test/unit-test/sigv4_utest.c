@@ -82,13 +82,17 @@
 #define HEADERS_WITH_TRIMMABLE_SPACES                         "  Header-1 :  Value \t - \t 1  \r\n"
 
 /* Examples with more header pairs than SIGV4_MAX_HTTP_HEADER_COUNT=5. */
-#define PRECAN_HEADERS_PAIRS_GT_THAN_MAX                      "H1:a\nH2:b\nH3:c\nH4:d\nH5:e\nH6:\n"
-#define HEADERS_PAIRS_GT_THAN_MAX                             "H1:a\r\nH2:b\r\nH3:c\r\nH4:d\r\nH5:e\r\nH6:\r\n\r\n"
+#define PRECAN_HEADERS_PAIRS_GT_THAN_MAX                      "H1:a\nH2:b\nH3:c\nH4:d\nH5:e\nH6:\nH7:\nH8:\n"
+#define HEADERS_PAIRS_GT_THAN_MAX                             "H1:a\r\nH2:b\r\nH3:c\r\nH4:d\r\nH5:e\r\nH6:\r\nH7:\r\n:H8:\r\n\r\n"
 
 /* Examples of invalid HTTP headers data. */
 #define INVALID_HEADERS_NO_HEADER_VAL                         "Header1: Value1\r\nHeader2: Value2\n"
 #define INVALID_HEADERS_NO_HEADER_KEY                         "Header=Value\r\n"
 #define INVALID_PRECANON_HEADERS_NO_HEADER_KEY                "Header=Value\n"
+
+#define HEADERS_SORTED_COVERAGE_1                             "A:a\r\nB:b\r\nC:c\r\nE:e\r\nF:f\r\nD:d\r\n\r\n"
+#define HEADERS_SORTED_COVERAGE_2                             "A:a\r\nC:c\r\nE:e\r\nF:f\r\nD:d\r\n\r\n"
+
 
 #define STRING_TO_SIGN_LEN_WITH_DEFAULT_REGION                              \
     SIGV4_AWS4_HMAC_SHA256_LENGTH + 1U +                                    \
@@ -1231,5 +1235,22 @@ void test_SigV4_GenerateAuthorization_Headers_Greater_Than_Configured_Max()
     params.pHttpParameters->headersLen = strlen( PRECAN_HEADERS_PAIRS_GT_THAN_MAX );
     params.pHttpParameters->flags = SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG;
     TEST_ASSERT_EQUAL( SigV4MaxHeaderPairCountExceeded, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+}
+
+void test_SigV4_GenerateAuthorization_Sorting_Algorithm_Coverage()
+{
+    params.pHttpParameters->pHeaders = HEADERS_SORTED_COVERAGE_1;
+    params.pHttpParameters->headersLen = strlen( HEADERS_SORTED_COVERAGE_1 );
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+
+    params.pHttpParameters->pPath = NULL;
+    params.pHttpParameters->pathLen = 0U;
+    params.pHttpParameters->pQuery = NULL;
+    params.pHttpParameters->queryLen = 0U;
+    params.pHttpParameters->pHeaders = HEADERS_SORTED_COVERAGE_2;
+    params.pHttpParameters->headersLen = strlen( HEADERS_SORTED_COVERAGE_2 );
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
                            &params, authBuf, &authBufLen, &signature, &signatureLen ) );
 }

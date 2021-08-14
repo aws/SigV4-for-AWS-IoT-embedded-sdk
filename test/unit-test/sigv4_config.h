@@ -90,7 +90,7 @@
  * <b>Default value:</b> `100`
  */
 #ifndef SIGV4_MAX_HTTP_HEADER_COUNT
-    #define SIGV4_MAX_HTTP_HEADER_COUNT    5U
+    #define SIGV4_MAX_HTTP_HEADER_COUNT    7U
 #endif
 
 /**

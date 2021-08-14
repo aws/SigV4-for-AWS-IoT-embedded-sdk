@@ -2030,7 +2030,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 
         returnStatus = setQueryStringFieldsAndValues( pQuery, queryLen, &numberOfParameters, pCanonicalContext );
 
-        if( returnStatus == SigV4Success )
+        if( ( returnStatus == SigV4Success ) && ( numberOfParameters > 0U ) )
         {
             /* Sort the parameter names by character code point in ascending order.
              * Parameters with duplicate names should be sorted by value. */

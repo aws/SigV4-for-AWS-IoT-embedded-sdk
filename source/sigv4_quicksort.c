@@ -237,8 +237,10 @@ void quickSort( void * pArray,
                 size_t itemSize,
                 ComparisonFunc_t comparator )
 {
-    if( ( numItems != 0U ) && ( pArray != NULL ) )
-    {
-        quickSortHelper( pArray, 0U, numItems - 1U, itemSize, comparator );
-    }
+    assert( pArray != NULL );
+    assert( numItems > 0U );
+    assert( itemSize > 0U );
+    assert( comparator != NULL );
+
+    quickSortHelper( pArray, 0U, numItems - 1U, itemSize, comparator );
 }
