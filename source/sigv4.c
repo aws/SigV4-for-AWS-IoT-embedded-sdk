@@ -1979,10 +1979,13 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
 
         assert( pCanonicalContext != NULL );
         assert( pCanonicalContext->pBufCur != NULL );
-
-        returnStatus = setQueryStringFieldsAndValues( pQuery, queryLen, &numberOfParameters, pCanonicalContext );
-
-        if( returnStatus == SigV4Success )
+        
+        if( pQuery != NULL )
+        {
+            returnStatus = setQueryStringFieldsAndValues( pQuery, queryLen, &numberOfParameters, pCanonicalContext );
+        }
+        
+        if( pQuery != NULL && returnStatus == SigV4Success )
         {
             /* Sort the parameter names by character code point in ascending order.
              * Parameters with duplicate names should be sorted by value. */
