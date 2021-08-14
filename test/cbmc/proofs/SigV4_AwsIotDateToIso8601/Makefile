@@ -8,7 +8,7 @@ HARNESS_FILE = SigV4_AwsIotDateToIso8601_harness
 # Litani dashboard. It can be human-readable and contain spaces if you wish.
 PROOF_UID = SigV4_AwsIotDateToIso8601
 
-DEFINES +=
+DEFINES += -DSIGV4_DO_NOT_USE_CUSTOM_CONFIG=1
 INCLUDES +=
 
 MONTH_ASCII_LEN=3
