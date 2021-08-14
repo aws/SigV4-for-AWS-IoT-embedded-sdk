@@ -69,8 +69,8 @@
 #define ACCESS_KEY_ID                                         "AKIAIOSFODNN7EXAMPLE"
 #define SECRET_KEY                                            "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"
 #define SECRET_KEY_LEN                                        ( sizeof( SECRET_KEY ) - 1U )
-#define SECRET_KEY_LONGER_THAN_DIGEST                         "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEYwJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEYwJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEYwJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"
-#define SECRET_KEY_LONGER_THAN_DIGEST_LEN                     ( sizeof( SECRET_KEY_LONGER_THAN_DIGEST ) - 1U )
+#define SECRET_KEY_LONGER_THAN_HASH_BLOCK                     "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEYwJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEYwJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEYwJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"
+#define SECRET_KEY_LONGER_THAN_HASH_BLOCK_LEN                 ( sizeof( SECRET_KEY_LONGER_THAN_HASH_BLOCK ) - 1U )
 #define DATE                                                  "20210811T001558Z"
 #define REGION                                                "us-east-1"
 #define SERVICE                                               "iam"
@@ -273,13 +273,20 @@ static int32_t echo_hash_final( void * pHashContext,
 
 #define HAPPY_PATH_HASH_ITERATIONS    12U
 
-static bool failHashInitFlag = false;
+static size_t hashInitCalledCount = 0U, hashInitCallToFail = SIZE_MAX;
 static size_t updateHashCalledCount = 0U, updateHashCallToFail = SIZE_MAX;
 static size_t finalHashCalledCount = 0U, finalHashCallToFail = SIZE_MAX;
 
 static int32_t hash_init_failable( void * pHashContext )
 {
-    return failHashInitFlag ? 1 : 0;
+    int32_t ret = 0;
+
+    if( hashInitCalledCount++ == hashInitCallToFail )
+    {
+        ret = 1;
+    }
+
+    return ret;
 }
 
 static int32_t hash_update_failable( void * pHashContext,
@@ -314,6 +321,8 @@ static int32_t hash_final_failable( void * pHashContext,
 
 static void resetFailableHashParams()
 {
+    hashInitCalledCount = 0U;
+    hashInitCallToFail = SIZE_MAX;
     updateHashCalledCount = 0U;
     updateHashCallToFail = SIZE_MAX;
     finalHashCalledCount = 0U;
@@ -652,8 +661,17 @@ void test_SigV4_GenerateHTTPAuthorization_Happy_Paths()
 
     /* Attempt to generate the signature with a secret longer than the digest length. This
      * causes the inner-most HMAC key of the signing key to be hashed down. */
-    creds.pSecretAccessKey = SECRET_KEY_LONGER_THAN_DIGEST;
-    creds.secretAccessKeyLen = SECRET_KEY_LONGER_THAN_DIGEST_LEN;
+    creds.pSecretAccessKey = SECRET_KEY_LONGER_THAN_HASH_BLOCK;
+    creds.secretAccessKeyLen = SECRET_KEY_LONGER_THAN_HASH_BLOCK_LEN;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+
+    /* Test case when the first step of the Signing Key generation HMAC operation encounters a key that is
+     * less than hash block in length. */
+    char secretKeyGeneratingBlockLenHMACKey[ SIGV4_HASH_MAX_BLOCK_LENGTH - strlen( SIGV4_HMAC_SIGNING_KEY_PREFIX ) ];
+    memset( secretKeyGeneratingBlockLenHMACKey, ( int ) 'K', sizeof( secretKeyGeneratingBlockLenHMACKey ) );
+    creds.pSecretAccessKey = secretKeyGeneratingBlockLenHMACKey;
+    creds.secretAccessKeyLen = sizeof( secretKeyGeneratingBlockLenHMACKey );
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
 
@@ -1162,19 +1180,17 @@ void test_SigV4_GenerateHTTPAuthorization_Hash_Errors()
     SigV4Status_t returnStatus;
     size_t i;
 
-    params.pCredentials->pSecretAccessKey = SECRET_KEY_LONGER_THAN_DIGEST;
-    params.pCredentials->secretAccessKeyLen = strlen( SECRET_KEY_LONGER_THAN_DIGEST );
-
-    /* Test failure of hashInit crypto interface function. */
-    failHashInitFlag = true;
-    params.pCryptoInterface->hashInit = hash_init_failable;
-    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
-    TEST_ASSERT_EQUAL( SigV4HashError, returnStatus );
-
-    failHashInitFlag = false;
+    params.pCredentials->pSecretAccessKey = SECRET_KEY_LONGER_THAN_HASH_BLOCK;
+    params.pCredentials->secretAccessKeyLen = strlen( SECRET_KEY_LONGER_THAN_HASH_BLOCK );
 
     for( i = 0U; i < HAPPY_PATH_HASH_ITERATIONS; i++ )
     {
+        resetFailableHashParams();
+        hashInitCallToFail = i;
+        params.pCryptoInterface->hashInit = hash_init_failable;
+        returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+        TEST_ASSERT_EQUAL( SigV4HashError, returnStatus );
+
         resetFailableHashParams();
         updateHashCallToFail = i;
         returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
