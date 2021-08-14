@@ -28,6 +28,8 @@
 #ifndef SIGV4_INTERNAL_H_
 #define SIGV4_INTERNAL_H_
 
+#include <stdbool.h>
+
 /* SIGV4_DO_NOT_USE_CUSTOM_CONFIG allows building of the SigV4 library without a
  * config file. If a config file is provided, the SIGV4_DO_NOT_USE_CUSTOM_CONFIG
  * macro must not be defined.
@@ -111,6 +113,9 @@
 #define AUTH_SIGNED_HEADERS_PREFIX_LEN         ( sizeof( AUTH_SIGNED_HEADERS_PREFIX ) - 1U )      /**< The length of #AUTH_SIGNED_HEADERS_PREFIX. */
 #define AUTH_SIGNATURE_PREFIX                  "Signature="                                       /**< The prefix that goes before the signature in the Authorization header value. */
 #define AUTH_SIGNATURE_PREFIX_LEN              ( sizeof( AUTH_SIGNATURE_PREFIX ) - 1U )           /**< The length of #AUTH_SIGNATURE_PREFIX. */
+
+#define HMAC_INNER_PAD_BYTE                    ( 0x36U )                                          /**< The "ipad" byte used for generating the inner key in the HMAC calculation process. */
+#define HMAC_OUTER_PAD_BYTE                    ( 0x5CU )                                          /**< The "opad" byte used for generating the outer key in the HMAC calculation process. */
 
 /**
  * @brief A helper macro to print insufficient memory errors.
@@ -210,6 +215,10 @@ typedef struct HmacContext
      * @brief The length of the accumulated key data.
      */
     size_t keyLen;
+
+    /* Flag to indicate whether the user-supplied
+     * HASH interface has been initialized. */
+    bool isHashInitialized;
 } HmacContext_t;
 
 

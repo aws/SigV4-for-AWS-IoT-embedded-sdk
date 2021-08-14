@@ -271,29 +271,15 @@ static int32_t echo_hash_final( void * pHashContext,
 
 /*==================== Failable Implementation of Crypto Interface ===================== */
 
-/*
- #define FAIL_HASH_INIT 1U,
- #define FAIL_HASH_UPDATE 2U
- #define FAIL_HASH_FINAL 3U
- *
- * static size_t hashToFail;
- */
-#define HAPPY_PATH_HASH_ITERATIONS    11U
+#define HAPPY_PATH_HASH_ITERATIONS    12U
 
-static size_t initHashCalledCount = 0U, initHashCallToFail = SIZE_MAX;
+static bool failHashInitFlag = false;
 static size_t updateHashCalledCount = 0U, updateHashCallToFail = SIZE_MAX;
 static size_t finalHashCalledCount = 0U, finalHashCallToFail = SIZE_MAX;
 
 static int32_t hash_init_failable( void * pHashContext )
 {
-    int32_t ret = 0;
-
-    if( initHashCalledCount++ == initHashCallToFail )
-    {
-        ret = 1;
-    }
-
-    return ret;
+    return failHashInitFlag ? 1 : 0;
 }
 
 static int32_t hash_update_failable( void * pHashContext,
@@ -328,8 +314,6 @@ static int32_t hash_final_failable( void * pHashContext,
 
 static void resetFailableHashParams()
 {
-    initHashCalledCount = 0U;
-    initHashCallToFail = SIZE_MAX;
     updateHashCalledCount = 0U;
     updateHashCallToFail = SIZE_MAX;
     finalHashCalledCount = 0U;
@@ -1178,13 +1162,19 @@ void test_SigV4_GenerateHTTPAuthorization_Hash_Errors()
     SigV4Status_t returnStatus;
     size_t i;
 
+    params.pCredentials->pSecretAccessKey = SECRET_KEY_LONGER_THAN_DIGEST;
+    params.pCredentials->secretAccessKeyLen = strlen( SECRET_KEY_LONGER_THAN_DIGEST );
+
+    /* Test failure of hashInit crypto interface function. */
+    failHashInitFlag = true;
+    params.pCryptoInterface->hashInit = hash_init_failable;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4HashError, returnStatus );
+
+    failHashInitFlag = false;
+
     for( i = 0U; i < HAPPY_PATH_HASH_ITERATIONS; i++ )
     {
-        resetFailableHashParams();
-        initHashCallToFail = i;
-        returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
-        TEST_ASSERT_EQUAL( SigV4HashError, returnStatus );
-
         resetFailableHashParams();
         updateHashCallToFail = i;
         returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );

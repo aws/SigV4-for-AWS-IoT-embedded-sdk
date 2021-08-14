@@ -353,8 +353,8 @@ static void setQueryParameterValue( size_t currentParameter,
  * @brief Update the HMAC using an input key.
  *
  * @note This function can be called multiple times before calling
- * #hmacData. Appending multiple substrings, then calling #hmacKey
- * on the appended string is also equivalent to calling #hmacKey on
+ * #hmacIntermediate. Appending multiple substrings, then calling #addKeyToHMAC
+ * on the appended string is also equivalent to calling #addKeyToHMAC on
  * each individual substring.
  * @note This function accepts a const char * so that string literals
  * can be passed in.
@@ -364,17 +364,18 @@ static void setQueryParameterValue( size_t currentParameter,
  * @param[in] keyLen The length of @p pKey.
  * @return Zero on success, all other return values are failures.
  */
-static int32_t hmacKey( HmacContext_t * pHmacContext,
-                        const char * pKey,
-                        size_t keyLen );
+static int32_t addKeyToHMAC( HmacContext_t * pHmacContext,
+                             const char * pKey,
+                             size_t keyLen,
+                             bool isCompleteKey );
 
 /**
  * @brief Update the HMAC using input data.
  *
- * @note Must only be called after #hmacKey; otherwise results in
- * undefined behavior. Likewise, one should not call #hmacKey after
- * calling #hmacData. One must call #hmacFinal first before calling
- * #hmacKey again.
+ * @note Must only be called after #addKeyToHMAC; otherwise results in
+ * undefined behavior. Likewise, one should not call #addKeyToHMAC after
+ * calling #hmacIntermediate. One must call #hmacFinal first before calling
+ * #addKeyToHMAC again.
  *
  * @param[in] pHmacContext The context used for HMAC calculation.
  * @param[in] pData The data used as input for HMAC calculation.
@@ -382,9 +383,9 @@ static int32_t hmacKey( HmacContext_t * pHmacContext,
  *
  * @return Zero on success, all other return values are failures.
  */
-static int32_t hmacData( HmacContext_t * pHmacContext,
-                         const char * pData,
-                         size_t dataLen );
+static int32_t hmacIntermediate( HmacContext_t * pHmacContext,
+                                 const char * pData,
+                                 size_t dataLen );
 
 /**
  * @brief Write the HMAC digest into the buffer.
@@ -2195,9 +2196,10 @@ static SigV4Status_t completeHashAndHexEncode( const char * pInput,
     return returnStatus;
 }
 
-static int32_t hmacKey( HmacContext_t * pHmacContext,
-                        const char * pKey,
-                        size_t keyLen )
+static int32_t addKeyToHMAC( HmacContext_t * pHmacContext,
+                             const char * pKey,
+                             size_t keyLen,
+                             bool isCompleteKey )
 {
     int32_t returnStatus = 0;
     const SigV4CryptoInterface_t * pCryptoInterface = NULL;
@@ -2221,20 +2223,12 @@ static int32_t hmacKey( HmacContext_t * pHmacContext,
     }
     else
     {
-        /* Initialize the hash context and hash existing key data. */
-        if( pHmacContext->keyLen <= pCryptoInterface->hashBlockLen )
-        {
-            returnStatus = pCryptoInterface->hashInit( pCryptoInterface->pHashContext );
+        /* Has part of the key that is cached in the HMAC context. */
+        returnStatus = pCryptoInterface->hashUpdate( pCryptoInterface->pHashContext,
+                                                     pHmacContext->key,
+                                                     pHmacContext->keyLen );
 
-            if( returnStatus == 0 )
-            {
-                returnStatus = pCryptoInterface->hashUpdate( pCryptoInterface->pHashContext,
-                                                             pHmacContext->key,
-                                                             pHmacContext->keyLen );
-            }
-        }
-
-        /* Hash down the key in order to create a block-sized derived key. */
+        /* Hash down the remaining part of the key in order to create a block-sized derived key. */
         if( returnStatus == 0 )
         {
             returnStatus = pCryptoInterface->hashUpdate( pCryptoInterface->pHashContext,
@@ -2250,15 +2244,16 @@ static int32_t hmacKey( HmacContext_t * pHmacContext,
 
 /*-----------------------------------------------------------*/
 
-static int32_t hmacData( HmacContext_t * pHmacContext,
-                         const char * pData,
-                         size_t dataLen )
+static int32_t hmacIntermediate( HmacContext_t * pHmacContext,
+                                 const char * pData,
+                                 size_t dataLen )
 {
     int32_t returnStatus = 0;
     size_t i = 0U;
     const SigV4CryptoInterface_t * pCryptoInterface = NULL;
 
     assert( pHmacContext != NULL );
+    assert( dataLen > 0U );
     assert( pHmacContext->key != NULL );
     assert( pHmacContext->pCryptoInterface != NULL );
     assert( pHmacContext->pCryptoInterface->hashInit != NULL );
@@ -2288,7 +2283,7 @@ static int32_t hmacData( HmacContext_t * pHmacContext,
         for( i = 0U; i < pCryptoInterface->hashBlockLen; i++ )
         {
             /* XOR the key with the ipad. */
-            pHmacContext->key[ i ] ^= 0x36U;
+            pHmacContext->key[ i ] ^= HMAC_INNER_PAD_BYTE;
         }
 
         returnStatus = pCryptoInterface->hashInit( pCryptoInterface->pHashContext );
@@ -2302,7 +2297,7 @@ static int32_t hmacData( HmacContext_t * pHmacContext,
                                                      pCryptoInterface->hashBlockLen );
     }
 
-    if( ( returnStatus == 0 ) && ( dataLen > 0U ) )
+    if( returnStatus == 0 )
     {
         /* Hash the data. */
         returnStatus = pCryptoInterface->hashUpdate( pCryptoInterface->pHashContext,
@@ -2424,21 +2419,19 @@ static int32_t completeHmac( HmacContext_t * pHmacContext,
 {
     int32_t returnStatus = 0;
 
-    if( outputLen < pCryptoInterface->hashDigestLen )
-    {
-        LogError( ( "Not enough buffer to write the hash digest, bytesExceeded=%lu",
-                    ( unsigned long ) ( pCryptoInterface->hashDigestLen - outputLen ) ) );
-        returnStatus = -1;
-    }
+    assert( pHmacContext != NULL );
+    assert( pKey != NULL );
+    assert( keyLen > 0U );
+    assert( pData != NULL );
+    assert( dataLen > 0U );
+    assert( pOutput != NULL );
+    assert( outputLen >= pCryptoInterface->hashDigestLen );
+
+    returnStatus = addKeyToHMAC( pHmacContext, pKey, keyLen, true );
 
     if( returnStatus == 0 )
     {
-        returnStatus = hmacKey( pHmacContext, pKey, keyLen );
-    }
-
-    if( returnStatus == 0 )
-    {
-        returnStatus = hmacData( pHmacContext, pData, dataLen );
+        returnStatus = hmacIntermediate( pHmacContext, pData, dataLen );
     }
 
     if( returnStatus == 0 )
@@ -2742,10 +2735,6 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
     assert( pSigningKey != NULL );
     assert( pBytesRemaining != NULL );
 
-    hmacStatus = hmacKey( pHmacContext,
-                          SIGV4_HMAC_SIGNING_KEY_PREFIX,
-                          SIGV4_HMAC_SIGNING_KEY_PREFIX_LEN );
-
     /* To calculate the final signing key, this function needs at least enough
      * buffer to hold the length of two digests since one digest is used to
      * calculate the other. */
@@ -2756,7 +2745,19 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
                                        ( pSigV4Params->pCryptoInterface->hashDigestLen * 2U ) - *pBytesRemaining );
     }
 
-    if( isBufferSpaceSufficient && ( hmacStatus == 0 ) )
+    if( isBufferSpaceSufficient )
+    {
+        /* Fill the key prefix, "AWS4" in the HMAC context cache.
+         * The prefix is part of the key for the first round of HMAC operation:
+         * HMAC("AWS4" + SecretKey, Date) */
+        hmacStatus = addKeyToHMAC( pHmacContext,
+                                   SIGV4_HMAC_SIGNING_KEY_PREFIX,
+                                   SIGV4_HMAC_SIGNING_KEY_PREFIX_LEN,
+                                   false );
+        assert( hmacStatus == 0 );
+    }
+
+    if( isBufferSpaceSufficient )
     {
         hmacStatus = completeHmac( pHmacContext,
                                    pSigV4Params->pCredentials->pSecretAccessKey,
@@ -2918,8 +2919,11 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
     char * pSignedHeaders = NULL;
     size_t encodedLen = 0U, algorithmLen = 0U, signedHeadersLen = 0U, authPrefixLen = 0U;
     HmacContext_t hmacContext = { 0 };
+
     SigV4String_t signingKey;
     ptrdiff_t bufferLen;
+
+    hmacContext.isHashInitialized = false;
 
     returnStatus = verifyParamsToGenerateAuthHeaderApi( pParams,
                                                         pAuthBuf, authBufLen,
