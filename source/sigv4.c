@@ -1779,6 +1779,8 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         bool fieldHasValue = false;
         SigV4Status_t returnStatus = SigV4Success;
 
+        assert( pQuery != NULL );
+        assert( queryLen > 0 );
         assert( pNumberOfParameters != NULL );
         assert( pCanonicalRequest != NULL );
         assert( pCanonicalRequest->pQueryLoc != NULL );
