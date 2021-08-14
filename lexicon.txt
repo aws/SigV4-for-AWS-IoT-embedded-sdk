@@ -27,12 +27,9 @@ configpagestyle
 const
 constness
 copydoc
-<<<<<<< HEAD
 crypto
-=======
 css
 ctype
->>>>>>> origin/main
 currentparameter
 datalen
 datatracker
@@ -52,11 +49,8 @@ failable
 feb
 formatchar
 formatlen
-<<<<<<< HEAD
-generatecanonicaluri
-=======
 gcc
->>>>>>> origin/main
+generatecanonicaluri
 github
 gmt
 gr
@@ -76,8 +70,10 @@ hexstring
 hh
 hhmmss
 hmac
+hmacaddkey
 hmacdata
 hmacfinal
+hmacintermediate
 hmackey
 html
 http
@@ -91,9 +87,10 @@ ingroup
 inputlen
 iot
 ipad
+iskeyprefix
 iso
-itemsize
 isspace
+itemsize
 jan
 january
 keylen
@@ -106,6 +103,7 @@ logdebug
 logerror
 loginfo
 logwarn
+longregionlen
 lv
 maclen
 mainpage
@@ -117,11 +115,8 @@ mon
 monthsperday
 noninfringement
 nullterminate
-<<<<<<< HEAD
-oom
-=======
 numitems
->>>>>>> origin/main
+oom
 opad
 openssl
 ored
@@ -130,11 +125,7 @@ outputlen
 paccesskeyid
 palgorithm
 param
-<<<<<<< HEAD
-paramater
-=======
 parray
->>>>>>> origin/main
 pathlen
 pauthbuf
 pauthprefixlen
@@ -182,8 +173,8 @@ pre
 precanonical
 precanonicalized
 pregion
-printf
 pregion
+printf
 pseconditem
 psecondval
 psecretaccesskey
@@ -196,8 +187,8 @@ psigningkey
 ptestformatfailure
 puri
 pvalue
-quicksort
 querylen
+quicksort
 rande
 readloc
 regionlen
@@ -206,6 +197,7 @@ sdk
 sec
 secretaccesskey
 secretaccesskeylen
+secretkey
 securitytoken
 securitytokenlen
 sep
@@ -248,6 +240,7 @@ valuelen
 writecanonicalqueryparameters
 writelinetocanonicalrequest
 xor
+xoring
 xy
 yyyy
 yyyymmdd

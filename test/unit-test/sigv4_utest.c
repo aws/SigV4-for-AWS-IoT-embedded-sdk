@@ -47,7 +47,7 @@
 #define NULL_TERMINATED_PATH_LEN                              ( sizeof( NULL_TERMINATED_PATH ) - 1U )
 /* An equal in the query string value must be double-encoded. */
 #define QUERY_VALUE_HAS_EQUALS                                "quantum==&->sha256=dead&maybe&&"
-/* A query string with paramater count exceeding SIGV4_MAX_HTTP_HEADER_COUNT=5. */
+/* A query string with parameter count exceeding SIGV4_MAX_HTTP_HEADER_COUNT=5. */
 #define QUERY_GT_MAX_PARAMS                                   "params&allowed&to&have&no&values"
 
 /* Query strings that represent different cases matching parameter names and values */
@@ -79,7 +79,7 @@
 #define PRECANON_HEADER                                       "content-type:application/json;\nhost:iam.amazonaws.com\n"
 
 /* Header data containing leading, trailing and sequential trimmable spaces. */
-#define HEADERS_WITH_TRIMMABLE_SPACES                         "  Header-1 :  Value  -  1  \r\n"
+#define HEADERS_WITH_TRIMMABLE_SPACES                         "  Header-1 :  Value \t - \t 1  \r\n"
 
 /* Examples with more header pairs than SIGV4_MAX_HTTP_HEADER_COUNT=5. */
 #define PRECAN_HEADERS_PAIRS_GT_THAN_MAX                      "H1:a\nH2:b\nH3:c\nH4:d\nH5:e\nH6:\n"

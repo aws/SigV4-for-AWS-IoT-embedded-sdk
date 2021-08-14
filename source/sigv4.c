@@ -354,8 +354,8 @@ static void setQueryParameterValue( size_t currentParameter,
  * @brief Generates the key for the HMAC operation.
  *
  * @note This function can be called multiple times before calling
- * #hmacIntermediate. Appending multiple substrings, then calling #addKeyToHMAC
- * on the appended string is also equivalent to calling #addKeyToHMAC on
+ * #hmacIntermediate. Appending multiple substrings, then calling #hmacAddKey
+ * on the appended string is also equivalent to calling #hmacAddKey on
  * each individual substring.
  * @note This function accepts a const char * so that string literals
  * can be passed in.
@@ -363,21 +363,26 @@ static void setQueryParameterValue( size_t currentParameter,
  * @param[in] pHmacContext The context used for HMAC calculation.
  * @param[in] pKey The key used as input for HMAC calculation.
  * @param[in] keyLen The length of @p pKey.
+ * @param[in] isKeyPrefix Flag to indicate whether the passed key is
+ * prefix of a complete key for an HMAC operation. If this is a prefix,
+ * then it will be stored in cache for use with remaining part of the
+ * key that will be provided in a subsequent call to @ref hmacAddKey.
+ *
  * @return Zero on success, all other return values are failures.
  */
-static int32_t addKeyToHMAC( HmacContext_t * pHmacContext,
-                             const char * pKey,
-                             size_t keyLen,
-                             bool isCompleteKey );
+static int32_t hmacAddKey( HmacContext_t * pHmacContext,
+                           const char * pKey,
+                           size_t keyLen,
+                           bool isKeyPrefix );
 
 /**
  * @brief Generates the intermediate hash output in the HMAC signing process.
  * This represents the H( K' ^ i_pad || message ) part of the HMAC algorithm.
  *
- * @note Must only be called after #addKeyToHMAC; otherwise results in
- * undefined behavior. Likewise, one should not call #addKeyToHMAC after
+ * @note This MUST be ONLY called after #hmacAddKey; otherwise results in
+ * undefined behavior. Likewise, one SHOULD NOT call #hmacAddKey after
  * calling #hmacIntermediate. One must call #hmacFinal first before calling
- * #addKeyToHMAC again.
+ * #hmacAddKey again.
  *
  * @param[in] pHmacContext The context used for HMAC calculation.
  * @param[in] pData The data used as input for HMAC calculation.
@@ -390,11 +395,17 @@ static int32_t hmacIntermediate( HmacContext_t * pHmacContext,
                                  size_t dataLen );
 
 /**
- * @brief Write the HMAC digest into the buffer.
+ * @brief Generates the end output of the HMAC algorithm.
+ *
+ * This represents the second hash operation in the HMAC algorithm:
+ *   H( K' ^ o_pad || Intermediate Hash Output )
+ * where the Intermediate Hash Output is generated from the call
+ * to @ref hmacIntermediate.
  *
  * @param[in] pHmacContext The context used for HMAC calculation.
  * @param[out] pMac The buffer onto which to write the HMAC digest.
  * @param[in] macLen The length of @p pMac.
+ *
  * @return Zero on success, all other return values are failures.
  */
 static int32_t hmacFinal( HmacContext_t * pHmacContext,
@@ -1276,7 +1287,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 
         bufferLen = *canonicalURILen;
 
-        for( ; ( uriIndex < uriLen ) && ( returnStatus == SigV4Success ); uriIndex++ )
+        while( ( uriIndex < uriLen ) && ( returnStatus == SigV4Success ) )
         {
             if( doubleEncodeEquals && ( pUri[ uriIndex ] == '=' ) )
             {
@@ -1319,6 +1330,8 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                     bytesConsumed += writeHexCodeOfChar( pCanonicalURI + bytesConsumed, bufferLen - bytesConsumed, pUri[ uriIndex - 1U ] );
                 }
             }
+
+            uriIndex++;
         }
 
         if( returnStatus == SigV4Success )
@@ -1643,8 +1656,8 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             }
             /* Look for header value part of a header field entry for both canonicalized and non-canonicalized forms. */
             /* Non-canonicalized headers will have header values ending with "\r\n". */
-            else if( ( !keyFlag ) && !( flags & SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( ( index + 1 ) < headersDataLen ) &&
-                     ( 0 == strncmp( pCurrLoc, CARRIAGE_RETURN_LINEFEED_STRING, CARRIAGE_RETURN_LINEFEED_STRING_LEN ) ) )
+            else if( ( !keyFlag ) && !FLAG_IS_SET( flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( ( index + 1 ) < headersDataLen ) &&
+                     ( 0 == strncmp( pCurrLoc, HTTP_REQUEST_LINE_ENDING, HTTP_REQUEST_LINE_ENDING_LEN ) ) )
             {
                 dataLen = pCurrLoc - pKeyOrValStartLoc;
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = pKeyOrValStartLoc;
@@ -1655,7 +1668,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                 noOfHeaders++;
             }
             /* Canonicalized headers will have header values ending just with "\n". */
-            else if( ( !keyFlag ) && ( FLAG_IS_SET( flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( pHeaders[ index ] == '\n' ) ) )
+            else if( ( !keyFlag ) && FLAG_IS_SET( flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( pHeaders[ index ] == '\n' ) )
             {
                 dataLen = pCurrLoc - pKeyOrValStartLoc;
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = pKeyOrValStartLoc;
@@ -1842,16 +1855,16 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                     /* Store the previous parameter's empty value information. Use NULL to represent empty value. */
                     setQueryParameterValue( currentParameter, NULL, 0U, pCanonicalRequest );
 
+                    /* Set the starting index for the new query parameter name. */
                     startOfFieldOrValue = i + 1U;
                     currentParameter++;
-
-                    /* Reset the parameter value state of the new parameter entry. */
-                    fieldHasValue = false;
                 }
                 else
                 {
                     /* End of value reached, so store a pointer to the previously set value. */
                     setQueryParameterValue( currentParameter, &pQuery[ startOfFieldOrValue ], i - startOfFieldOrValue, pCanonicalRequest );
+
+                    /* Set the starting index for the new query parameter name. */
                     startOfFieldOrValue = i + 1U;
                     currentParameter++;
 
@@ -1863,6 +1876,8 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             {
                 /* Store information about Query Parameter Key in the canonical context. This query parameter has an associated value. */
                 setQueryParameterKey( currentParameter, &pQuery[ startOfFieldOrValue ], i - startOfFieldOrValue, pCanonicalRequest );
+
+                /* Set the starting index for the query parameter's value. */
                 startOfFieldOrValue = i + 1U;
 
                 /* Set the flag to indicate that the current parameter's value has been found. */
@@ -1978,7 +1993,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             {
                 *pBufLoc = '&';
                 ++pBufLoc;
-                remainingLen -= 1;
+                remainingLen--;
             }
 
             /* There is at least another query parameter entry to encode
@@ -2229,10 +2244,10 @@ static SigV4Status_t completeHashAndHexEncode( const char * pInput,
     return returnStatus;
 }
 
-static int32_t addKeyToHMAC( HmacContext_t * pHmacContext,
-                             const char * pKey,
-                             size_t keyLen,
-                             bool isPartialKey )
+static int32_t hmacAddKey( HmacContext_t * pHmacContext,
+                           const char * pKey,
+                           size_t keyLen,
+                           bool isKeyPrefix )
 {
     int32_t returnStatus = 0;
     const SigV4CryptoInterface_t * pCryptoInterface = NULL;
@@ -2285,6 +2300,18 @@ static int32_t addKeyToHMAC( HmacContext_t * pHmacContext,
         }
     }
 
+    /* If the complete key has been obtained and it is less than the hash block size, then append
+     * padding with zero valued bytes to make it block-sized. */
+    if( !isKeyPrefix && ( returnStatus == 0 ) && ( pHmacContext->keyLen < pCryptoInterface->hashBlockLen ) )
+    {
+        /* Zero pad to the right so that the key has the same size as the block size. */
+        ( void ) memset( ( void * ) ( pHmacContext->key + pHmacContext->keyLen ),
+                         0,
+                         pCryptoInterface->hashBlockLen - pHmacContext->keyLen );
+
+        pHmacContext->keyLen = pCryptoInterface->hashBlockLen;
+    }
+
     return returnStatus;
 }
 
@@ -2305,19 +2332,9 @@ static int32_t hmacIntermediate( HmacContext_t * pHmacContext,
     assert( pHmacContext->pCryptoInterface->hashInit != NULL );
     assert( pHmacContext->pCryptoInterface->hashUpdate != NULL );
     assert( pHmacContext->pCryptoInterface->hashFinal != NULL );
-    assert( pCryptoInterface->hashBlockLen >= pHmacContext->keyLen );
+    assert( pHmacContext->keyLen == pCryptoInterface->hashBlockLen );
 
-    /* If the key is less than the hash block size, append padding
-     * with zero valued bytes to make it block-sized. */
-    if( pHmacContext->keyLen < pCryptoInterface->hashBlockLen )
-    {
-        /* Zero pad to the right so that the key has the same size as the block size. */
-        ( void ) memset( ( void * ) ( pHmacContext->key + pHmacContext->keyLen ),
-                         0,
-                         pCryptoInterface->hashBlockLen - pHmacContext->keyLen );
-    }
-
-    /* Derive the inner HMAC key by XOR'ng the key with inner pad byte. */
+    /* Derive the inner HMAC key by XORing the key with inner pad byte. */
     for( i = 0U; i < pCryptoInterface->hashBlockLen; i++ )
     {
         /* XOR the key with the ipad. */
@@ -2376,12 +2393,12 @@ static int32_t hmacFinal( HmacContext_t * pHmacContext,
     if( returnStatus == 0 )
     {
         /* Create the outer-padded key by retrieving the original key from
-         * the inner-padded key then XOR with opad. XOR is associative,
-         * so one way to do this is by performing XOR on each byte of the
-         * inner-padded key with (0x36 ^ 0x5c) = (ipad ^ opad) = 0x6a.  */
+         * the inner-padded key (by XORing with ipad byte) and then XOR with opad
+         * to generate the outer-padded key. As XOR is associative, one way to do
+         * this is by performing XOR on each byte of the inner-padded key (ipad ^ opad).  */
         for( i = 0U; i < pCryptoInterface->hashBlockLen; i++ )
         {
-            pHmacContext->key[ i ] ^= 0x6aU;
+            pHmacContext->key[ i ] ^= ( HMAC_INNER_PAD_BYTE ^ HMAC_OUTER_PAD_BYTE );
         }
 
         returnStatus = pCryptoInterface->hashInit( pCryptoInterface->pHashContext );
@@ -2466,7 +2483,10 @@ static int32_t completeHmac( HmacContext_t * pHmacContext,
     assert( pOutput != NULL );
     assert( outputLen >= pCryptoInterface->hashDigestLen );
 
-    returnStatus = addKeyToHMAC( pHmacContext, pKey, keyLen, false );
+    returnStatus = hmacAddKey( pHmacContext,
+                               pKey,
+                               keyLen,
+                               false /* Not a key prefix. */ );
 
     if( returnStatus == 0 )
     {
@@ -2789,10 +2809,10 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
         /* Fill the key prefix, "AWS4" in the HMAC context cache.
          * The prefix is part of the key for the first round of HMAC operation:
          * HMAC("AWS4" + SecretKey, Date) */
-        hmacStatus = addKeyToHMAC( pHmacContext,
-                                   SIGV4_HMAC_SIGNING_KEY_PREFIX,
-                                   SIGV4_HMAC_SIGNING_KEY_PREFIX_LEN,
-                                   true );
+        hmacStatus = hmacAddKey( pHmacContext,
+                                 SIGV4_HMAC_SIGNING_KEY_PREFIX,
+                                 SIGV4_HMAC_SIGNING_KEY_PREFIX_LEN,
+                                 true /* Is key prefix. */ );
         assert( hmacStatus == 0 );
     }
 
@@ -2971,7 +2991,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
         authPrefixLen = *authBufLen;
 
         /* Default arguments. */
-        if( ( pParams->pAlgorithm == NULL ) || ( pParams->algorithmLen == 0 ) )
+        if( ( pParams->pAlgorithm == NULL ) || ( pParams->algorithmLen == 0U ) )
         {
             /* The default algorithm is AWS4-HMAC-SHA256. */
             pAlgorithm = SIGV4_AWS4_HMAC_SHA256;
