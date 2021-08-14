@@ -96,6 +96,9 @@ void harness()
         pSigV4Params->pService = malloc( pSigV4Params->serviceLen );
         pSigV4Params->pAlgorithm = malloc( pSigV4Params->algorithmLen );
 
+        /* The ISO date has a fixed length. */
+        pSigV4Params->pDateIso8601 = malloc( SIGV4_ISO_STRING_LEN );
+
         /* Set other structs within SigV4Parameters_t. */
         pSigV4Params->pCredentials = pCredentials;
         pSigV4Params->pCryptoInterface = pCryptoInterface;
