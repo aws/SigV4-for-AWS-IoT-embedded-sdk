@@ -35,6 +35,27 @@
 #ifndef SIGV4_CONFIG_DEFAULTS_H_
 #define SIGV4_CONFIG_DEFAULTS_H_
 
+/* The macro definition for SIGV4_DO_NOT_USE_CUSTOM_CONFIG is for Doxygen
+ * documentation only. */
+
+/**
+ * @brief Define this macro to build the AWS IoT SigV4 Library without the
+ * custom config file sigv4_config.h.
+ *
+ * Without the custom config, the the AWS IoT SigV4 Library builds with default
+ * values of config macros defined in the sigv4_config_defaults.h file.
+ *
+ * If a custom config file is provided, then
+ * SIGV4_DO_NOT_USE_CUSTOM_CONFIG must not be defined.
+ *
+ * <b>Default value</b>: SIGV4_DO_NOT_USE_CUSTOM_CONFIG is
+ * <b>not</b> defined by default and the library expects a
+ * sigv4_config.h file.
+ */
+#ifdef DOXYGEN
+    #define SIGV4_DO_NOT_USE_CUSTOM_CONFIG
+#endif
+
 /**
  * @brief Macro defining the size of the internal buffer used for incremental
  * canonicalization and hashing.

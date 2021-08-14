@@ -1,14 +1,14 @@
 /**
 @mainpage Overview
 @anchor sigv4
-@brief AWS Iot SigV4 Utility
+@brief AWS IoT SigV4 Library
 
-<p>
-The AWS IoT SigV4 Library is a standalone utility for generating a signature and
-authorization header according to the specifications of the AWS Signature Version 4
-signing process. This utility is an optional addition to applications sending direct
-HTTP requests to AWS services requiring SigV4 authentication. The library is written in C and designed to be compliant with ISO C90 and MISRA C. It has proven safe memory use.
-</p>
+The AWS IoT SigV4 Library is a standalone library for generating signatures
+and authorization headers according to the specifications of the AWS Signature
+Version 4 signing process. This library aids applications in sending direct
+HTTP requests to AWS services requiring SigV4 authentication. The library is
+written in C and designed to be compliant with ISO C90 and MISRA C and has no
+dependencies on any additional libraries other than the standard C library.
 
 @section sigv4_memory_requirements Memory Requirements
 @brief Memory requirements of the SigV4 Utility library.
@@ -28,15 +28,43 @@ local variables on the stack.
 
 <p>
 The SIGV4 library is designed to be compliant with ISO C90 and MISRA C:2012.
-All functions are written to have minimal complexity. Unit tests and CBMC proofs
-are written to cover every path of execution and achieve 100% branch coverage.
+All functions are written to have low complexity scores. Unit tests and CBMC
+proofs are written to cover every path of execution and achieve 100% branch
+coverage.
 </p>
 
 */
 
 /**
+@page sigv4_config Configurations
+@brief Configurations of the AWS IoT SigV4 Library.
+<!-- @par configpagestyle allows the @section titles to be styled according to
+     style.css -->
+@par configpagestyle
+
+Configuration settings are C pre-processor constants. They can be set with a
+`\#define` in the config file (`sigv4_config.h`) or by using a
+compiler option such as -D in gcc.
+
+@section SIGV4_DO_NOT_USE_CUSTOM_CONFIG
+@copydoc SIGV4_DO_NOT_USE_CUSTOM_CONFIG
+
+@section sigv4_logerror LogError
+@copydoc LogError
+
+@section sigv4_logwarn LogWarn
+@copydoc LogWarn
+
+@section sigv4_loginfo LogInfo
+@copydoc LogInfo
+
+@section sigv4_logdebug LogDebug
+@copydoc LogDebug
+*/
+
+/**
 @page sigv4_functions Functions
-@brief Primary functions of the Sigv4 library:<br><br>
+@brief Primary functions of the AWS IoT SigV4 library:<br><br>
 @subpage sigV4_generateHTTPAuthorization_function <br>
 @subpage sigV4_awsIotDateToIso8601_function <br>
 
