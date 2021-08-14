@@ -1283,7 +1283,6 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         assert( pUri != NULL );
         assert( pCanonicalURI != NULL );
         assert( canonicalURILen != NULL );
-        assert( *canonicalURILen > 0U );
 
         bufferLen = *canonicalURILen;
 
@@ -1718,6 +1717,8 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         assert( pHeaders != NULL );
         assert( canonicalRequest != NULL );
         assert( canonicalRequest->pBufCur != NULL );
+        assert( pSignedHeaders != NULL );
+        assert( pSignedHeadersLen != NULL );
 
         /* Parsing header string to extract key and value. */
         sigV4Status = parseHeaderKeyValueEntries( pHeaders,
@@ -2028,7 +2029,10 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         assert( pCanonicalContext != NULL );
         assert( pCanonicalContext->pBufCur != NULL );
 
-        returnStatus = setQueryStringFieldsAndValues( pQuery, queryLen, &numberOfParameters, pCanonicalContext );
+        if( pQuery != NULL )
+        {
+            returnStatus = setQueryStringFieldsAndValues( pQuery, queryLen, &numberOfParameters, pCanonicalContext );
+        }
 
         if( ( returnStatus == SigV4Success ) && ( numberOfParameters > 0U ) )
         {
@@ -2445,7 +2449,7 @@ static SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
 {
     SigV4Status_t returnStatus = SigV4Success;
 
-    assert( ( pLine != NULL ) && ( lineLen > 0 ) );
+    assert( pLine != NULL );
     assert( ( pCanonicalContext != NULL ) && ( pCanonicalContext->pBufCur != NULL ) );
 
     /* Make sure that there is space for the Method and the newline character.*/
@@ -2662,7 +2666,8 @@ static SigV4Status_t generateCanonicalRequestUntilHeaders( const SigV4Parameters
     if( returnStatus == SigV4Success )
     {
         /* Write the query to the canonical request. */
-        if( FLAG_IS_SET( pParams->pHttpParameters->flags, SIGV4_HTTP_QUERY_IS_CANONICAL_FLAG ) )
+        if( FLAG_IS_SET( pParams->pHttpParameters->flags, SIGV4_HTTP_QUERY_IS_CANONICAL_FLAG ) &&
+            ( pParams->pHttpParameters->pQuery != NULL ) )
         {
             /* HTTP query is already canonicalized, so just write it to the buffer as is. */
             returnStatus = writeLineToCanonicalRequest( pParams->pHttpParameters->pQuery,
@@ -2711,7 +2716,7 @@ static SigV4Status_t generateAuthorizationValuePrefix( const SigV4Parameters_t *
     assert( pSignedHeaders != NULL );
     assert( signedHeadersLen > 0 );
     assert( pAuthBuf != NULL );
-    assert( ( pAuthPrefixLen != NULL ) && ( *pAuthPrefixLen > 0 ) );
+    assert( pAuthPrefixLen != NULL );
 
     /* Since the signed headers are required to be a part of final Authorization header value,
      * we copy the signed headers onto the auth buffer before continuing to generate the signature
