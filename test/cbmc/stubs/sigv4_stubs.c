@@ -134,7 +134,6 @@ SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
 {
     SigV4Status_t ret = SigV4InsufficientMemory;
 
-    assert( pLine != NULL );
     assert( ( pCanonicalContext != NULL ) && ( pCanonicalContext->pBufCur != NULL ) );
 
     if( pCanonicalContext->bufRemaining >= ( lineLen + 1U ) )
@@ -158,10 +157,63 @@ SigV4Status_t encodeURI( const char * pUri,
     assert( pUri != NULL );
     assert( pCanonicalURI != NULL );
     assert( canonicalURILen != NULL );
-    assert( *canonicalURILen > 0U );
 
-    if(nondet_bool())
+    if( nondet_bool() )
     {
+        returnStatus = SigV4Success;
+    }
+    else
+    {
+        returnStatus = SigV4InsufficientMemory;
+    }
+
+    return returnStatus;
+}
+
+SigV4Status_t generateCanonicalQuery( const char * pQuery,
+                                      size_t queryLen,
+                                      CanonicalContext_t * pCanonicalContext )
+{
+    SigV4Status_t returnStatus = SigV4InsufficientMemory;
+
+    assert( ( pCanonicalContext != NULL ) && ( pCanonicalContext->pBufCur != NULL ) );
+
+    if( nondet_bool() )
+    {
+        returnStatus = SigV4Success;
+    }
+    else
+    {
+        returnStatus = SigV4InsufficientMemory;
+    }
+
+    return returnStatus;
+}
+
+SigV4Status_t generateCanonicalAndSignedHeaders( const char * pHeaders,
+                                                 size_t headersLen,
+                                                 uint32_t flags,
+                                                 CanonicalContext_t * pCanonicalContext,
+                                                 char ** pSignedHeaders,
+                                                 size_t * pSignedHeadersLen )
+{
+    SigV4Status_t returnStatus = SigV4InsufficientMemory;
+
+    assert( pHeaders != NULL );
+    assert( pCanonicalContext != NULL );
+    assert( pCanonicalContext->pBufCur != NULL );
+    assert( pSignedHeaders != NULL );
+    assert( pSignedHeadersLen != NULL );
+
+    if( nondet_bool() )
+    {
+        size_t headersLen, startOfHeaders;
+        char * pHeaders = ( char * ) pCanonicalContext->pBufProcessing;
+        __CPROVER_assume( headersLen > 0U &&
+                          startOfHeaders >= 0U &&
+                          ( startOfHeaders + headersLen ) < ( size_t ) ( SIGV4_PROCESSING_BUFFER_LENGTH - pCanonicalContext->bufRemaining ) );
+        *pSignedHeadersLen = headersLen;
+        *pSignedHeaders = pHeaders + startOfHeaders;
         returnStatus = SigV4Success;
     }
     else

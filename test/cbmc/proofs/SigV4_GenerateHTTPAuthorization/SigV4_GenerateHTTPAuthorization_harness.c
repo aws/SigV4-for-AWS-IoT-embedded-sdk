@@ -50,6 +50,8 @@ void harness()
     /* This property applies to all hash functions. */
     if( pCryptoInterface != NULL )
     {
+        __CPROVER_assume( 0U < pCryptoInterface->hashBlockLen );
+        __CPROVER_assume( 0U < pCryptoInterface->hashDigestLen );
         __CPROVER_assume( pCryptoInterface->hashBlockLen <= pCryptoInterface->hashDigestLen );
         pCryptoInterface->hashInit = HashInitStub;
         pCryptoInterface->hashUpdate = HashUpdateStub;
@@ -59,7 +61,7 @@ void harness()
     if( pCredentials != NULL )
     {
         /* Make size assumptions for string-like types. */
-        __CPROVER_assume( pCredentials->accessKeyIdLen < CBMC_MAX_OBJECT_SIZE );
+        __CPROVER_assume( 16 <= pCredentials->accessKeyIdLen && pCredentials->accessKeyIdLen <= 128 );
         __CPROVER_assume( pCredentials->expirationLen < CBMC_MAX_OBJECT_SIZE );
         __CPROVER_assume( pCredentials->secretAccessKeyLen < CBMC_MAX_OBJECT_SIZE );
         __CPROVER_assume( pCredentials->securityTokenLen < CBMC_MAX_OBJECT_SIZE );
@@ -87,9 +89,9 @@ void harness()
     if( pSigV4Params != NULL )
     {
         /* Make size assumptions for string-like types. */
-        __CPROVER_assume( pSigV4Params->regionLen < CBMC_MAX_OBJECT_SIZE );
-        __CPROVER_assume( pSigV4Params->serviceLen < CBMC_MAX_OBJECT_SIZE );
-        __CPROVER_assume( pSigV4Params->algorithmLen < CBMC_MAX_OBJECT_SIZE );
+        __CPROVER_assume( pSigV4Params->regionLen < 30 );
+        __CPROVER_assume( pSigV4Params->serviceLen < 30 );
+        __CPROVER_assume( pSigV4Params->algorithmLen < 30 );
         pSigV4Params->pRegion = malloc( pSigV4Params->regionLen );
         pSigV4Params->pService = malloc( pSigV4Params->serviceLen );
         pSigV4Params->pAlgorithm = malloc( pSigV4Params->algorithmLen );
@@ -103,15 +105,18 @@ void harness()
     authBufLen = malloc( sizeof( size_t ) );
     signatureLen = malloc( sizeof( size_t ) );
 
-    if( ( authBufLen != NULL ) && ( signatureLen != NULL ) )
+    if( authBufLen != NULL )
     {
         __CPROVER_assume( *authBufLen < CBMC_MAX_OBJECT_SIZE );
-        __CPROVER_assume( *signatureLen < CBMC_MAX_OBJECT_SIZE );
-
         pAuthBuf = malloc( *authBufLen );
+    }
+
+    if( signatureLen != NULL )
+    {
+        __CPROVER_assume( *signatureLen < CBMC_MAX_OBJECT_SIZE );
         pSignature = malloc( *signatureLen );
     }
 
     status = SigV4_GenerateHTTPAuthorization( pSigV4Params, pAuthBuf, authBufLen, pSignature, signatureLen );
-    __CPROVER_assert( status == SigV4InvalidParameter || status == SigV4Success || status == SigV4ISOFormattingError, "This is not a valid SigV4 return status" );
+    __CPROVER_assert( status == SigV4InvalidParameter || status == SigV4Success || status == SigV4HashError || status == SigV4InsufficientMemory || status == SigV4MaxHeaderPairCountExceeded || status == SigV4MaxQueryPairCountExceeded, "This is not a valid SigV4 return status" );
 }

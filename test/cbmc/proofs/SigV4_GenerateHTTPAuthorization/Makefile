@@ -25,7 +25,6 @@ REMOVE_FUNCTION_BODY += memmove
 REMOVE_FUNCTION_BODY += maskrune
 UNWINDSET += setQueryStringFieldsAndValues.0:$(MAX_QUERY_LEN)
 UNWINDSET += parseHeaderKeyValueEntries.0:$(MAX_HEADERS_LEN)
-UNWINDSET += __CPROVER_file_local_sigv4_c_encodeURI.0:$(MAX_ENCODED_PATH_LEN)
 UNWINDSET += strncmp.0:$(S3_SERVICE_LEN)
 
 PROOF_SOURCES += $(PROOFDIR)/$(HARNESS_FILE).c
@@ -38,4 +37,4 @@ include ../Makefile-json.common
 
 # Substitution command to pass to sed for patching sigv4.c. The
 # characters " and # must be escaped with backslash.
-SIGV4_SED_EXPR = 1s/^/\#include \"sigv4_stubs.h\" /; s/^static //; s/SigV4Status_t (scanValue|encodeURI)\b/&_/
+SIGV4_SED_EXPR = 1s/^/\#include \"sigv4_stubs.h\" /; s/^static //; s/SigV4Status_t (scanValue|encodeURI|generateCanonicalQuery|generateCanonicalAndSignedHeaders)\b/&_/
