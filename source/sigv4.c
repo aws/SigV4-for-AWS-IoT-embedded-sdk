@@ -34,6 +34,7 @@
 
 #include "sigv4.h"
 #include "sigv4_internal.h"
+#include "sigv4_quicksort.h"
 
 /*-----------------------------------------------------------*/
 
@@ -109,10 +110,10 @@
  *
  * @return Returns a value less than 0 if @pFirstVal < @pSecondVal, or
  * a value greater than 0 if @pSecondVal < @pFirstVal. 0 is never returned in
- * order to provide stability to qSort() calls.
+ * order to provide stability to quickSort() calls.
  */
-    static int cmpHeaderField( const void * pFirstVal,
-                               const void * pSecondVal );
+    static int32_t cmpHeaderField( const void * pFirstVal,
+                                   const void * pSecondVal );
 
 #endif /* #if (SIGV4_USE_CANONICAL_SUPPORT == 1) */
 
@@ -1087,8 +1088,8 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
 
 #if ( SIGV4_USE_CANONICAL_SUPPORT == 1 )
 
-    static int cmpHeaderField( const void * pFirstVal,
-                               const void * pSecondVal )
+    static int32_t cmpHeaderField( const void * pFirstVal,
+                                   const void * pSecondVal )
     {
         const SigV4KeyValuePair_t * pFirst, * pSecond = NULL;
         size_t lenSmall = 0U;
@@ -1118,8 +1119,8 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
 
 /*-----------------------------------------------------------*/
 
-    static int cmpQueryFieldValue( const void * pFirstVal,
-                                   const void * pSecondVal )
+    static int32_t cmpQueryFieldValue( const void * pFirstVal,
+                                       const void * pSecondVal )
     {
         const SigV4KeyValuePair_t * pFirst, * pSecond = NULL;
         size_t lenSmall = 0U;
@@ -1704,7 +1705,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         if( ( sigV4Status == SigV4Success ) && !FLAG_IS_SET( flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) )
         {
             /* Sorting headers based on keys. */
-            qsort( canonicalRequest->pHeadersLoc, noOfHeaders, sizeof( SigV4KeyValuePair_t ), cmpHeaderField );
+            quickSort( canonicalRequest->pHeadersLoc, noOfHeaders, sizeof( SigV4KeyValuePair_t ), cmpHeaderField );
 
             /* If the headers are canonicalized, we will copy them directly into the buffer as they do not
              * need processing, else we need to call the following function. */
@@ -1985,7 +1986,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         {
             /* Sort the parameter names by character code point in ascending order.
              * Parameters with duplicate names should be sorted by value. */
-            qsort( pCanonicalContext->pQueryLoc, numberOfParameters, sizeof( SigV4KeyValuePair_t ), cmpQueryFieldValue );
+            quickSort( pCanonicalContext->pQueryLoc, numberOfParameters, sizeof( SigV4KeyValuePair_t ), cmpQueryFieldValue );
 
             /* URI-encode each parameter name and value according to the following rules specified for SigV4:
              *  - Do not URI-encode any of the unreserved characters that RFC 3986 defines:
