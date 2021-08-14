@@ -1220,7 +1220,38 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
     static bool isAllowedChar( char c,
                                bool encodeSlash )
     {
-        return( ( isalnum( c ) != 0U ) || ( c == '-' ) || ( c == '_' ) || ( c == '.' ) || ( c == '~' ) || ( ( c == '/' ) && ( encodeSlash == false ) ) );
+        bool ret = false;
+
+        /* Lowercase. */
+        if( ( c >= 'a' ) && ( c <= 'z' ) )
+        {
+            ret = true;
+        }
+        /* Uppercase. */
+        else if( ( c >= 'A' ) && ( c <= 'Z' ) )
+        {
+            ret = true;
+        }
+        /* Numeric. */
+        else if( ( c >= '0' ) && ( c <= '9' ) )
+        {
+            ret = true;
+        }
+        /* Other characters. */
+        else if( ( c == '-' ) || ( c == '_' ) || ( c == '.' ) || ( c == '~' ) )
+        {
+            ret = true;
+        }
+        else if( ( c == '/' ) )
+        {
+            ret = !encodeSlash;
+        }
+        else
+        {
+            ret = false;
+        }
+
+        return ret;
     }
 
 /*-----------------------------------------------------------*/
@@ -1382,7 +1413,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         assert( ( value != NULL ) && ( index < valLen ) );
 
         /* Only trim spaces. */
-        if( isspace( value[ index ] ) != 0U )
+        if( isWhitespace( value[ index ] ) )
         {
             /* The last character is a trailing space. */
             if( ( index + 1U ) == valLen )
@@ -1390,7 +1421,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                 ret = true;
             }
             /* Trim if the next character is also a space. */
-            else if( isspace( value[ index + 1U ] ) != 0U )
+            else if( isWhitespace( value[ index + 1U ] ) )
             {
                 ret = true;
             }

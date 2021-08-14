@@ -27,8 +27,10 @@ const
 constness
 copydoc
 css
+ctype
 currentparameter
 datalen
+datatracker
 datelen
 dd
 deconstructed
@@ -76,6 +78,7 @@ inputlen
 iot
 ipad
 iso
+isspace
 jan
 january
 keylen
