@@ -9,7 +9,7 @@ Deviations from the MISRA standard are listed below:
 | Deviation | Category | Justification |
 | :-: | :-: | :-: |
 | Directive 4.9 | Advisory | Allow inclusion of function like macros. Asserts, logging, and topic string macros use function like macros. |
-| Rule 2.5 | Advisory | Allow unused macros. Macros defined for topic strings are not used by the library, but are part of the API. |
+| Rule 2.5 | Advisory | Allow unused macros. |
 | Rule 3.1 | Required | Allow nested comments. C++ style `//` comments are used in example code within Doxygen documentation blocks. |
 
 ### Flagged by Coverity
