@@ -82,4 +82,4 @@ doxygen docs/doxygen/config.doxyfile
 ```
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for information on contributing.
+See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for information on contributing.
