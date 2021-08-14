@@ -1,6 +1,6 @@
 # MISRA Compliance
 
-The Fleet Provisioning Client Library files conform to the
+The AWS IoT SigV4 Library files conform to the
 [MISRA C:2012](https://www.misra.org.uk)
 guidelines, with some noted exceptions. Compliance is checked with Coverity static analysis.
 Deviations from the MISRA standard are listed below:
