@@ -29,6 +29,8 @@
 #ifndef SIGV4_STUBS_H_
 #define SIGV4_STUBS_H_
 
+#include <stdbool.h>
+
 #include <sigv4.h>
 #include <sigv4_internal.h>
 
@@ -45,5 +47,12 @@ SigV4Status_t scanValue( const char * pDate,
 SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
                                            size_t lineLen,
                                            CanonicalContext_t * pCanonicalContext );
+
+SigV4Status_t encodeURI( const char * pUri,
+                         size_t uriLen,
+                         char * pCanonicalURI,
+                         size_t * canonicalURILen,
+                         bool encodeSlash,
+                         bool doubleEncodeEquals );
 
 #endif /* ifndef SIGV4_STUBS_H_ */

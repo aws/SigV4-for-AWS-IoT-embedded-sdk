@@ -134,15 +134,40 @@ SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
 {
     SigV4Status_t ret = SigV4InsufficientMemory;
 
-    assert( ( pLine != NULL ) && ( lineLen > 0 ) );
+    assert( pLine != NULL );
     assert( ( pCanonicalContext != NULL ) && ( pCanonicalContext->pBufCur != NULL ) );
 
     if( pCanonicalContext->bufRemaining >= ( lineLen + 1U ) )
     {
-        assert( __CPROVER_r_ok( pLine, lineLen ) );
         assert( __CPROVER_w_ok( pCanonicalContext->pBufCur, ( lineLen + 1U ) ) );
         ret = SigV4Success;
     }
 
     return ret;
+}
+
+SigV4Status_t encodeURI( const char * pUri,
+                         size_t uriLen,
+                         char * pCanonicalURI,
+                         size_t * canonicalURILen,
+                         bool encodeSlash,
+                         bool doubleEncodeEquals )
+{
+    SigV4Status_t returnStatus = SigV4Success;
+
+    assert( pUri != NULL );
+    assert( pCanonicalURI != NULL );
+    assert( canonicalURILen != NULL );
+    assert( *canonicalURILen > 0U );
+
+    if(nondet_bool())
+    {
+        returnStatus = SigV4Success;
+    }
+    else
+    {
+        returnStatus = SigV4InsufficientMemory;
+    }
+
+    return returnStatus;
 }
