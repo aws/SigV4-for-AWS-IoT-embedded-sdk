@@ -55,4 +55,15 @@ SigV4Status_t encodeURI( const char * pUri,
                          bool encodeSlash,
                          bool doubleEncodeEquals );
 
+SigV4Status_t generateCanonicalQuery( const char * pQuery,
+                                      size_t queryLen,
+                                      CanonicalContext_t * pCanonicalContext );
+
+SigV4Status_t generateCanonicalAndSignedHeaders( const char * pHeaders,
+                                                 size_t headersLen,
+                                                 uint32_t flags,
+                                                 CanonicalContext_t * canonicalRequest,
+                                                 char ** pSignedHeaders,
+                                                 size_t * pSignedHeadersLen );
+
 #endif /* ifndef SIGV4_STUBS_H_ */

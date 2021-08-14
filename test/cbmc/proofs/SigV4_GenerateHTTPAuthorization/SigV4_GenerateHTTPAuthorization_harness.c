@@ -50,12 +50,12 @@ void harness()
     /* This property applies to all hash functions. */
     if( pCryptoInterface != NULL )
     {
-        __CPROVER_assume( 0U < pCryptoInterface->hashBlockLen );
-        __CPROVER_assume( 0U < pCryptoInterface->hashDigestLen );
+        __CPROVER_assume( 0U < pCryptoInterface->hashBlockLen && pCryptoInterface->hashBlockLen <= MAX_HASH_BLOCK_LEN );
+        __CPROVER_assume( 0U < pCryptoInterface->hashDigestLen && pCryptoInterface->hashDigestLen <= MAX_HASH_DIGEST_LEN );
         __CPROVER_assume( pCryptoInterface->hashBlockLen <= pCryptoInterface->hashDigestLen );
-        pCryptoInterface->hashInit = HashInitStub;
-        pCryptoInterface->hashUpdate = HashUpdateStub;
-        pCryptoInterface->hashFinal = HashFinalStub;
+        pCryptoInterface->hashInit = nondet_bool() ? NULL : HashInitStub;
+        pCryptoInterface->hashUpdate = nondet_bool() ? NULL : HashUpdateStub;
+        pCryptoInterface->hashFinal = nondet_bool() ? NULL : HashFinalStub;
     }
 
     if( pCredentials != NULL )
