@@ -207,13 +207,16 @@ SigV4Status_t generateCanonicalAndSignedHeaders( const char * pHeaders,
 
     if( nondet_bool() )
     {
-        size_t headersLen, startOfHeaders;
-        char * pHeaders = ( char * ) pCanonicalContext->pBufProcessing;
-        __CPROVER_assume( headersLen > 0U &&
-                          startOfHeaders >= 0U &&
-                          ( startOfHeaders + headersLen ) < ( size_t ) ( SIGV4_PROCESSING_BUFFER_LENGTH - pCanonicalContext->bufRemaining ) );
+        size_t headersLen, headerOffset;
+        char * pHeaders = NULL;
+        __CPROVER_assume( pCanonicalContext->bufRemaining < SIGV4_PROCESSING_BUFFER_LENGTH );
+        size_t bytesConsumed = SIGV4_PROCESSING_BUFFER_LENGTH - pCanonicalContext->bufRemaining;
+        __CPROVER_assume( headerOffset < bytesConsumed );
+        __CPROVER_assume( headersLen > 0U && headersLen <= bytesConsumed - headerOffset );
+        pHeaders = ( char * ) pCanonicalContext->pBufProcessing + headerOffset;
+
         *pSignedHeadersLen = headersLen;
-        *pSignedHeaders = pHeaders + startOfHeaders;
+        *pSignedHeaders = pHeaders;
         returnStatus = SigV4Success;
     }
     else

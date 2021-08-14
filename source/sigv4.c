@@ -2891,7 +2891,15 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
     }
     else if( hmacStatus != 0 )
     {
-        returnStatus = SigV4HashError;
+        if( hmacStatus == 0 )
+        {
+            pSigningKey->pData = pSigningKeyStart;
+            pSigningKey->dataLen = pSigV4Params->pCryptoInterface->hashDigestLen;
+        }
+        else
+        {
+            returnStatus = SigV4HashError;
+        }
     }
     else
     {

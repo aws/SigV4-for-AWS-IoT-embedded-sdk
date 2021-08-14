@@ -70,7 +70,7 @@
  * <b>Default value:</b> `1024`
  */
 #ifndef SIGV4_PROCESSING_BUFFER_LENGTH
-    #define SIGV4_PROCESSING_BUFFER_LENGTH    50U
+    #define SIGV4_PROCESSING_BUFFER_LENGTH    48U
 #endif
 
 /**

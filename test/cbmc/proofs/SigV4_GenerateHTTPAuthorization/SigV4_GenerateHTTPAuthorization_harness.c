@@ -38,8 +38,8 @@ void harness()
     SigV4Credentials_t * pCredentials;
     char * pAuthBuf;
     size_t * authBufLen;
-    char ** pSignature;
-    size_t * signatureLen;
+    char * pSignature;
+    size_t signatureLen;
     SigV4Status_t status;
 
     pHttpParams = malloc( sizeof( SigV4HttpParameters_t ) );
@@ -52,7 +52,7 @@ void harness()
     {
         __CPROVER_assume( 0U < pCryptoInterface->hashBlockLen && pCryptoInterface->hashBlockLen <= MAX_HASH_BLOCK_LEN );
         __CPROVER_assume( 0U < pCryptoInterface->hashDigestLen && pCryptoInterface->hashDigestLen <= MAX_HASH_DIGEST_LEN );
-        __CPROVER_assume( pCryptoInterface->hashBlockLen <= pCryptoInterface->hashDigestLen );
+        __CPROVER_assume( pCryptoInterface->hashDigestLen <= pCryptoInterface->hashBlockLen );
         pCryptoInterface->hashInit = nondet_bool() ? NULL : HashInitStub;
         pCryptoInterface->hashUpdate = nondet_bool() ? NULL : HashUpdateStub;
         pCryptoInterface->hashFinal = nondet_bool() ? NULL : HashFinalStub;
@@ -106,7 +106,7 @@ void harness()
     }
 
     authBufLen = malloc( sizeof( size_t ) );
-    signatureLen = malloc( sizeof( size_t ) );
+    /*signatureLen = malloc( sizeof( size_t ) ); */
 
     if( authBufLen != NULL )
     {
@@ -114,12 +114,20 @@ void harness()
         pAuthBuf = malloc( *authBufLen );
     }
 
-    if( signatureLen != NULL )
-    {
-        __CPROVER_assume( *signatureLen < CBMC_MAX_OBJECT_SIZE );
-        pSignature = malloc( *signatureLen );
-    }
-
-    status = SigV4_GenerateHTTPAuthorization( pSigV4Params, pAuthBuf, authBufLen, pSignature, signatureLen );
+    status = SigV4_GenerateHTTPAuthorization( pSigV4Params,
+                                              pAuthBuf,
+                                              authBufLen,
+                                              nondet_bool() ? NULL : &pSignature,
+                                              nondet_bool() ? NULL : &signatureLen );
     __CPROVER_assert( status == SigV4InvalidParameter || status == SigV4Success || status == SigV4HashError || status == SigV4InsufficientMemory || status == SigV4MaxHeaderPairCountExceeded || status == SigV4MaxQueryPairCountExceeded, "This is not a valid SigV4 return status" );
+
+    if( status == SigV4Success )
+    {
+        /* The signature must start at a location within pAuthBuf and
+         * should not end past the length of pAuthBuf. */
+        __CPROVER_assert( pAuthBuf <= pSignature,
+                          "Signature does not start at a location within pAuthBuf." );
+        __CPROVER_assert( pSignature + signatureLen <= pAuthBuf + *authBufLen,
+                          "Signature ends past the length of pAuthBuf." );
+    }
 }
