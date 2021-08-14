@@ -23,18 +23,26 @@ chunked
 com
 completehashandhexencode
 config
+configpagestyle
 const
 constness
 copydoc
+<<<<<<< HEAD
 crypto
+=======
+css
+ctype
+>>>>>>> origin/main
 currentparameter
 datalen
+datatracker
 datelen
 dd
 deconstructed
 defgroup
 doesn
 doubleencodeequals
+doxygen
 encodeslash
 encodetwice
 endif
@@ -44,7 +52,11 @@ failable
 feb
 formatchar
 formatlen
+<<<<<<< HEAD
 generatecanonicaluri
+=======
+gcc
+>>>>>>> origin/main
 github
 gmt
 gr
@@ -80,6 +92,8 @@ inputlen
 iot
 ipad
 iso
+itemsize
+isspace
 jan
 january
 keylen
@@ -88,9 +102,14 @@ leninput
 lentoread
 lf
 linelen
+logdebug
+logerror
+loginfo
+logwarn
 lv
 maclen
 mainpage
+md
 min
 misra
 mmm
@@ -98,7 +117,11 @@ mon
 monthsperday
 noninfringement
 nullterminate
+<<<<<<< HEAD
 oom
+=======
+numitems
+>>>>>>> origin/main
 opad
 openssl
 ored
@@ -107,7 +130,11 @@ outputlen
 paccesskeyid
 palgorithm
 param
+<<<<<<< HEAD
 paramater
+=======
+parray
+>>>>>>> origin/main
 pathlen
 pauthbuf
 pauthprefixlen
@@ -127,6 +154,7 @@ pdata
 pdate
 pdateelements
 pexpiration
+pfirstitem
 pfirstval
 pformat
 phashcontext
@@ -155,6 +183,8 @@ precanonical
 precanonicalized
 pregion
 printf
+pregion
+pseconditem
 psecondval
 psecretaccesskey
 psecuritytoken
@@ -166,7 +196,7 @@ psigningkey
 ptestformatfailure
 puri
 pvalue
-qsort
+quicksort
 querylen
 rande
 readloc
@@ -196,6 +226,7 @@ stringtosign
 struct
 structs
 sts
+subarray
 subfolder
 sublicense
 thu

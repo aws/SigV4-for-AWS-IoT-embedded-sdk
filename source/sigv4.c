@@ -34,6 +34,7 @@
 
 #include "sigv4.h"
 #include "sigv4_internal.h"
+#include "sigv4_quicksort.h"
 
 /*-----------------------------------------------------------*/
 
@@ -109,10 +110,10 @@
  *
  * @return Returns a value less than 0 if @pFirstVal < @pSecondVal, or
  * a value greater than 0 if @pSecondVal < @pFirstVal. 0 is never returned in
- * order to provide stability to qSort() calls.
+ * order to provide stability to quickSort() calls.
  */
-    static int cmpHeaderField( const void * pFirstVal,
-                               const void * pSecondVal );
+    static int32_t cmpHeaderField( const void * pFirstVal,
+                                   const void * pSecondVal );
 
 #endif /* #if (SIGV4_USE_CANONICAL_SUPPORT == 1) */
 
@@ -1088,8 +1089,8 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 
 #if ( SIGV4_USE_CANONICAL_SUPPORT == 1 )
 
-    static int cmpHeaderField( const void * pFirstVal,
-                               const void * pSecondVal )
+    static int32_t cmpHeaderField( const void * pFirstVal,
+                                   const void * pSecondVal )
     {
         const SigV4KeyValuePair_t * pFirst, * pSecond = NULL;
         size_t lenSmall = 0U;
@@ -1119,8 +1120,8 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 
 /*-----------------------------------------------------------*/
 
-    static int cmpQueryFieldValue( const void * pFirstVal,
-                                   const void * pSecondVal )
+    static int32_t cmpQueryFieldValue( const void * pFirstVal,
+                                       const void * pSecondVal )
     {
         const SigV4KeyValuePair_t * pFirst, * pSecond = NULL;
         size_t lenSmall = 0U;
@@ -1221,7 +1222,38 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
     static bool isAllowedChar( char c,
                                bool encodeSlash )
     {
-        return( ( isalnum( c ) != 0U ) || ( c == '-' ) || ( c == '_' ) || ( c == '.' ) || ( c == '~' ) || ( ( c == '/' ) && ( encodeSlash == false ) ) );
+        bool ret = false;
+
+        /* Lowercase. */
+        if( ( c >= 'a' ) && ( c <= 'z' ) )
+        {
+            ret = true;
+        }
+        /* Uppercase. */
+        else if( ( c >= 'A' ) && ( c <= 'Z' ) )
+        {
+            ret = true;
+        }
+        /* Numeric. */
+        else if( ( c >= '0' ) && ( c <= '9' ) )
+        {
+            ret = true;
+        }
+        /* Other characters. */
+        else if( ( c == '-' ) || ( c == '_' ) || ( c == '.' ) || ( c == '~' ) )
+        {
+            ret = true;
+        }
+        else if( ( c == '/' ) )
+        {
+            ret = !encodeSlash;
+        }
+        else
+        {
+            ret = false;
+        }
+
+        return ret;
     }
 
 /*-----------------------------------------------------------*/
@@ -1383,7 +1415,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         assert( ( value != NULL ) && ( index < valLen ) );
 
         /* Only trim spaces. */
-        if( isspace( value[ index ] ) != 0U )
+        if( isWhitespace( value[ index ] ) )
         {
             /* The last character is a trailing space. */
             if( ( index + 1U ) == valLen )
@@ -1391,7 +1423,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                 ret = true;
             }
             /* Trim if the next character is also a space. */
-            else if( isspace( value[ index + 1U ] ) != 0U )
+            else if( isWhitespace( value[ index + 1U ] ) )
             {
                 ret = true;
             }
@@ -1693,7 +1725,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             else
             {
                 /* Sorting headers based on keys. */
-                qsort( canonicalRequest->pHeadersLoc, noOfHeaders, sizeof( SigV4KeyValuePair_t ), cmpHeaderField );
+                quickSort( canonicalRequest->pHeadersLoc, noOfHeaders, sizeof( SigV4KeyValuePair_t ), cmpHeaderField );
 
                 /* If the headers are canonicalized, we will copy them directly into the buffer as they do not
                  * need processing, else we need to call the following function. */
@@ -1987,7 +2019,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         {
             /* Sort the parameter names by character code point in ascending order.
              * Parameters with duplicate names should be sorted by value. */
-            qsort( pCanonicalContext->pQueryLoc, numberOfParameters, sizeof( SigV4KeyValuePair_t ), cmpQueryFieldValue );
+            quickSort( pCanonicalContext->pQueryLoc, numberOfParameters, sizeof( SigV4KeyValuePair_t ), cmpQueryFieldValue );
 
             /* URI-encode each parameter name and value according to the following rules specified for SigV4:
              *  - Do not URI-encode any of the unreserved characters that RFC 3986 defines:

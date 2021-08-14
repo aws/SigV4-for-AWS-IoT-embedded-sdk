@@ -132,6 +132,16 @@
 #define FLAG_IS_SET( bits, flag )    ( ( ( bits ) & ( flag ) ) == ( flag ) )
 
 /**
+ * @brief A helper macro to determine if a character is whitespace.
+ * @note The ctype function isspace() returns true for the following characters:
+ * ` `, `\t`, `\n`, `\v`, `\f`, `\r`. However, according to RFC5234:
+ * https://datatracker.ietf.org/doc/html/rfc5234#appendix-B.1
+ * the only whitespace characters in an HTTP header are spaces and
+ * horizontal tabs.
+ */
+#define isWhitespace( c )            ( ( ( c ) == ' ' ) || ( ( c ) == '\t' ) )
+
+/**
  * @brief An aggregator representing the individually parsed elements of the
  * user-provided date parameter. This is used to verify the complete date
  * representation, and construct the final ISO 8601 string.
@@ -171,7 +181,7 @@ typedef struct SigV4ConstString
 /**
  * @brief A key-value pair data structure that allows for sorting of SigV4
  * string values using internal comparison functions, and provides additional
- * stability to qSort(), to comply with Misra rule 21.9.
+ * stability to quickSort(), to comply with Misra rule 21.9.
  */
 typedef struct SigV4KeyValuePair
 {
@@ -220,6 +230,5 @@ typedef struct HmacContext
      * HASH interface has been initialized. */
     bool isHashInitialized;
 } HmacContext_t;
-
 
 #endif /* ifndef SIGV4_INTERNAL_H_ */
