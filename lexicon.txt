@@ -5,6 +5,7 @@ addtogroup
 aggregator
 algorithmlen
 amz
+ansi
 api
 apr
 ascii
@@ -99,6 +100,7 @@ leninput
 lentoread
 lf
 linelen
+linux
 logdebug
 logerror
 loginfo
@@ -108,6 +110,8 @@ lv
 maclen
 mainpage
 md
+memcpy
+memmove
 min
 misra
 mmm

@@ -102,7 +102,6 @@ void harness()
     }
 
     authBufLen = malloc( sizeof( size_t ) );
-    /*signatureLen = malloc( sizeof( size_t ) ); */
 
     if( authBufLen != NULL )
     {

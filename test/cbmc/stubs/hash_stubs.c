@@ -32,6 +32,7 @@
 int32_t HashInitStub( void * pHashContext )
 {
     int32_t ret;
+
     return ret;
 }
 
@@ -40,6 +41,7 @@ int32_t HashUpdateStub( void * pHashContext,
                         size_t inputLen )
 {
     int32_t ret;
+
     return ret;
 }
 
@@ -48,5 +50,6 @@ int32_t HashFinalStub( void * pHashContext,
                        size_t inputLen )
 {
     int32_t ret;
+
     return ret;
 }

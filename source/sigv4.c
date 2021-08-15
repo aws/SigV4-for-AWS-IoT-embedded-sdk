@@ -638,7 +638,7 @@ static SigV4Status_t verifyParamsToGenerateAuthHeaderApi( const SigV4Parameters_
  * @param[out] algorithmLen The length of @p pAlgorithm.
  */
 static void assignDefaultArguments( const SigV4Parameters_t * pParams,
-                                    char ** pAlgorithm,
+                                    const char ** pAlgorithm,
                                     size_t * algorithmLen );
 
 /**
@@ -2179,7 +2179,7 @@ static SigV4Status_t verifyParamsToGenerateAuthHeaderApi( const SigV4Parameters_
 /*-----------------------------------------------------------*/
 
 static void assignDefaultArguments( const SigV4Parameters_t * pParams,
-                                    char ** pAlgorithm,
+                                    const char ** pAlgorithm,
                                     size_t * algorithmLen )
 {
     if( ( pParams->pAlgorithm == NULL ) || ( pParams->algorithmLen == 0 ) )

@@ -22,8 +22,8 @@
 
 /**
  * @file memmove.c
- * @brief Creates a stub for memmove so that the proof for
- * httpParserOnBodyCallback is not stuck in the Post-Processing Step.
+ * @brief Creates a stub for memmove so that it runs quickly
+ * when running CBMC for URI encoding functionality.
  */
 
 #include <string.h>
@@ -46,7 +46,7 @@
         __CPROVER_assert( ( n == 0 ) || __CPROVER_r_ok( src, n ), "read" );
         return dest;
     }
-#else
+#else /* if __has_builtin( __builtin___memmove_chk ) */
     void * memmove( void * dest,
                     const void * src,
                     size_t n )
