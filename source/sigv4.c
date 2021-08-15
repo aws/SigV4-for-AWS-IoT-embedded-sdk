@@ -2183,7 +2183,7 @@ static void assignDefaultArguments( const SigV4Parameters_t * pParams,
                                     const char ** pAlgorithm,
                                     size_t * algorithmLen )
 {
-    if( ( pParams->pAlgorithm == NULL ) || ( pParams->algorithmLen == 0 ) )
+    if( ( pParams->pAlgorithm == NULL ) || ( pParams->algorithmLen == 0U ) )
     {
         /* The default algorithm is AWS4-HMAC-SHA256. */
         *pAlgorithm = SIGV4_AWS4_HMAC_SHA256;
