@@ -628,8 +628,7 @@ static SigV4Status_t verifyParamsToGenerateAuthHeaderApi( const SigV4Parameters_
                                                           const size_t * signatureLen );
 
 /**
- * @brief Verify all authorization-related parameters passed to
- * #SigV4_GenerateHTTPAuthorization.
+ * @brief Assign default arguments based on parameters set in @p pParams.
  *
  * @param[in] pParams Complete SigV4 configurations passed by application.
  * @param[out] pAlgorithm The algorithm used for SigV4 authentication.
