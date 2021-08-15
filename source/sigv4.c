@@ -619,7 +619,7 @@ static SigV4Status_t parseDate( const char * pDate,
  * @param[in] authBufLen The user-supplied size value of @p pAuthBuf buffer.
  * @param[in] pSignature The user-supplied pointer memory to store starting location of
  * Signature in Authorization Buffer.
- * @param[in] signatureLen The user supplied pointer to store length of Signature.
+ * @param[in] signatureLen The user-supplied pointer to store length of Signature.
  *
  * @return #SigV4Success if successful, #SigV4InvalidParameter otherwise.
  */
@@ -1656,7 +1656,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             }
             /* Look for header value part of a header field entry for both canonicalized and non-canonicalized forms. */
             /* Non-canonicalized headers will have header values ending with "\r\n". */
-            else if( ( !keyFlag ) && !FLAG_IS_SET( flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( ( index + 1 ) < headersDataLen ) &&
+            else if( ( !keyFlag ) && !FLAG_IS_SET( flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( ( index + 1U ) < headersDataLen ) &&
                      ( 0 == strncmp( pCurrLoc, HTTP_REQUEST_LINE_ENDING, HTTP_REQUEST_LINE_ENDING_LEN ) ) )
             {
                 dataLen = pCurrLoc - pKeyOrValStartLoc;
