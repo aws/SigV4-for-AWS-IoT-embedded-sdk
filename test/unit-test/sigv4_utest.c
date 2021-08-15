@@ -748,8 +748,9 @@ void test_SigV4_GenerateAuthorization_Empty_Query()
     TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
                            &params, authBuf, &authBufLen, &signature, &signatureLen ) );
 
-    /* The query is NULL but length is greater than 0. */
-    params.pHttpParameters->pQuery = NULL;
+    /* The query is NULL, length is greater than 0, and the query is precanonicalized. */
+    params.pHttpParameters->flags = SIGV4_HTTP_QUERY_IS_CANONICAL_FLAG;
+    params.pHttpParameters->pQuery = NULL;  
     params.pHttpParameters->queryLen = 3U;
     TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
                            &params, authBuf, &authBufLen, &signature, &signatureLen ) );
