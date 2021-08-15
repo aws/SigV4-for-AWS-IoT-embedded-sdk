@@ -630,6 +630,34 @@ static SigV4Status_t verifyParamsToGenerateAuthHeaderApi( const SigV4Parameters_
                                                           const size_t * signatureLen );
 
 /**
+ * @brief Verify all authorization-related parameters passed to
+ * #SigV4_GenerateHTTPAuthorization.
+ *
+ * @param[in] pAuthBuf Buffer to hold the generated Authorization header value.
+ * @param[in] authBufLen The length of @p pAuthBuf
+ * @param[in] pSignature Location of the signature in the authorization string.
+ * @param[in] signatureLen The length of @p pSignature.
+ *
+ * @return #SigV4Success if successful, #SigV4InvalidParameter otherwise.
+ */
+static SigV4Status_t verifyAuthorizationParameters( char * pAuthBuf,
+                                                    size_t * authBufLen,
+                                                    char ** pSignature,
+                                                    size_t * signatureLen );
+
+/**
+ * @brief Verify all authorization-related parameters passed to
+ * #SigV4_GenerateHTTPAuthorization.
+ *
+ * @param[in] pParams Complete SigV4 configurations passed by application.
+ * @param[out] pAlgorithm The algorithm used for SigV4 authentication.
+ * @param[out] algorithmLen The length of @p pAlgorithm.
+ */
+static void assignDefaultArguments( const SigV4Parameters_t * pParams,
+                                    char ** pAlgorithm,
+                                    size_t * algorithmLen );
+
+/**
  * @brief Hex digest of provided string parameter.
  *
  * @param[in] pInputStr String to encode.
@@ -2166,6 +2194,62 @@ static SigV4Status_t verifyParamsToGenerateAuthHeaderApi( const SigV4Parameters_
 
 /*-----------------------------------------------------------*/
 
+static SigV4Status_t verifyAuthorizationParameters( char * pAuthBuf,
+                                                    size_t * authBufLen,
+                                                    char ** pSignature,
+                                                    size_t * signatureLen )
+{
+    SigV4Status_t returnStatus = SigV4Success;
+
+    if( pAuthBuf == NULL )
+    {
+        LogError( ( "Parameter check failed: pAuthBuf is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( authBufLen == NULL )
+    {
+        LogError( ( "Parameter check failed: authBufLen is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( pSignature == NULL )
+    {
+        LogError( ( "Parameter check failed: pSignature is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else if( signatureLen == NULL )
+    {
+        LogError( ( "Parameter check failed: signatureLen is NULL." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
+    else
+    {
+        /* Empty else. */
+    }
+
+    return returnStatus;
+}
+
+/*-----------------------------------------------------------*/
+
+static void assignDefaultArguments( const SigV4Parameters_t * pParams,
+                                    char ** pAlgorithm,
+                                    size_t * algorithmLen )
+{
+    if( ( pParams->pAlgorithm == NULL ) || ( pParams->algorithmLen == 0 ) )
+    {
+        /* The default algorithm is AWS4-HMAC-SHA256. */
+        *pAlgorithm = SIGV4_AWS4_HMAC_SHA256;
+        *algorithmLen = SIGV4_AWS4_HMAC_SHA256_LENGTH;
+    }
+    else
+    {
+        *pAlgorithm = pParams->pAlgorithm;
+        *algorithmLen = pParams->algorithmLen;
+    }
+}
+
+/*-----------------------------------------------------------*/
+
 static int32_t completeHash( const uint8_t * pInput,
                              size_t inputLen,
                              uint8_t * pOutput,
@@ -3007,9 +3091,14 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
 
     if( returnStatus == SigV4Success )
     {
+<<<<<<< HEAD
         /* If the SigV4 algorithm is not specified, use "AWS4-HMAC-256" as the default algorithm. */
         pAlgorithm = ( pParams->pAlgorithm == NULL ) ? SIGV4_AWS4_HMAC_SHA256 : pParams->pAlgorithm;
         algorithmLen = ( pParams->pAlgorithm == NULL ) ? SIGV4_AWS4_HMAC_SHA256_LENGTH : pParams->algorithmLen;
+=======
+        authPrefixLen = *authBufLen;
+        assignDefaultArguments( pParams, &pAlgorithm, &algorithmLen );
+>>>>>>> 851fdaa (Update memcpy stubs to allow 0 length read/write)
     }
 
     if( returnStatus == SigV4Success )

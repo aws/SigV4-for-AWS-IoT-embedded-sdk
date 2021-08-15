@@ -8,13 +8,24 @@ HARNESS_FILE = SigV4_GenerateHTTPAuthorization_harness
 # Litani dashboard. It can be human-readable and contain spaces if you wish.
 PROOF_UID = SigV4_GenerateHTTPAuthorization
 
+# Define constants so as to limit the running time of the proofs.
+# Note that these constants are also deliberately chosen so as to attain
+# coverage for the SigV4InsufficientMemory cases.
+# For the constants below,
+# SIGV4_PROCESSING_BUFFER_LENGTH is set specifically to 47.
+# It may be easier to attain coverage if the processing buffer is instead
+# provided by the user as the length can be variable.
+# However, since the length of the processing buffer is fixed,
+# these constants must also be fixed in order to match whatever
+# SIGV4_PROCESSING_BUFFER_LENGTH is set to in sigv4_config.h.
 MAX_QUERY_LEN=6
 MAX_HEADERS_LEN=6
-MAX_PATH_LEN=6
 MAX_URI_LEN=3
-MAX_ENCODED_PATH_LEN=$(shell expr $(MAX_URI_LEN) \* 2)
 MAX_REQUEST_LEN=16
 S3_SERVICE_LEN=2
+MAX_REGION_LEN=30
+MAX_SERVICE_LEN=30
+MAX_ALGORITHM_LEN=30
 MAX_HASH_DIGEST_LEN=16
 MAX_HASH_BLOCK_LEN=17
 
@@ -23,6 +34,9 @@ DEFINES += -DMAX_HEADERS_LEN=$(MAX_HEADERS_LEN)
 DEFINES += -DMAX_URI_LEN=$(MAX_URI_LEN)
 DEFINES += -DMAX_HASH_DIGEST_LEN=$(MAX_HASH_DIGEST_LEN)
 DEFINES += -DMAX_HASH_BLOCK_LEN=$(MAX_HASH_BLOCK_LEN)
+DEFINES += -DMAX_REGION_LEN=$(MAX_REGION_LEN)
+DEFINES += -DMAX_SERVICE_LEN=$(MAX_SERVICE_LEN)
+DEFINES += -DMAX_ALGORITHM_LEN=$(MAX_ALGORITHM_LEN)
 INCLUDES +=
 
 REMOVE_FUNCTION_BODY += memcpy

@@ -127,7 +127,7 @@ void harness()
          * should not end past the length of pAuthBuf. */
         __CPROVER_assert( pAuthBuf <= pSignature,
                           "Signature does not start at a location within pAuthBuf." );
-        __CPROVER_assert( pSignature + signatureLen <= pAuthBuf + *authBufLen,
-                          "Signature ends past the length of pAuthBuf." );
+        __CPROVER_assert( pSignature + signatureLen <= pAuthBuf + *authBufLen, 
+        "Signature ends past the length of pAuthBuf.");
     }
 }

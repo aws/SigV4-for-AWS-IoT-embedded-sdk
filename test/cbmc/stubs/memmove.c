@@ -39,8 +39,11 @@
                                     size_t n,
                                     size_t m )
     {
-        __CPROVER_assert( __CPROVER_w_ok( dest, n ), "write" );
-        __CPROVER_assert( __CPROVER_r_ok( src, n ), "read" );
+        /* Attempting to read or write 0 bytes will make __CPROVER_r/w_ok
+         * fail. However, per ANSI C specification, memcpy must be able
+         * to handle a copy length of zero. */
+        __CPROVER_assert( ( n == 0 ) || __CPROVER_w_ok( dest, n ), "write" );
+        __CPROVER_assert( ( n == 0 ) || __CPROVER_r_ok( src, n ), "read" );
         return dest;
     }
 #else

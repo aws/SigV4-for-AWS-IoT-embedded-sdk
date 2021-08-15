@@ -180,6 +180,7 @@ SigV4Status_t generateCanonicalQuery( const char * pQuery,
 
     if( nondet_bool() )
     {
+        __CPROVER_assume( pCanonicalContext->bufRemaining < SIGV4_PROCESSING_BUFFER_LENGTH );
         returnStatus = SigV4Success;
     }
     else
@@ -207,10 +208,12 @@ SigV4Status_t generateCanonicalAndSignedHeaders( const char * pHeaders,
 
     if( nondet_bool() )
     {
-        size_t headersLen, headerOffset;
+        /* The signed headers are assumed to start at a location within the processing
+         * buffer and should not end past the length of the processing buffer. */
+        size_t headersLen, headerOffset, bytesConsumed;
         char * pHeaders = NULL;
         __CPROVER_assume( pCanonicalContext->bufRemaining < SIGV4_PROCESSING_BUFFER_LENGTH );
-        size_t bytesConsumed = SIGV4_PROCESSING_BUFFER_LENGTH - pCanonicalContext->bufRemaining;
+        bytesConsumed = SIGV4_PROCESSING_BUFFER_LENGTH - pCanonicalContext->bufRemaining;
         __CPROVER_assume( headerOffset < bytesConsumed );
         __CPROVER_assume( headersLen > 0U && headersLen <= bytesConsumed - headerOffset );
         pHeaders = ( char * ) pCanonicalContext->pBufProcessing + headerOffset;
