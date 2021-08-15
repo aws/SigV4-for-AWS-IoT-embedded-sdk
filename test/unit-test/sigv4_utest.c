@@ -739,6 +739,28 @@ void test_SigV4_GenerateAuthorization_Query_With_No_Param_Values()
                            &params, authBuf, &authBufLen, &signature, &signatureLen ) );
 }
 
+/* Test that the library can handle an empty query string. */
+void test_SigV4_GenerateAuthorization_Empty_Query()
+{
+    /* Happy path when both query and length are NULL and 0 respectively. */
+    params.pHttpParameters->pQuery = NULL;
+    params.pHttpParameters->queryLen = 0U;
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+
+    /* The query is NULL but length is greater than 0. */
+    params.pHttpParameters->pQuery = NULL;
+    params.pHttpParameters->queryLen = 3U;
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+
+    /* The query is non-NULL but length is 0. */
+    params.pHttpParameters->pQuery = QUERY;
+    params.pHttpParameters->queryLen = 0U;
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+}
+
 void test_SigV4_GenerateHTTPAuthorization_Default_Arguments()
 {
     SigV4Status_t returnStatus;
