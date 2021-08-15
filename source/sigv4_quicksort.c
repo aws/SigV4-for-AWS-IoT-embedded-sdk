@@ -147,8 +147,7 @@ static void quickSortHelper( void * pArray,
         /* Calculate length of the left partition containing items smaller
          * than the pivot element.
          * The length is zero if either:
-         * 1. The pivoted item is the smallest in the
-         * the array before partitioning.
+         * 1. The pivoted item is the smallest in the the array before partitioning.
          *              OR
          * 2. The left partition is only of single length which can be treated as
          * sorted, and thus, of zero length for avoided adding to the stack. */
@@ -157,7 +156,7 @@ static void quickSortHelper( void * pArray,
         /* Calculate length of the right partition containing items greater than
          * or equal to the pivot item.
          * The calculated length is zero if either:
-         * 1. The pivoted item is the smallest in the the array before partitioning.
+         * 1. The pivoted item is the greatest in the the array before partitioning.
          *              OR
          * 2. The right partition contains only a single length which can be treated as
          * sorted, and thereby, of zero length to avoid adding to the stack. */
@@ -202,14 +201,15 @@ static size_t partition( void * pArray,
                          size_t itemSize,
                          ComparisonFunc_t comparator )
 {
-    void * pivot;
+    uint8_t * pivot;
+    uint8_t * pArrayLocal = ( uint8_t * ) pArray;
     size_t i = low - 1U, j = low;
 
     assert( pArray != NULL );
     assert( comparator != NULL );
 
     /* Choose pivot as the highest indexed item in the current partition. */
-    pivot = pArray + ( high * itemSize );
+    pivot = pArrayLocal + ( high * itemSize );
 
     /* Iterate over all elements of the current array to partition it
      * in comparison to the chosen pivot with smaller items on the left
@@ -217,16 +217,16 @@ static size_t partition( void * pArray,
     for( ; j < high; j++ )
     {
         /* Use comparator function to check current element is smaller than the pivot */
-        if( comparator( pArray + ( j * itemSize ), pivot ) < 0 )
+        if( comparator( pArrayLocal + ( j * itemSize ), pivot ) < 0 )
         {
             ++i;
-            swap( pArray + ( i * itemSize ), pArray + ( j * itemSize ), itemSize );
+            swap( pArrayLocal + ( i * itemSize ), pArrayLocal + ( j * itemSize ), itemSize );
         }
     }
 
     /* Place the pivot between the smaller and larger item chunks of
      * the array. This represents the 2 partitions of the array. */
-    swap( pArray + ( ( i + 1U ) * itemSize ), pivot, itemSize );
+    swap( pArrayLocal + ( ( i + 1U ) * itemSize ), pivot, itemSize );
 
     /* Return the pivot item's index. */
     return i + 1U;

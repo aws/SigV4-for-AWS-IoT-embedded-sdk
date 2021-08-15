@@ -2272,6 +2272,11 @@ static int32_t hmacAddKey( HmacContext_t * pHmacContext,
     }
     else
     {
+        /* To reduce the key length to less than the hash block size, this branch performs
+         * hash operations. We want to perform hash operations only when we have received the
+         * entire key. */
+        assert( isKeyPrefix == false );
+
         returnStatus = pCryptoInterface->hashInit( pCryptoInterface->pHashContext );
 
         /* Has part of the key that is cached in the HMAC context. */
@@ -2813,6 +2818,7 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
                                  SIGV4_HMAC_SIGNING_KEY_PREFIX,
                                  SIGV4_HMAC_SIGNING_KEY_PREFIX_LEN,
                                  true /* Is key prefix. */ );
+        /* The above call should always succeed as it only populates the HMAC key cache. */
         assert( hmacStatus == 0 );
     }
 
@@ -2988,20 +2994,9 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
 
     if( returnStatus == SigV4Success )
     {
-        authPrefixLen = *authBufLen;
-
-        /* Default arguments. */
-        if( ( pParams->pAlgorithm == NULL ) || ( pParams->algorithmLen == 0U ) )
-        {
-            /* The default algorithm is AWS4-HMAC-SHA256. */
-            pAlgorithm = SIGV4_AWS4_HMAC_SHA256;
-            algorithmLen = SIGV4_AWS4_HMAC_SHA256_LENGTH;
-        }
-        else
-        {
-            pAlgorithm = pParams->pAlgorithm;
-            algorithmLen = pParams->algorithmLen;
-        }
+        /* If the SigV4 algorithm is not specified, use "AWS4-HMAC-256" as the default algorithm. */
+        pAlgorithm = ( pParams->pAlgorithm == NULL ) ? SIGV4_AWS4_HMAC_SHA256 : pParams->pAlgorithm;
+        algorithmLen = ( pParams->pAlgorithm == NULL ) ? SIGV4_AWS4_HMAC_SHA256_LENGTH : pParams->algorithmLen;
     }
 
     if( returnStatus == SigV4Success )
@@ -3025,6 +3020,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
     /* Write the prefix of the Authorizaton header value. */
     if( returnStatus == SigV4Success )
     {
+        authPrefixLen = *authBufLen;
         returnStatus = generateAuthorizationValuePrefix( pParams,
                                                          pAlgorithm, algorithmLen,
                                                          pSignedHeaders, signedHeadersLen,

@@ -28,8 +28,6 @@
 #ifndef SIGV4_INTERNAL_H_
 #define SIGV4_INTERNAL_H_
 
-#include <stdbool.h>
-
 /* SIGV4_DO_NOT_USE_CUSTOM_CONFIG allows building of the SigV4 library without a
  * config file. If a config file is provided, the SIGV4_DO_NOT_USE_CUSTOM_CONFIG
  * macro must not be defined.

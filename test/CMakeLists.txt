@@ -33,7 +33,7 @@ include( ${MODULE_ROOT_DIR}/sigv4FilePaths.cmake )
 
 # Target for Coverity analysis that builds the library.
 add_library( coverity_analysis
-${SIGV4_SOURCES} )
+            ${SIGV4_SOURCES} )
 
 # Build SigV4 library target without custom config dependencies.
 target_compile_definitions( coverity_analysis PUBLIC SIGV4_DO_NOT_USE_CUSTOM_CONFIG=1 )

@@ -245,37 +245,9 @@ static int32_t valid_sha256_final( void * pHashContext,
     return -1;
 }
 
-/*==================== Echo Implementation of Crypto Interface ===================== */
-
-static uint8_t hashEchoBuffer[ SIGV4_HASH_MAX_BLOCK_LENGTH ];
-static size_t hashInputLen;
-
-/* These hash functions simply take the input and write it back to the output.
- * The purpose of which is make it possible to write tests without having to
- * know the computed hash of the string to sign. */
-static int32_t echo_hash_init( void * pHashContext )
-{
-    return 0;
-}
-
-static int32_t echo_hash_update( void * pHashContext,
-                                 const uint8_t * pInput,
-                                 size_t inputLen )
-{
-    hashInputLen = inputLen;
-    ( void ) memcpy( hashEchoBuffer, pInput, inputLen );
-}
-
-static int32_t echo_hash_final( void * pHashContext,
-                                uint8_t * pOutput,
-                                size_t outputLen )
-{
-    ( void ) memcpy( pOutput, hashEchoBuffer, hashInputLen );
-}
-
 /*==================== Failable Implementation of Crypto Interface ===================== */
 
-#define HAPPY_PATH_HASH_ITERATIONS    12U
+#define HASH_ERROR_BRANCH_COVERAGE_ITERATIONS    12U
 
 static size_t hashInitCalledCount = 0U, hashInitCallToFail = SIZE_MAX;
 static size_t updateHashCalledCount = 0U, updateHashCallToFail = SIZE_MAX;
@@ -1186,24 +1158,28 @@ void test_SigV4_GenerateHTTPAuthorization_Hash_Errors()
 
     params.pCredentials->pSecretAccessKey = SECRET_KEY_LONGER_THAN_HASH_BLOCK;
     params.pCredentials->secretAccessKeyLen = strlen( SECRET_KEY_LONGER_THAN_HASH_BLOCK );
+    char failureMessage[ 250 ];
 
-    for( i = 0U; i < HAPPY_PATH_HASH_ITERATIONS; i++ )
+    for( i = 0U; i < HASH_ERROR_BRANCH_COVERAGE_ITERATIONS; i++ )
     {
         resetFailableHashParams();
         hashInitCallToFail = i;
         params.pCryptoInterface->hashInit = hash_init_failable;
         returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
-        TEST_ASSERT_EQUAL( SigV4HashError, returnStatus );
+        snprintf( failureMessage, sizeof( failureMessage ), "Expected SigV4HashError from hashInit failure at call count %ld", i );
+        TEST_ASSERT_EQUAL_MESSAGE( SigV4HashError, returnStatus, failureMessage );
 
         resetFailableHashParams();
         updateHashCallToFail = i;
         returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
-        TEST_ASSERT_EQUAL( SigV4HashError, returnStatus );
+        snprintf( failureMessage, sizeof( failureMessage ), "Expected SigV4HashError from hashUpdate failure at call count %ld", i );
+        TEST_ASSERT_EQUAL_MESSAGE( SigV4HashError, returnStatus, failureMessage );
 
         resetFailableHashParams();
         finalHashCallToFail = i;
         returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
-        TEST_ASSERT_EQUAL( SigV4HashError, returnStatus );
+        snprintf( failureMessage, sizeof( failureMessage ), "Expected SigV4HashError from hashFinal failure at call count %ld", i );
+        TEST_ASSERT_EQUAL_MESSAGE( SigV4HashError, returnStatus, failureMessage );
     }
 }
 
