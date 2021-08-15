@@ -61,14 +61,10 @@ void harness()
     if( pCredentials != NULL )
     {
         /* Make size assumptions for string-like types. */
-        __CPROVER_assume( 16 <= pCredentials->accessKeyIdLen && pCredentials->accessKeyIdLen <= 128 );
-        __CPROVER_assume( pCredentials->expirationLen < CBMC_MAX_OBJECT_SIZE );
+        __CPROVER_assume( pCredentials->accessKeyIdLen <= MAX_ACCESS_KEY_ID_LEN );
         __CPROVER_assume( pCredentials->secretAccessKeyLen < CBMC_MAX_OBJECT_SIZE );
-        __CPROVER_assume( pCredentials->securityTokenLen < CBMC_MAX_OBJECT_SIZE );
         pCredentials->pAccessKeyId = malloc( pCredentials->accessKeyIdLen );
-        pCredentials->pExpiration = malloc( pCredentials->expirationLen );
         pCredentials->pSecretAccessKey = malloc( pCredentials->secretAccessKeyLen );
-        pCredentials->pSecurityToken = malloc( pCredentials->securityTokenLen );
     }
 
     if( pHttpParams != NULL )
@@ -89,9 +85,9 @@ void harness()
     if( pSigV4Params != NULL )
     {
         /* Make size assumptions for string-like types. */
-        __CPROVER_assume( pSigV4Params->regionLen < 30 );
-        __CPROVER_assume( pSigV4Params->serviceLen < 30 );
-        __CPROVER_assume( pSigV4Params->algorithmLen < 30 );
+        __CPROVER_assume( pSigV4Params->regionLen < MAX_REGION_LEN );
+        __CPROVER_assume( pSigV4Params->serviceLen < MAX_SERVICE_LEN );
+        __CPROVER_assume( pSigV4Params->algorithmLen < MAX_ALGORITHM_LEN );
         pSigV4Params->pRegion = malloc( pSigV4Params->regionLen );
         pSigV4Params->pService = malloc( pSigV4Params->serviceLen );
         pSigV4Params->pAlgorithm = malloc( pSigV4Params->algorithmLen );
@@ -127,7 +123,7 @@ void harness()
          * should not end past the length of pAuthBuf. */
         __CPROVER_assert( pAuthBuf <= pSignature,
                           "Signature does not start at a location within pAuthBuf." );
-        __CPROVER_assert( pSignature + signatureLen <= pAuthBuf + *authBufLen, 
-        "Signature ends past the length of pAuthBuf.");
+        __CPROVER_assert( pSignature + signatureLen <= pAuthBuf + *authBufLen,
+                          "Signature ends past the length of pAuthBuf." );
     }
 }

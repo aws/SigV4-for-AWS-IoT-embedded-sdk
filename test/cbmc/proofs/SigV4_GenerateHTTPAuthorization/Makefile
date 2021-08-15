@@ -12,7 +12,7 @@ PROOF_UID = SigV4_GenerateHTTPAuthorization
 # Note that these constants are also deliberately chosen so as to attain
 # coverage for the SigV4InsufficientMemory cases.
 # For the constants below,
-# SIGV4_PROCESSING_BUFFER_LENGTH is set specifically to 47.
+# SIGV4_PROCESSING_BUFFER_LENGTH is set specifically to 60.
 # It may be easier to attain coverage if the processing buffer is instead
 # provided by the user as the length can be variable.
 # However, since the length of the processing buffer is fixed,
@@ -28,6 +28,8 @@ MAX_SERVICE_LEN=30
 MAX_ALGORITHM_LEN=30
 MAX_HASH_DIGEST_LEN=16
 MAX_HASH_BLOCK_LEN=17
+# This is the actual maximum length of an AWS access key ID
+MAX_ACCESS_KEY_ID_LEN=128
 
 DEFINES += -DMAX_QUERY_LEN=$(MAX_QUERY_LEN)
 DEFINES += -DMAX_HEADERS_LEN=$(MAX_HEADERS_LEN)
@@ -37,6 +39,7 @@ DEFINES += -DMAX_HASH_BLOCK_LEN=$(MAX_HASH_BLOCK_LEN)
 DEFINES += -DMAX_REGION_LEN=$(MAX_REGION_LEN)
 DEFINES += -DMAX_SERVICE_LEN=$(MAX_SERVICE_LEN)
 DEFINES += -DMAX_ALGORITHM_LEN=$(MAX_ALGORITHM_LEN)
+DEFINES += -DMAX_ACCESS_KEY_ID_LEN=$(MAX_ACCESS_KEY_ID_LEN)
 INCLUDES +=
 
 REMOVE_FUNCTION_BODY += memcpy
@@ -44,7 +47,7 @@ REMOVE_FUNCTION_BODY += memmove
 UNWINDSET += setQueryStringFieldsAndValues.0:$(MAX_QUERY_LEN)
 UNWINDSET += parseHeaderKeyValueEntries.0:$(MAX_HEADERS_LEN)
 UNWINDSET += lowercaseHexEncode.0:$(MAX_HASH_DIGEST_LEN)
-UNWINDSET += hmacData.0:$(MAX_HASH_BLOCK_LEN)
+UNWINDSET += hmacIntermediate.0:$(MAX_HASH_BLOCK_LEN)
 UNWINDSET += hmacFinal.0:$(MAX_HASH_BLOCK_LEN)
 UNWINDSET += strncmp.0:$(S3_SERVICE_LEN)
 

@@ -633,22 +633,6 @@ static SigV4Status_t verifyParamsToGenerateAuthHeaderApi( const SigV4Parameters_
  * @brief Verify all authorization-related parameters passed to
  * #SigV4_GenerateHTTPAuthorization.
  *
- * @param[in] pAuthBuf Buffer to hold the generated Authorization header value.
- * @param[in] authBufLen The length of @p pAuthBuf
- * @param[in] pSignature Location of the signature in the authorization string.
- * @param[in] signatureLen The length of @p pSignature.
- *
- * @return #SigV4Success if successful, #SigV4InvalidParameter otherwise.
- */
-static SigV4Status_t verifyAuthorizationParameters( char * pAuthBuf,
-                                                    size_t * authBufLen,
-                                                    char ** pSignature,
-                                                    size_t * signatureLen );
-
-/**
- * @brief Verify all authorization-related parameters passed to
- * #SigV4_GenerateHTTPAuthorization.
- *
  * @param[in] pParams Complete SigV4 configurations passed by application.
  * @param[out] pAlgorithm The algorithm used for SigV4 authentication.
  * @param[out] algorithmLen The length of @p pAlgorithm.
@@ -2194,43 +2178,6 @@ static SigV4Status_t verifyParamsToGenerateAuthHeaderApi( const SigV4Parameters_
 
 /*-----------------------------------------------------------*/
 
-static SigV4Status_t verifyAuthorizationParameters( char * pAuthBuf,
-                                                    size_t * authBufLen,
-                                                    char ** pSignature,
-                                                    size_t * signatureLen )
-{
-    SigV4Status_t returnStatus = SigV4Success;
-
-    if( pAuthBuf == NULL )
-    {
-        LogError( ( "Parameter check failed: pAuthBuf is NULL." ) );
-        returnStatus = SigV4InvalidParameter;
-    }
-    else if( authBufLen == NULL )
-    {
-        LogError( ( "Parameter check failed: authBufLen is NULL." ) );
-        returnStatus = SigV4InvalidParameter;
-    }
-    else if( pSignature == NULL )
-    {
-        LogError( ( "Parameter check failed: pSignature is NULL." ) );
-        returnStatus = SigV4InvalidParameter;
-    }
-    else if( signatureLen == NULL )
-    {
-        LogError( ( "Parameter check failed: signatureLen is NULL." ) );
-        returnStatus = SigV4InvalidParameter;
-    }
-    else
-    {
-        /* Empty else. */
-    }
-
-    return returnStatus;
-}
-
-/*-----------------------------------------------------------*/
-
 static void assignDefaultArguments( const SigV4Parameters_t * pParams,
                                     char ** pAlgorithm,
                                     size_t * algorithmLen )
@@ -2907,11 +2854,14 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
                                  SIGV4_HMAC_SIGNING_KEY_PREFIX,
                                  SIGV4_HMAC_SIGNING_KEY_PREFIX_LEN,
                                  true /* Is key prefix. */ );
+<<<<<<< HEAD
         /* The above call should always succeed as it only populates the HMAC key cache. */
         assert( hmacStatus == 0 );
+=======
+>>>>>>> a166248 (Update CBMC proofs based on code changes from unit tests)
     }
 
-    if( isBufferSpaceSufficient )
+    if( isBufferSpaceSufficient && ( hmacStatus == 0 ) )
     {
         hmacStatus = completeHmac( pHmacContext,
                                    pSigV4Params->pCredentials->pSecretAccessKey,
@@ -2975,15 +2925,7 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
     }
     else if( hmacStatus != 0 )
     {
-        if( hmacStatus == 0 )
-        {
-            pSigningKey->pData = pSigningKeyStart;
-            pSigningKey->dataLen = pSigV4Params->pCryptoInterface->hashDigestLen;
-        }
-        else
-        {
-            returnStatus = SigV4HashError;
-        }
+        returnStatus = SigV4HashError;
     }
     else
     {
