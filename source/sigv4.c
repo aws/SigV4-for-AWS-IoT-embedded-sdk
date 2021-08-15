@@ -2308,11 +2308,6 @@ static int32_t hmacAddKey( HmacContext_t * pHmacContext,
     }
     else
     {
-        /* To reduce the key length to less than the hash block size, this branch performs
-         * hash operations. We want to perform hash operations only when we have received the
-         * entire key. */
-        assert( isKeyPrefix == false );
-
         returnStatus = pCryptoInterface->hashInit( pCryptoInterface->pHashContext );
 
         /* Has part of the key that is cached in the HMAC context. */
