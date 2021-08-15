@@ -424,7 +424,6 @@ static int32_t hmacFinal( HmacContext_t * pHmacContext,
  * @param[out] pOutput The buffer onto which to write the HMAC digest.
  * @param[out] outputLen The length of @p pOutput and must be greater
  * than pCryptoInterface->hashDigestLen for this function to succeed.
- * @param[in] pCryptoInterface The interface used to call hash functions.
  * @return Zero on success, all other return values are failures.
  */
 static int32_t completeHmac( HmacContext_t * pHmacContext,
@@ -433,8 +432,7 @@ static int32_t completeHmac( HmacContext_t * pHmacContext,
                              const char * pData,
                              size_t dataLen,
                              char * pOutput,
-                             size_t outputLen,
-                             const SigV4CryptoInterface_t * pCryptoInterface );
+                             size_t outputLen );
 
 /**
  * @brief Generates the complete hash of an input string, then write
@@ -2045,6 +2043,10 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         {
             returnStatus = setQueryStringFieldsAndValues( pQuery, queryLen, &numberOfParameters, pCanonicalContext );
         }
+        else
+        {
+            numberOfParameters = 0U;
+        }
 
         if( ( returnStatus == SigV4Success ) && ( numberOfParameters > 0U ) )
         {
@@ -2107,12 +2109,12 @@ static SigV4Status_t verifyParamsToGenerateAuthHeaderApi( const SigV4Parameters_
     }
     else if( ( pParams->pCredentials->pAccessKeyId == NULL ) || ( pParams->pCredentials->accessKeyIdLen == 0U ) )
     {
-        LogError( ( "Parameter check failed: Access Key ID data is invalid." ) );
+        LogError( ( "Parameter check failed: Access Key ID data is empty." ) );
         returnStatus = SigV4InvalidParameter;
     }
     else if( ( pParams->pCredentials->pSecretAccessKey == NULL ) || ( pParams->pCredentials->secretAccessKeyLen == 0U ) )
     {
-        LogError( ( "Parameter check failed: Secret Access Key data is invalid." ) );
+        LogError( ( "Parameter check failed: Secret Access Key data is empty." ) );
         returnStatus = SigV4InvalidParameter;
     }
     else if( pParams->pDateIso8601 == NULL )
@@ -2122,12 +2124,12 @@ static SigV4Status_t verifyParamsToGenerateAuthHeaderApi( const SigV4Parameters_
     }
     else if( ( pParams->pRegion == NULL ) || ( pParams->regionLen == 0U ) )
     {
-        LogError( ( "Parameter check failed: Region data is invalid." ) );
+        LogError( ( "Parameter check failed: Region data is empty." ) );
         returnStatus = SigV4InvalidParameter;
     }
     else if( ( pParams->pService == NULL ) || ( pParams->serviceLen == 0U ) )
     {
-        LogError( ( "Parameter check failed: Service data is invalid." ) );
+        LogError( ( "Parameter check failed: Service data is empty." ) );
         returnStatus = SigV4InvalidParameter;
     }
     else if( pParams->pCryptoInterface == NULL )
@@ -2510,8 +2512,7 @@ static int32_t completeHmac( HmacContext_t * pHmacContext,
                              const char * pData,
                              size_t dataLen,
                              char * pOutput,
-                             size_t outputLen,
-                             const SigV4CryptoInterface_t * pCryptoInterface )
+                             size_t outputLen )
 {
     int32_t returnStatus = 0;
 
@@ -2521,7 +2522,7 @@ static int32_t completeHmac( HmacContext_t * pHmacContext,
     assert( pData != NULL );
     assert( dataLen > 0U );
     assert( pOutput != NULL );
-    assert( outputLen >= pCryptoInterface->hashDigestLen );
+    assert( outputLen >= pHmacContext->pCryptoInterface->hashDigestLen );
 
     returnStatus = hmacAddKey( pHmacContext,
                                pKey,
@@ -2869,8 +2870,7 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
                                    pSigV4Params->pDateIso8601,
                                    ISO_DATE_SCOPE_LEN,
                                    pSigningKey->pData,
-                                   pSigningKey->dataLen,
-                                   pSigV4Params->pCryptoInterface );
+                                   pSigningKey->dataLen );
         *pBytesRemaining -= pSigV4Params->pCryptoInterface->hashDigestLen;
     }
 
@@ -2883,8 +2883,7 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
                                    pSigV4Params->pRegion,
                                    pSigV4Params->regionLen,
                                    pSigningKeyStart,
-                                   *pBytesRemaining,
-                                   pSigV4Params->pCryptoInterface );
+                                   *pBytesRemaining );
         *pBytesRemaining -= pSigV4Params->pCryptoInterface->hashDigestLen;
     }
 
@@ -2896,8 +2895,7 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
                                    pSigV4Params->pService,
                                    pSigV4Params->serviceLen,
                                    pSigningKey->pData,
-                                   pSigV4Params->pCryptoInterface->hashDigestLen,
-                                   pSigV4Params->pCryptoInterface );
+                                   pSigV4Params->pCryptoInterface->hashDigestLen );
     }
 
     if( isBufferSpaceSufficient && ( hmacStatus == 0 ) )
@@ -2908,8 +2906,7 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
                                    CREDENTIAL_SCOPE_TERMINATOR,
                                    CREDENTIAL_SCOPE_TERMINATOR_LEN,
                                    pSigningKeyStart,
-                                   pSigV4Params->pCryptoInterface->hashDigestLen,
-                                   pSigV4Params->pCryptoInterface );
+                                   pSigV4Params->pCryptoInterface->hashDigestLen );
     }
 
     if( isBufferSpaceSufficient && ( hmacStatus == 0 ) )
@@ -3104,8 +3101,8 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
                                        ( char * ) canonicalContext.pBufProcessing,
                                        ( size_t ) bufferLen,
                                        canonicalContext.pBufCur,
-                                       pParams->pCryptoInterface->hashDigestLen,
-                                       pParams->pCryptoInterface ) != 0 ) ? SigV4HashError : SigV4Success;
+                                       pParams->pCryptoInterface->hashDigestLen ) != 0 )
+                       ? SigV4HashError : SigV4Success;
     }
 
     /* Hex-encode the final signature beforehand to its precalculated
