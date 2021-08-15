@@ -617,7 +617,7 @@ static SigV4Status_t parseDate( const char * pDate,
  * @param[in] authBufLen The user-supplied size value of @p pAuthBuf buffer.
  * @param[in] pSignature The user-supplied pointer memory to store starting location of
  * Signature in Authorization Buffer.
- * @param[in] signatureLen The user-supplied pointer to store length of Signature.
+ * @param[in] signatureLen The user supplied pointer to store length of Signature.
  *
  * @return #SigV4Success if successful, #SigV4InvalidParameter otherwise.
  */
@@ -1665,7 +1665,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             }
             /* Look for header value part of a header field entry for both canonicalized and non-canonicalized forms. */
             /* Non-canonicalized headers will have header values ending with "\r\n". */
-            else if( ( !keyFlag ) && !FLAG_IS_SET( flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( ( index + 1U ) < headersDataLen ) &&
+            else if( ( !keyFlag ) && !FLAG_IS_SET( flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( ( index + 1 ) < headersDataLen ) &&
                      ( 0 == strncmp( pCurrLoc, HTTP_REQUEST_LINE_ENDING, HTTP_REQUEST_LINE_ENDING_LEN ) ) )
             {
                 dataLen = pCurrLoc - pKeyOrValStartLoc;
@@ -2309,11 +2309,6 @@ static int32_t hmacAddKey( HmacContext_t * pHmacContext,
     }
     else
     {
-        /* To reduce the key length to less than the hash block size, this branch performs
-         * hash operations. We want to perform hash operations only when we have received the
-         * entire key. */
-        assert( isKeyPrefix == false );
-
         returnStatus = pCryptoInterface->hashInit( pCryptoInterface->pHashContext );
 
         /* Has part of the key that is cached in the HMAC context. */
@@ -2855,11 +2850,6 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
                                  SIGV4_HMAC_SIGNING_KEY_PREFIX,
                                  SIGV4_HMAC_SIGNING_KEY_PREFIX_LEN,
                                  true /* Is key prefix. */ );
-<<<<<<< HEAD
-        /* The above call should always succeed as it only populates the HMAC key cache. */
-        assert( hmacStatus == 0 );
-=======
->>>>>>> a166248 (Update CBMC proofs based on code changes from unit tests)
     }
 
     if( isBufferSpaceSufficient && ( hmacStatus == 0 ) )
@@ -3030,14 +3020,8 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
 
     if( returnStatus == SigV4Success )
     {
-<<<<<<< HEAD
-        /* If the SigV4 algorithm is not specified, use "AWS4-HMAC-256" as the default algorithm. */
-        pAlgorithm = ( pParams->pAlgorithm == NULL ) ? SIGV4_AWS4_HMAC_SHA256 : pParams->pAlgorithm;
-        algorithmLen = ( pParams->pAlgorithm == NULL ) ? SIGV4_AWS4_HMAC_SHA256_LENGTH : pParams->algorithmLen;
-=======
         authPrefixLen = *authBufLen;
         assignDefaultArguments( pParams, &pAlgorithm, &algorithmLen );
->>>>>>> 851fdaa (Update memcpy stubs to allow 0 length read/write)
     }
 
     if( returnStatus == SigV4Success )
@@ -3061,7 +3045,6 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
     /* Write the prefix of the Authorizaton header value. */
     if( returnStatus == SigV4Success )
     {
-        authPrefixLen = *authBufLen;
         returnStatus = generateAuthorizationValuePrefix( pParams,
                                                          pAlgorithm, algorithmLen,
                                                          pSignedHeaders, signedHeadersLen,
