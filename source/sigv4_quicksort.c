@@ -106,17 +106,17 @@ static void swap( void * pFirstItem,
     uint8_t * pSecondByte = pSecondItem;
     size_t dataSize = itemSize;
 
-    if( ( pFirstItem != NULL ) && ( pSecondItem != NULL ) )
+    assert( pFirstItem != NULL );
+    assert( pSecondItem != NULL );
+
+    /* Swap one byte at a time. */
+    while( dataSize-- > 0U )
     {
-        /* Swap one byte at a time. */
-        while( dataSize-- > 0U )
-        {
-            uint8_t tmp = *pFirstByte;
-            *pFirstByte = *pSecondByte;
-            ++pFirstByte;
-            *pSecondByte = tmp;
-            ++pSecondByte;
-        }
+        uint8_t tmp = *pFirstByte;
+        *pFirstByte = *pSecondByte;
+        ++pFirstByte;
+        *pSecondByte = tmp;
+        ++pSecondByte;
     }
 }
 
@@ -130,7 +130,7 @@ static void quickSortHelper( void * pArray,
 
     /* Low and high are first two items on the stack. Note
      * that we use an intermediary variable for MISRA compliance. */
-    size_t top = 0, lo = low, hi = high;
+    size_t top = 0U, lo = low, hi = high;
 
     PUSH_STACK( lo, stack, top );
     PUSH_STACK( hi, stack, top );
@@ -144,9 +144,29 @@ static void quickSortHelper( void * pArray,
 
         partitionIndex = partition( pArray, lo, hi, itemSize, comparator );
 
-        len1 = ( ( partitionIndex != 0U ) && ( ( partitionIndex - 1U ) > lo ) ) ? ( partitionIndex - 1U - lo ) : 0U;
-        len2 = ( ( partitionIndex + 1U ) < hi ) ? ( hi - partitionIndex - 1U ) : 0U;
+        /* Calculate length of the left partition containing items smaller
+         * than the pivot element.
+         * The length is zero if either:
+         * 1. The pivoted item is the smallest in the the array before partitioning.
+         *              OR
+         * 2. The left partition is only of single length which can be treated as
+         * sorted, and thus, of zero length for avoided adding to the stack. */
+        len1 = ( ( partitionIndex != 0U ) && ( ( partitionIndex - 1U ) > lo ) ) ? ( partitionIndex - lo ) : 0U;
 
+        /* Calculate length of the right partition containing items greater than
+         * or equal to the pivot item.
+         * The calculated length is zero if either:
+         * 1. The pivoted item is the greatest in the the array before partitioning.
+         *              OR
+         * 2. The right partition contains only a single length which can be treated as
+         * sorted, and thereby, of zero length to avoid adding to the stack. */
+        len2 = ( ( partitionIndex + 1U ) < hi ) ? ( hi - partitionIndex ) : 0U;
+
+        /* Push the information of the left and right partitions to the stack.
+         * Note: For stack space optimization, the larger of the partitions is pushed
+         * first and the smaller is pushed later so that the smaller part of the tree
+         * is completed first without increasing stack space usage before coming back
+         * to the larger partition. */
         if( len1 > len2 )
         {
             PUSH_STACK( lo, stack, top );
@@ -181,24 +201,34 @@ static size_t partition( void * pArray,
                          size_t itemSize,
                          ComparisonFunc_t comparator )
 {
-    void * pivot;
+    uint8_t * pivot;
+    uint8_t * pArrayLocal = ( uint8_t * ) pArray;
     size_t i = low - 1U, j = low;
 
     assert( pArray != NULL );
+    assert( comparator != NULL );
 
-    pivot = pArray + ( high * itemSize );
+    /* Choose pivot as the highest indexed item in the current partition. */
+    pivot = pArrayLocal + ( high * itemSize );
 
+    /* Iterate over all elements of the current array to partition it
+     * in comparison to the chosen pivot with smaller items on the left
+     * and larger or equal to items on the right. */
     for( ; j < high; j++ )
     {
         /* Use comparator function to check current element is smaller than the pivot */
-        if( comparator( pArray + ( j * itemSize ), pivot ) < 0 )
+        if( comparator( pArrayLocal + ( j * itemSize ), pivot ) < 0 )
         {
             ++i;
-            swap( pArray + ( i * itemSize ), pArray + ( j * itemSize ), itemSize );
+            swap( pArrayLocal + ( i * itemSize ), pArrayLocal + ( j * itemSize ), itemSize );
         }
     }
 
-    swap( pArray + ( ( i + 1U ) * itemSize ), pivot, itemSize );
+    /* Place the pivot between the smaller and larger item chunks of
+     * the array. This represents the 2 partitions of the array. */
+    swap( pArrayLocal + ( ( i + 1U ) * itemSize ), pivot, itemSize );
+
+    /* Return the pivot item's index. */
     return i + 1U;
 }
 
@@ -207,8 +237,10 @@ void quickSort( void * pArray,
                 size_t itemSize,
                 ComparisonFunc_t comparator )
 {
-    if( ( numItems != 0U ) && ( pArray != NULL ) )
-    {
-        quickSortHelper( pArray, 0U, numItems - 1U, itemSize, comparator );
-    }
+    assert( pArray != NULL );
+    assert( numItems > 0U );
+    assert( itemSize > 0U );
+    assert( comparator != NULL );
+
+    quickSortHelper( pArray, 0U, numItems - 1U, itemSize, comparator );
 }

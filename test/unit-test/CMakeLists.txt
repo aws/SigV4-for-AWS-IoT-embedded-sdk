@@ -1,6 +1,8 @@
 # Include filepaths for source and include.
 include( ${MODULE_ROOT_DIR}/sigv4FilePaths.cmake )
 
+find_package(OpenSSL REQUIRED)
+
 # ====================  Define your project name (edit) ========================
 set(project_name "sigv4")
 
@@ -51,3 +53,5 @@ create_test(${utest_name}
             "${utest_dep_list}"
             "${test_include_directories}"
         )
+
+target_link_libraries(${utest_name} OpenSSL::SSL)

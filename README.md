@@ -59,7 +59,7 @@ To use CMake, please refer to the [sigV4FilePaths.cmake](https://github.com/aws/
 
 1. Go to the root directory of this repository.
 
-1. Run the *cmake* command: `cmake -S test -B build -DBUILD_CLONE_SUBMODULES=ON`.
+1. Run the *cmake* command: `cmake -S test -B build -DBUILD_UNIT_TESTS=ON`.
 
 1. Run this command to build the library and unit tests: `make -C build all`.
 

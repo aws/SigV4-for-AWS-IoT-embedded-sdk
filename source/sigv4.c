@@ -351,10 +351,11 @@ static void setQueryParameterValue( size_t currentParameter,
                                     CanonicalContext_t * pCanonicalRequest );
 
 /**
- * @brief Update the HMAC using an input key.
+ * @brief Generates the key for the HMAC operation.
+ *
  * @note This function can be called multiple times before calling
- * #hmacData. Appending multiple substrings, then calling #hmacKey
- * on the appended string is also equivalent to calling #hmacKey on
+ * #hmacIntermediate. Appending multiple substrings, then calling #hmacAddKey
+ * on the appended string is also equivalent to calling #hmacAddKey on
  * each individual substring.
  * @note This function accepts a const char * so that string literals
  * can be passed in.
@@ -362,34 +363,49 @@ static void setQueryParameterValue( size_t currentParameter,
  * @param[in] pHmacContext The context used for HMAC calculation.
  * @param[in] pKey The key used as input for HMAC calculation.
  * @param[in] keyLen The length of @p pKey.
+ * @param[in] isKeyPrefix Flag to indicate whether the passed key is
+ * prefix of a complete key for an HMAC operation. If this is a prefix,
+ * then it will be stored in cache for use with remaining part of the
+ * key that will be provided in a subsequent call to @ref hmacAddKey.
+ *
  * @return Zero on success, all other return values are failures.
  */
-static int32_t hmacKey( HmacContext_t * pHmacContext,
-                        const char * pKey,
-                        size_t keyLen );
+static int32_t hmacAddKey( HmacContext_t * pHmacContext,
+                           const char * pKey,
+                           size_t keyLen,
+                           bool isKeyPrefix );
 
 /**
- * @brief Update the HMAC using input data.
- * @note Must only be called after #hmacKey and leads to undefined
- * behavior otherwise. Likewise, one should not call #hmacKey after
- * calling #hmacData. One must call #hmacFinal first before calling
- * #hmacKey again.
+ * @brief Generates the intermediate hash output in the HMAC signing process.
+ * This represents the H( K' ^ i_pad || message ) part of the HMAC algorithm.
+ *
+ * @note This MUST be ONLY called after #hmacAddKey; otherwise results in
+ * undefined behavior. Likewise, one SHOULD NOT call #hmacAddKey after
+ * calling #hmacIntermediate. One must call #hmacFinal first before calling
+ * #hmacAddKey again.
  *
  * @param[in] pHmacContext The context used for HMAC calculation.
  * @param[in] pData The data used as input for HMAC calculation.
  * @param[in] dataLen The length of @p pData.
+ *
  * @return Zero on success, all other return values are failures.
  */
-static int32_t hmacData( HmacContext_t * pHmacContext,
-                         const char * pData,
-                         size_t dataLen );
+static int32_t hmacIntermediate( HmacContext_t * pHmacContext,
+                                 const char * pData,
+                                 size_t dataLen );
 
 /**
- * @brief Write the HMAC digest into the buffer.
+ * @brief Generates the end output of the HMAC algorithm.
+ *
+ * This represents the second hash operation in the HMAC algorithm:
+ *   H( K' ^ o_pad || Intermediate Hash Output )
+ * where the Intermediate Hash Output is generated from the call
+ * to @ref hmacIntermediate.
  *
  * @param[in] pHmacContext The context used for HMAC calculation.
  * @param[out] pMac The buffer onto which to write the HMAC digest.
  * @param[in] macLen The length of @p pMac.
+ *
  * @return Zero on success, all other return values are failures.
  */
 static int32_t hmacFinal( HmacContext_t * pHmacContext,
@@ -517,12 +533,9 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
  *
  * @param[in] pSigV4Params The application parameters defining the credential's scope.
  * @param[in, out] pCredScope The credential scope in the SigV4 format.
- *
- * @return SigV4InsufficientMemory if the length of @p pCredScope was insufficient to
- * fit the actual credential scope, #SigV4Success otherwise.
  */
-static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
-                                              SigV4String_t * pCredScope );
+static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
+                                     SigV4String_t * pCredScope );
 
 /**
  * @brief Check if the date represents a valid leap year day.
@@ -599,13 +612,22 @@ static SigV4Status_t parseDate( const char * pDate,
                                 SigV4DateTime_t * pDateElements );
 
 /**
- * @brief Verify @p pParams and its sub-members.
+ * @brief Verify input parameters to the SigV4_GenerateHTTPAuthorization API.
  *
  * @param[in] pParams Complete SigV4 configurations passed by application.
+ * @param[in] pAuthBuf The user-supplied buffer for filling Authorization Header.
+ * @param[in] authBufLen The user-supplied size value of @p pAuthBuf buffer.
+ * @param[in] pSignature The user-supplied pointer memory to store starting location of
+ * Signature in Authorization Buffer.
+ * @param[in] signatureLen The user-supplied pointer to store length of Signature.
  *
  * @return #SigV4Success if successful, #SigV4InvalidParameter otherwise.
  */
-static SigV4Status_t verifySigV4Parameters( const SigV4Parameters_t * pParams );
+static SigV4Status_t verifyParamsToGenerateAuthHeaderApi( const SigV4Parameters_t * pParams,
+                                                          const char * pAuthBuf,
+                                                          const size_t * authBufLen,
+                                                          char * const * pSignature,
+                                                          const size_t * signatureLen );
 
 /**
  * @brief Hex digest of provided string parameter.
@@ -1026,12 +1048,11 @@ static size_t copyString( char * destination,
 
 /*-----------------------------------------------------------*/
 
-static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
-                                              SigV4String_t * pCredScope )
+static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
+                                     SigV4String_t * pCredScope )
 {
-    SigV4Status_t returnStatus = SigV4Success;
     char * pBufWrite = NULL;
-    size_t sizeNeeded = 0U;
+    size_t credScopeLen = sizeNeededForCredentialScope( pSigV4Params );
 
     assert( pSigV4Params != NULL );
     assert( pSigV4Params->pCredentials != NULL );
@@ -1039,49 +1060,40 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
     assert( pSigV4Params->pService != NULL );
     assert( pCredScope != NULL );
     assert( pCredScope->pData != NULL );
-
-    sizeNeeded = sizeNeededForCredentialScope( pSigV4Params );
+    assert( pCredScope->dataLen >= credScopeLen );
 
     pBufWrite = pCredScope->pData;
 
-    if( pCredScope->dataLen < sizeNeeded )
-    {
-        returnStatus = SigV4InsufficientMemory;
-        LOG_INSUFFICIENT_MEMORY_ERROR( "write the credential scope",
-                                       ( sizeNeeded - pCredScope->dataLen ) );
-    }
     /* Each concatenated component is separated by a '/' character. */
-    else
-    {
-        /* Concatenate first 8 characters from the provided ISO 8601 string (YYYYMMDD). */
-        ( void ) memcpy( pBufWrite, pSigV4Params->pDateIso8601, ISO_DATE_SCOPE_LEN );
-        pBufWrite += ISO_DATE_SCOPE_LEN;
+    /* Concatenate first 8 characters from the provided ISO 8601 string (YYYYMMDD). */
+    ( void ) memcpy( pBufWrite, pSigV4Params->pDateIso8601, ISO_DATE_SCOPE_LEN );
+    pBufWrite += ISO_DATE_SCOPE_LEN;
 
-        *pBufWrite = CREDENTIAL_SCOPE_SEPARATOR;
-        pBufWrite += CREDENTIAL_SCOPE_SEPARATOR_LEN;
+    *pBufWrite = CREDENTIAL_SCOPE_SEPARATOR;
+    pBufWrite += CREDENTIAL_SCOPE_SEPARATOR_LEN;
 
-        /* Concatenate AWS region. */
-        ( void ) memcpy( pBufWrite, pSigV4Params->pRegion, pSigV4Params->regionLen );
-        pBufWrite += pSigV4Params->regionLen;
+    /* Concatenate AWS region. */
+    ( void ) memcpy( pBufWrite, pSigV4Params->pRegion, pSigV4Params->regionLen );
+    pBufWrite += pSigV4Params->regionLen;
 
-        *pBufWrite = CREDENTIAL_SCOPE_SEPARATOR;
-        pBufWrite += CREDENTIAL_SCOPE_SEPARATOR_LEN;
+    *pBufWrite = CREDENTIAL_SCOPE_SEPARATOR;
+    pBufWrite += CREDENTIAL_SCOPE_SEPARATOR_LEN;
 
-        /* Concatenate AWS service. */
-        ( void ) memcpy( pBufWrite, pSigV4Params->pService, pSigV4Params->serviceLen );
-        pBufWrite += pSigV4Params->serviceLen;
+    /* Concatenate AWS service. */
+    ( void ) memcpy( pBufWrite, pSigV4Params->pService, pSigV4Params->serviceLen );
+    pBufWrite += pSigV4Params->serviceLen;
 
-        *pBufWrite = CREDENTIAL_SCOPE_SEPARATOR;
-        pBufWrite += CREDENTIAL_SCOPE_SEPARATOR_LEN;
+    *pBufWrite = CREDENTIAL_SCOPE_SEPARATOR;
+    pBufWrite += CREDENTIAL_SCOPE_SEPARATOR_LEN;
 
-        /* Concatenate terminator. */
-        pBufWrite += copyString( pBufWrite, CREDENTIAL_SCOPE_TERMINATOR, CREDENTIAL_SCOPE_TERMINATOR_LEN );
+    /* Concatenate terminator. */
+    pBufWrite += copyString( pBufWrite, CREDENTIAL_SCOPE_TERMINATOR, CREDENTIAL_SCOPE_TERMINATOR_LEN );
 
-        assert( ( size_t ) ( pBufWrite - pCredScope->pData ) == sizeNeeded );
-        pCredScope->dataLen = sizeNeeded;
-    }
+    /* Verify that the number of bytes written match the sizeNeededForCredentialScope()
+     * utility function for calculating size of credential scope. */
+    assert( ( size_t ) ( pBufWrite - pCredScope->pData ) == credScopeLen );
 
-    return returnStatus;
+    pCredScope->dataLen = credScopeLen;
 }
 
 /*-----------------------------------------------------------*/
@@ -1264,9 +1276,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                                     bool encodeSlash,
                                     bool doubleEncodeEquals )
     {
-        const char * pUriLoc = NULL;
-        char * pBufLoc = NULL;
-        size_t i = 0U, bytesConsumed = 0U;
+        size_t uriIndex = 0U, bytesConsumed = 0U;
         size_t bufferLen = 0U;
         SigV4Status_t returnStatus = SigV4Success;
 
@@ -1275,37 +1285,36 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         assert( canonicalURILen != NULL );
         assert( *canonicalURILen > 0U );
 
-        pUriLoc = pUri;
-        pBufLoc = pCanonicalURI;
         bufferLen = *canonicalURILen;
 
-        while( ( i++ < uriLen ) && ( returnStatus == SigV4Success ) )
+        while( ( uriIndex < uriLen ) && ( returnStatus == SigV4Success ) )
         {
-            if( doubleEncodeEquals && ( *pUriLoc == '=' ) )
+            if( doubleEncodeEquals && ( pUri[ uriIndex ] == '=' ) )
             {
                 if( ( bufferLen - bytesConsumed ) < URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE )
                 {
                     returnStatus = SigV4InsufficientMemory;
-                    LOG_INSUFFICIENT_MEMORY_ERROR( "encode the URI",
+                    LOG_INSUFFICIENT_MEMORY_ERROR( "double encode '=' character in canonical query",
                                                    ( bytesConsumed + URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE - bufferLen ) );
                 }
                 else
                 {
-                    bytesConsumed += writeDoubleEncodedEquals( pBufLoc, bufferLen - bytesConsumed );
+                    bytesConsumed += writeDoubleEncodedEquals( pCanonicalURI + bytesConsumed, bufferLen - bytesConsumed );
                 }
             }
-            else if( isAllowedChar( *pUriLoc, encodeSlash ) )
+            else if( isAllowedChar( pUri[ uriIndex ], encodeSlash ) )
             {
+                /* If the output buffer has space, add the character as-is in URI encoding as it
+                 * is neither a special character nor an '=' character requiring double encoding. */
                 if( bytesConsumed < bufferLen )
                 {
-                    *pBufLoc = *pUriLoc;
-                    ++pBufLoc;
+                    pCanonicalURI[ bytesConsumed ] = pUri[ uriIndex ];
                     ++bytesConsumed;
                 }
                 else
                 {
                     returnStatus = SigV4InsufficientMemory;
-                    LOG_INSUFFICIENT_MEMORY_ERROR( "encode the URI", bytesConsumed + 1U - bufferLen );
+                    LogError( ( "Failed to encode URI in buffer due to insufficient memory" ) );
                 }
             }
             else
@@ -1313,19 +1322,24 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                 if( ( bufferLen - bytesConsumed ) < URI_ENCODED_SPECIAL_CHAR_SIZE )
                 {
                     returnStatus = SigV4InsufficientMemory;
-                    LOG_INSUFFICIENT_MEMORY_ERROR( "encode the URI",
+                    LOG_INSUFFICIENT_MEMORY_ERROR( "encode special character in canonical URI",
                                                    ( bytesConsumed + URI_ENCODED_SPECIAL_CHAR_SIZE - bufferLen ) );
                 }
                 else
                 {
-                    bytesConsumed += writeHexCodeOfChar( pBufLoc, bufferLen - bytesConsumed, *pUriLoc );
+                    bytesConsumed += writeHexCodeOfChar( pCanonicalURI + bytesConsumed, bufferLen - bytesConsumed, pUri[ uriIndex - 1U ] );
                 }
             }
 
-            pUriLoc++;
+            uriIndex++;
         }
 
-        *canonicalURILen = bytesConsumed;
+        if( returnStatus == SigV4Success )
+        {
+            /* Set the output parameter of the number of URI encoded bytes written
+             * to the buffer. */
+            *canonicalURILen = bytesConsumed;
+        }
 
         return returnStatus;
     }
@@ -1389,7 +1403,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
             if( pCanonicalRequest->bufRemaining < 1U )
             {
                 returnStatus = SigV4InsufficientMemory;
-                LOG_INSUFFICIENT_MEMORY_ERROR( "write the credential scope", 1U );
+                LOG_INSUFFICIENT_MEMORY_ERROR( "write newline character after canonical URI", 1U );
             }
             else
             {
@@ -1542,6 +1556,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
 
             if( sigV4Status != SigV4Success )
             {
+                LogError( ( "Unable to write Signed Headers for Canonical Request: Insufficient memory configured in \"SIGV4_PROCESSING_BUFFER_LENGTH\"" ) );
                 break;
             }
         }
@@ -1642,7 +1657,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
             /* Look for header value part of a header field entry for both canonicalized and non-canonicalized forms. */
             /* Non-canonicalized headers will have header values ending with "\r\n". */
             else if( ( !keyFlag ) && !FLAG_IS_SET( flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( ( index + 1U ) < headersDataLen ) &&
-                     ( 0 == strncmp( pCurrLoc, "\r\n", strlen( "\r\n" ) ) ) )
+                     ( 0 == strncmp( pCurrLoc, HTTP_REQUEST_LINE_ENDING, HTTP_REQUEST_LINE_ENDING_LEN ) ) )
             {
                 dataLen = pCurrLoc - pKeyOrValStartLoc;
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = pKeyOrValStartLoc;
@@ -1653,7 +1668,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                 noOfHeaders++;
             }
             /* Canonicalized headers will have header values ending just with "\n". */
-            else if( ( !keyFlag ) && ( FLAG_IS_SET( flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( pHeaders[ index ] == '\n' ) ) )
+            else if( ( !keyFlag ) && FLAG_IS_SET( flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( pHeaders[ index ] == '\n' ) )
             {
                 dataLen = pCurrLoc - pKeyOrValStartLoc;
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = pKeyOrValStartLoc;
@@ -1674,7 +1689,16 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         /* Ensure each key has its corresponding value. */
         assert( keyFlag == true );
 
-        *headerCount = noOfHeaders;
+        /* If no header was found OR header value was not found for a header key,
+         *  that represents incorrect HTTP headers data passed by the application. */
+        if( ( noOfHeaders == 0U ) || ( keyFlag == false ) )
+        {
+            sigV4Status = SigV4InvalidHttpHeaders;
+        }
+        else
+        {
+            *headerCount = noOfHeaders;
+        }
 
         return sigV4Status;
     }
@@ -1702,14 +1726,24 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                                                   &noOfHeaders,
                                                   canonicalRequest );
 
-        if( ( sigV4Status == SigV4Success ) && !FLAG_IS_SET( flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) )
+        if( sigV4Status == SigV4Success )
         {
-            /* Sorting headers based on keys. */
-            quickSort( canonicalRequest->pHeadersLoc, noOfHeaders, sizeof( SigV4KeyValuePair_t ), cmpHeaderField );
+            if( FLAG_IS_SET( flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) )
+            {
+                /* Headers are already canonicalized, so just write it to the buffer as is. */
+                sigV4Status = writeLineToCanonicalRequest( pHeaders,
+                                                           headersLen,
+                                                           canonicalRequest );
+            }
+            else
+            {
+                /* Sorting headers based on keys. */
+                quickSort( canonicalRequest->pHeadersLoc, noOfHeaders, sizeof( SigV4KeyValuePair_t ), cmpHeaderField );
 
-            /* If the headers are canonicalized, we will copy them directly into the buffer as they do not
-             * need processing, else we need to call the following function. */
-            sigV4Status = appendCanonicalizedHeaders( noOfHeaders, flags, canonicalRequest );
+                /* If the headers are canonicalized, we will copy them directly into the buffer as they do not
+                 * need processing, else we need to call the following function. */
+                sigV4Status = appendCanonicalizedHeaders( noOfHeaders, flags, canonicalRequest );
+            }
         }
 
         /* The \n character must be written if provided headers are not already canonicalized. */
@@ -1718,7 +1752,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
             if( canonicalRequest->bufRemaining < 1U )
             {
                 sigV4Status = SigV4InsufficientMemory;
-                LOG_INSUFFICIENT_MEMORY_ERROR( "write the canonical headers", 1U );
+                LOG_INSUFFICIENT_MEMORY_ERROR( "write the newline character after canonical headers", 1U );
             }
             else
             {
@@ -1812,14 +1846,16 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                     /* A field should never be empty, but a value can be empty
                      * provided a field was specified first. */
                 }
+                /* If the previous parameter did not have a value, write the name and empty value for it. */
                 else if( !fieldHasValue )
                 {
-                    /* Store information about Query Parameter Key in the canonical context. This query parameter does not have an associated value. */
+                    /* Store information about previous query parameter name. The query parameter has no associated value. */
                     setQueryParameterKey( currentParameter, &pQuery[ startOfFieldOrValue ], i - startOfFieldOrValue, pCanonicalRequest );
 
-                    /* The previous field did not have a value set for it, so set its value to NULL. */
+                    /* Store the previous parameter's empty value information. Use NULL to represent empty value. */
                     setQueryParameterValue( currentParameter, NULL, 0U, pCanonicalRequest );
 
+                    /* Set the starting index for the new query parameter name. */
                     startOfFieldOrValue = i + 1U;
                     currentParameter++;
                 }
@@ -1827,16 +1863,24 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                 {
                     /* End of value reached, so store a pointer to the previously set value. */
                     setQueryParameterValue( currentParameter, &pQuery[ startOfFieldOrValue ], i - startOfFieldOrValue, pCanonicalRequest );
-                    fieldHasValue = false;
+
+                    /* Set the starting index for the new query parameter name. */
                     startOfFieldOrValue = i + 1U;
                     currentParameter++;
+
+                    /* Reset the parameter value state of the new parameter entry. */
+                    fieldHasValue = false;
                 }
             }
             else if( ( pQuery[ i ] == '=' ) && !fieldHasValue )
             {
                 /* Store information about Query Parameter Key in the canonical context. This query parameter has an associated value. */
                 setQueryParameterKey( currentParameter, &pQuery[ startOfFieldOrValue ], i - startOfFieldOrValue, pCanonicalRequest );
+
+                /* Set the starting index for the query parameter's value. */
                 startOfFieldOrValue = i + 1U;
+
+                /* Set the flag to indicate that the current parameter's value has been found. */
                 fieldHasValue = true;
             }
             else
@@ -1867,6 +1911,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         /* Check that there is space at least for the equals to character. */
         if( bufferLen < 1U )
         {
+            LOG_INSUFFICIENT_MEMORY_ERROR( "write '=' query parameter separator", 1U );
             returnStatus = SigV4InsufficientMemory;
         }
         else
@@ -1874,17 +1919,12 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
             *pBufCur = '=';
             bytesWritten = bufferLen - 1U;
 
-            /* Query parameter values can be empty;
-             * thus encode value only if it is non-empty. */
-            if( pValue != NULL )
-            {
-                returnStatus = encodeURI( pValue,
-                                          valueLen,
-                                          pBufCur + 1U,
-                                          &bytesWritten,
-                                          true,
-                                          true );
-            }
+            returnStatus = encodeURI( pValue,
+                                      valueLen,
+                                      pBufCur + 1U,
+                                      &bytesWritten,
+                                      true,
+                                      true );
         }
 
         if( returnStatus == SigV4Success )
@@ -1902,7 +1942,8 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
     {
         SigV4Status_t returnStatus = SigV4Success;
         char * pBufLoc = NULL;
-        size_t encodedLen = 0U, remainingLen = 0U, i = 0U;
+        size_t encodedLen = 0U, remainingLen = 0U, paramsIndex = 0U;
+        bool thereExistsNextParameter = false;
 
         assert( pCanonicalRequest != NULL );
         assert( pCanonicalRequest->pBufCur != NULL );
@@ -1911,14 +1952,14 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
         pBufLoc = pCanonicalRequest->pBufCur;
         remainingLen = pCanonicalRequest->bufRemaining;
 
-        for( i = 0U; i < numberOfParameters; i++ )
+        for( paramsIndex = 0U; paramsIndex < numberOfParameters; paramsIndex++ )
         {
-            assert( pCanonicalRequest->pQueryLoc[ i ].key.pData != NULL );
-            assert( pCanonicalRequest->pQueryLoc[ i ].key.dataLen > 0U );
+            assert( pCanonicalRequest->pQueryLoc[ paramsIndex ].key.pData != NULL );
+            assert( pCanonicalRequest->pQueryLoc[ paramsIndex ].key.dataLen > 0U );
 
             encodedLen = remainingLen;
-            returnStatus = encodeURI( pCanonicalRequest->pQueryLoc[ i ].key.pData,
-                                      pCanonicalRequest->pQueryLoc[ i ].key.dataLen,
+            returnStatus = encodeURI( pCanonicalRequest->pQueryLoc[ paramsIndex ].key.pData,
+                                      pCanonicalRequest->pQueryLoc[ paramsIndex ].key.dataLen,
                                       pBufLoc,
                                       &encodedLen,
                                       true,
@@ -1929,36 +1970,43 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
                 pBufLoc += encodedLen;
                 remainingLen -= encodedLen;
 
-                /* An empty value corresponds to an empty string. */
-                if( pCanonicalRequest->pQueryLoc[ i ].value.dataLen > 0U )
+                /* Encode parameter value if non-empty. Query parameters can have empty values. */
+                if( pCanonicalRequest->pQueryLoc[ paramsIndex ].value.dataLen > 0U )
                 {
-                    assert( pCanonicalRequest->pQueryLoc[ i ].value.pData != NULL );
+                    assert( pCanonicalRequest->pQueryLoc[ paramsIndex ].value.pData != NULL );
                     returnStatus = writeValueInCanonicalizedQueryString( pBufLoc,
                                                                          remainingLen,
-                                                                         pCanonicalRequest->pQueryLoc[ i ].value.pData,
-                                                                         pCanonicalRequest->pQueryLoc[ i ].value.dataLen,
+                                                                         pCanonicalRequest->pQueryLoc[ paramsIndex ].value.pData,
+                                                                         pCanonicalRequest->pQueryLoc[ paramsIndex ].value.dataLen,
                                                                          &encodedLen );
                     pBufLoc += encodedLen;
                     remainingLen -= encodedLen;
                 }
             }
 
-            if( ( remainingLen < 1U ) && ( numberOfParameters != ( i + 1U ) ) )
-            {
-                returnStatus = SigV4InsufficientMemory;
-                LOG_INSUFFICIENT_MEMORY_ERROR( "write the canonical query", 1U );
-            }
+            /* Check if there is a next parameter. */
+            thereExistsNextParameter = ( ( paramsIndex + 1U ) != numberOfParameters );
 
-            if( returnStatus != SigV4Success )
-            {
-                break;
-            }
-
-            if( numberOfParameters != ( i + 1U ) )
+            /* Before adding the '&' for the next query parameter, check that this is not
+             * the last parameter. */
+            if( thereExistsNextParameter && ( remainingLen > 0U ) )
             {
                 *pBufLoc = '&';
                 ++pBufLoc;
                 remainingLen--;
+            }
+
+            /* There is at least another query parameter entry to encode
+             * but no space in the buffer. */
+            else if( thereExistsNextParameter )
+            {
+                returnStatus = SigV4InsufficientMemory;
+                LogError( ( "Unable to write canonical query: Insufficient memory configured in \"SIGV4_PROCESSING_BUFFER_LENGTH\"" ) );
+                break;
+            }
+            else
+            {
+                /* Empty else for MISRA C:2012 compliance. */
             }
 
             pCanonicalRequest->pBufCur = pBufLoc;
@@ -1982,7 +2030,7 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
 
         returnStatus = setQueryStringFieldsAndValues( pQuery, queryLen, &numberOfParameters, pCanonicalContext );
 
-        if( returnStatus == SigV4Success )
+        if( ( returnStatus == SigV4Success ) && ( numberOfParameters > 0U ) )
         {
             /* Sort the parameter names by character code point in ascending order.
              * Parameters with duplicate names should be sorted by value. */
@@ -1999,10 +2047,18 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
 
         if( returnStatus == SigV4Success )
         {
-            /* Append a linefeed at the end. */
-            *pCanonicalContext->pBufCur = LINEFEED_CHAR;
-            pCanonicalContext->pBufCur += 1U;
-            pCanonicalContext->bufRemaining -= 1U;
+            if( pCanonicalContext->bufRemaining > 0U )
+            {
+                /* Append a linefeed at the end. */
+                *pCanonicalContext->pBufCur = LINEFEED_CHAR;
+                pCanonicalContext->pBufCur += 1U;
+                pCanonicalContext->bufRemaining -= 1U;
+            }
+            else
+            {
+                returnStatus = SigV4InsufficientMemory;
+                LOG_INSUFFICIENT_MEMORY_ERROR( "write newline character after canonical query", 1U );
+            }
         }
 
         return returnStatus;
@@ -2012,14 +2068,20 @@ static SigV4Status_t generateCredentialScope( const SigV4Parameters_t * pSigV4Pa
 
 /*-----------------------------------------------------------*/
 
-static SigV4Status_t verifySigV4Parameters( const SigV4Parameters_t * pParams )
+static SigV4Status_t verifyParamsToGenerateAuthHeaderApi( const SigV4Parameters_t * pParams,
+                                                          const char * pAuthBuf,
+                                                          const size_t * authBufLen,
+                                                          char * const * pSignature,
+                                                          const size_t * signatureLen )
 {
     SigV4Status_t returnStatus = SigV4Success;
 
     /* Check for NULL members of struct pParams */
-    if( pParams == NULL )
+    if( ( pParams == NULL ) || ( pAuthBuf == NULL ) || ( authBufLen == NULL ) ||
+        ( pSignature == NULL ) || ( signatureLen == NULL ) )
     {
-        LogError( ( "Parameter check failed: pParams is NULL." ) );
+        LogError( ( "Parameter check failed: At least one of the input parameters is NULL. "
+                    "Input parameters cannot be NULL" ) );
         returnStatus = SigV4InvalidParameter;
     }
     else if( pParams->pCredentials == NULL )
@@ -2027,39 +2089,29 @@ static SigV4Status_t verifySigV4Parameters( const SigV4Parameters_t * pParams )
         LogError( ( "Parameter check failed: pParams->pCredentials is NULL." ) );
         returnStatus = SigV4InvalidParameter;
     }
-    else if( pParams->pCredentials->pAccessKeyId == NULL )
+    else if( ( pParams->pCredentials->pAccessKeyId == NULL ) || ( pParams->pCredentials->accessKeyIdLen == 0U ) )
     {
-        LogError( ( "Parameter check failed: pParams->pCredentials->pAccessKeyId is NULL." ) );
+        LogError( ( "Parameter check failed: Access Key ID data is invalid." ) );
         returnStatus = SigV4InvalidParameter;
     }
-    else if( pParams->pCredentials->pSecretAccessKey == NULL )
+    else if( ( pParams->pCredentials->pSecretAccessKey == NULL ) || ( pParams->pCredentials->secretAccessKeyLen == 0U ) )
     {
-        LogError( ( "Parameter check failed: pParams->pCredentials->pSecretAccessKey is NULL." ) );
-        returnStatus = SigV4InvalidParameter;
-    }
-    else if( pParams->pCredentials->pSecurityToken == NULL )
-    {
-        LogError( ( "Parameter check failed: pParams->pCredentials->pSecurityToken is NULL." ) );
-        returnStatus = SigV4InvalidParameter;
-    }
-    else if( pParams->pCredentials->pExpiration == NULL )
-    {
-        LogError( ( "Parameter check failed: pParams->pCredentials->pExpiration is NULL." ) );
+        LogError( ( "Parameter check failed: Secret Access Key data is invalid." ) );
         returnStatus = SigV4InvalidParameter;
     }
     else if( pParams->pDateIso8601 == NULL )
     {
-        LogError( ( "Parameter check failed: pParams->pDateIso8601 is NULL." ) );
+        LogError( ( "Parameter check failed: pParams->DateIso8601 data is NULL." ) );
         returnStatus = SigV4InvalidParameter;
     }
-    else if( pParams->pRegion == NULL )
+    else if( ( pParams->pRegion == NULL ) || ( pParams->regionLen == 0U ) )
     {
-        LogError( ( "Parameter check failed: pParams->pRegion is NULL." ) );
+        LogError( ( "Parameter check failed: Region data is invalid." ) );
         returnStatus = SigV4InvalidParameter;
     }
-    else if( pParams->pService == NULL )
+    else if( ( pParams->pService == NULL ) || ( pParams->serviceLen == 0U ) )
     {
-        LogError( ( "Parameter check failed: pParams->pService is NULL." ) );
+        LogError( ( "Parameter check failed: Service data is invalid." ) );
         returnStatus = SigV4InvalidParameter;
     }
     else if( pParams->pCryptoInterface == NULL )
@@ -2067,9 +2119,10 @@ static SigV4Status_t verifySigV4Parameters( const SigV4Parameters_t * pParams )
         LogError( ( "Parameter check failed: pParams->pCryptoInterface is NULL." ) );
         returnStatus = SigV4InvalidParameter;
     }
-    else if( pParams->pCryptoInterface->pHashContext == NULL )
+    else if( ( pParams->pCryptoInterface->hashInit == NULL ) || ( pParams->pCryptoInterface->hashUpdate == NULL ) ||
+             ( pParams->pCryptoInterface->hashFinal == NULL ) )
     {
-        LogError( ( "Parameter check failed: pParams->pCryptoInterface->pHashContext is NULL." ) );
+        LogError( ( "Parameter check failed: At least one of hashInit, hashUpdate, hashFinal function pointer members is NULL." ) );
         returnStatus = SigV4InvalidParameter;
     }
     else if( pParams->pCryptoInterface->hashBlockLen > SIGV4_HASH_MAX_BLOCK_LENGTH )
@@ -2089,19 +2142,19 @@ static SigV4Status_t verifySigV4Parameters( const SigV4Parameters_t * pParams )
         LogError( ( "Parameter check failed: pParams->pHttpParameters is NULL." ) );
         returnStatus = SigV4InvalidParameter;
     }
-    else if( pParams->pHttpParameters->pHttpMethod == NULL )
+    else if( ( pParams->pHttpParameters->pHttpMethod == NULL ) || ( pParams->pHttpParameters->httpMethodLen == 0U ) )
     {
-        LogError( ( "Parameter check failed: pParams->pHttpParameters->pHttpMethod is NULL." ) );
+        LogError( ( "Parameter check failed: HTTP Method data is either NULL or zero bytes in length." ) );
         returnStatus = SigV4InvalidParameter;
     }
-    else if( pParams->pHttpParameters->pHeaders == NULL )
+    else if( ( pParams->pHttpParameters->pHeaders == NULL ) || ( pParams->pHttpParameters->headersLen == 0U ) )
     {
-        LogError( ( "Parameter check failed: pParams->pHttpParameters->pHeaders is NULL." ) );
+        LogError( ( "Parameter check failed: HTTP URI path information is either NULL or zero bytes in length." ) );
         returnStatus = SigV4InvalidParameter;
     }
     else
     {
-        /* Empty else. */
+        /* Empty else block for MISRA C:2012 compliance. */
     }
 
     return returnStatus;
@@ -2191,9 +2244,10 @@ static SigV4Status_t completeHashAndHexEncode( const char * pInput,
     return returnStatus;
 }
 
-static int32_t hmacKey( HmacContext_t * pHmacContext,
-                        const char * pKey,
-                        size_t keyLen )
+static int32_t hmacAddKey( HmacContext_t * pHmacContext,
+                           const char * pKey,
+                           size_t keyLen,
+                           bool isKeyPrefix )
 {
     int32_t returnStatus = 0;
     const SigV4CryptoInterface_t * pCryptoInterface = NULL;
@@ -2214,81 +2268,87 @@ static int32_t hmacKey( HmacContext_t * pHmacContext,
     {
         /* The key fits into the block so just append it. */
         ( void ) memcpy( pHmacContext->key + pHmacContext->keyLen, pUnsignedKey, keyLen );
+        pHmacContext->keyLen += keyLen;
     }
     else
     {
-        /* Initialize the hash context and hash existing key data. */
-        if( pHmacContext->keyLen <= pCryptoInterface->hashBlockLen )
-        {
-            returnStatus = pCryptoInterface->hashInit( pCryptoInterface->pHashContext );
+        /* To reduce the key length to less than the hash block size, this branch performs
+         * hash operations. We want to perform hash operations only when we have received the
+         * entire key. */
+        assert( isKeyPrefix == false );
 
-            if( returnStatus == 0 )
-            {
-                returnStatus = pCryptoInterface->hashUpdate( pCryptoInterface->pHashContext,
-                                                             pHmacContext->key,
-                                                             pHmacContext->keyLen );
-            }
+        returnStatus = pCryptoInterface->hashInit( pCryptoInterface->pHashContext );
+
+        /* Has part of the key that is cached in the HMAC context. */
+        if( returnStatus == 0 )
+        {
+            returnStatus = pCryptoInterface->hashUpdate( pCryptoInterface->pHashContext,
+                                                         pHmacContext->key,
+                                                         pHmacContext->keyLen );
         }
 
-        /* Hash down the key in order to create a block-sized derived key. */
+        /* Hash down the remaining part of the key in order to create a block-sized derived key. */
         if( returnStatus == 0 )
         {
             returnStatus = pCryptoInterface->hashUpdate( pCryptoInterface->pHashContext,
                                                          pUnsignedKey,
                                                          keyLen );
         }
+
+        if( returnStatus == 0 )
+        {
+            /* Store the final block-sized derived key. */
+            returnStatus = pCryptoInterface->hashFinal( pCryptoInterface->pHashContext,
+                                                        pHmacContext->key,
+                                                        pCryptoInterface->hashBlockLen );
+            pHmacContext->keyLen = pCryptoInterface->hashDigestLen;
+        }
     }
 
-    pHmacContext->keyLen += keyLen;
-
-    return returnStatus;
-}
-
-/*-----------------------------------------------------------*/
-
-static int32_t hmacData( HmacContext_t * pHmacContext,
-                         const char * pData,
-                         size_t dataLen )
-{
-    int32_t returnStatus = 0;
-    size_t i = 0U;
-    const SigV4CryptoInterface_t * pCryptoInterface = NULL;
-
-    assert( pHmacContext != NULL );
-    assert( pHmacContext->key != NULL );
-    assert( pHmacContext->pCryptoInterface != NULL );
-    assert( pHmacContext->pCryptoInterface->hashInit != NULL );
-    assert( pHmacContext->pCryptoInterface->hashUpdate != NULL );
-    assert( pHmacContext->pCryptoInterface->hashFinal != NULL );
-
-    pCryptoInterface = pHmacContext->pCryptoInterface;
-
-    if( pHmacContext->keyLen > pCryptoInterface->hashBlockLen )
-    {
-        /* Store the final block-sized derived key. */
-        returnStatus = pCryptoInterface->hashFinal( pCryptoInterface->pHashContext,
-                                                    pHmacContext->key,
-                                                    pCryptoInterface->hashBlockLen );
-        pHmacContext->keyLen = pCryptoInterface->hashDigestLen;
-    }
-
-    assert( pCryptoInterface->hashBlockLen >= pHmacContext->keyLen );
-
-    if( returnStatus == 0 )
+    /* If the complete key has been obtained and it is less than the hash block size, then append
+     * padding with zero valued bytes to make it block-sized. */
+    if( !isKeyPrefix && ( returnStatus == 0 ) && ( pHmacContext->keyLen < pCryptoInterface->hashBlockLen ) )
     {
         /* Zero pad to the right so that the key has the same size as the block size. */
         ( void ) memset( ( void * ) ( pHmacContext->key + pHmacContext->keyLen ),
                          0,
                          pCryptoInterface->hashBlockLen - pHmacContext->keyLen );
 
-        for( i = 0U; i < pCryptoInterface->hashBlockLen; i++ )
-        {
-            /* XOR the key with the ipad. */
-            pHmacContext->key[ i ] ^= 0x36U;
-        }
-
-        returnStatus = pCryptoInterface->hashInit( pCryptoInterface->pHashContext );
+        pHmacContext->keyLen = pCryptoInterface->hashBlockLen;
     }
+
+    return returnStatus;
+}
+
+/*-----------------------------------------------------------*/
+
+static int32_t hmacIntermediate( HmacContext_t * pHmacContext,
+                                 const char * pData,
+                                 size_t dataLen )
+{
+    int32_t returnStatus = 0;
+    size_t i = 0U;
+    const SigV4CryptoInterface_t * pCryptoInterface = pHmacContext->pCryptoInterface;
+
+    assert( pHmacContext != NULL );
+    assert( dataLen > 0U );
+    assert( pHmacContext->key != NULL );
+    assert( pHmacContext->pCryptoInterface != NULL );
+    assert( pHmacContext->pCryptoInterface->hashInit != NULL );
+    assert( pHmacContext->pCryptoInterface->hashUpdate != NULL );
+    assert( pHmacContext->pCryptoInterface->hashFinal != NULL );
+    assert( pHmacContext->keyLen == pCryptoInterface->hashBlockLen );
+
+    /* Derive the inner HMAC key by XORing the key with inner pad byte. */
+    for( i = 0U; i < pCryptoInterface->hashBlockLen; i++ )
+    {
+        /* XOR the key with the ipad. */
+        pHmacContext->key[ i ] ^= HMAC_INNER_PAD_BYTE;
+    }
+
+    /* Initialize the Hash Crypto interface for performing new hash operation
+     * of H(Inner Key || Data) in the HMAC algorithm. */
+    returnStatus = pCryptoInterface->hashInit( pCryptoInterface->pHashContext );
 
     if( returnStatus == 0 )
     {
@@ -2298,7 +2358,7 @@ static int32_t hmacData( HmacContext_t * pHmacContext,
                                                      pCryptoInterface->hashBlockLen );
     }
 
-    if( ( returnStatus == 0 ) && ( dataLen > 0U ) )
+    if( returnStatus == 0 )
     {
         /* Hash the data. */
         returnStatus = pCryptoInterface->hashUpdate( pCryptoInterface->pHashContext,
@@ -2338,12 +2398,12 @@ static int32_t hmacFinal( HmacContext_t * pHmacContext,
     if( returnStatus == 0 )
     {
         /* Create the outer-padded key by retrieving the original key from
-         * the inner-padded key then XOR with opad. XOR is associative,
-         * so one way to do this is by performing XOR on each byte of the
-         * inner-padded key with (0x36 ^ 0x5c) = (ipad ^ opad) = 0x6a.  */
+         * the inner-padded key (by XORing with ipad byte) and then XOR with opad
+         * to generate the outer-padded key. As XOR is associative, one way to do
+         * this is by performing XOR on each byte of the inner-padded key (ipad ^ opad).  */
         for( i = 0U; i < pCryptoInterface->hashBlockLen; i++ )
         {
-            pHmacContext->key[ i ] ^= 0x6aU;
+            pHmacContext->key[ i ] ^= ( HMAC_INNER_PAD_BYTE ^ HMAC_OUTER_PAD_BYTE );
         }
 
         returnStatus = pCryptoInterface->hashInit( pCryptoInterface->pHashContext );
@@ -2388,11 +2448,10 @@ static SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
     assert( ( pLine != NULL ) && ( lineLen > 0 ) );
     assert( ( pCanonicalContext != NULL ) && ( pCanonicalContext->pBufCur != NULL ) );
 
+    /* Make sure that there is space for the Method and the newline character.*/
     if( pCanonicalContext->bufRemaining < ( lineLen + 1U ) )
     {
         returnStatus = SigV4InsufficientMemory;
-        LOG_INSUFFICIENT_MEMORY_ERROR( "write the credential scope",
-                                       lineLen - pCanonicalContext->bufRemaining );
     }
     else
     {
@@ -2421,21 +2480,22 @@ static int32_t completeHmac( HmacContext_t * pHmacContext,
 {
     int32_t returnStatus = 0;
 
-    if( outputLen < pCryptoInterface->hashDigestLen )
-    {
-        LogError( ( "Not enough buffer to write the hash digest, bytesExceeded=%lu",
-                    ( unsigned long ) ( pCryptoInterface->hashDigestLen - outputLen ) ) );
-        returnStatus = -1;
-    }
+    assert( pHmacContext != NULL );
+    assert( pKey != NULL );
+    assert( keyLen > 0U );
+    assert( pData != NULL );
+    assert( dataLen > 0U );
+    assert( pOutput != NULL );
+    assert( outputLen >= pCryptoInterface->hashDigestLen );
+
+    returnStatus = hmacAddKey( pHmacContext,
+                               pKey,
+                               keyLen,
+                               false /* Not a key prefix. */ );
 
     if( returnStatus == 0 )
     {
-        returnStatus = hmacKey( pHmacContext, pKey, keyLen );
-    }
-
-    if( returnStatus == 0 )
-    {
-        returnStatus = hmacData( pHmacContext, pData, dataLen );
+        returnStatus = hmacIntermediate( pHmacContext, pData, dataLen );
     }
 
     if( returnStatus == 0 )
@@ -2617,15 +2677,6 @@ static SigV4Status_t generateCanonicalRequestUntilHeaders( const SigV4Parameters
         }
     }
 
-    if( ( returnStatus == SigV4Success ) &&
-        FLAG_IS_SET( pParams->pHttpParameters->flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) )
-    {
-        /* Headers are already canonicalized, so just write it to the buffer as is. */
-        returnStatus = writeLineToCanonicalRequest( pParams->pHttpParameters->pHeaders,
-                                                    pParams->pHttpParameters->headersLen,
-                                                    pCanonicalContext );
-    }
-
     if( returnStatus == SigV4Success )
     {
         /* Canonicalize original HTTP headers before writing to buffer. */
@@ -2741,27 +2792,37 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
     SigV4Status_t returnStatus = SigV4Success;
     int32_t hmacStatus = 0;
     char * pSigningKeyStart = NULL;
+    bool isBufferSpaceSufficient = true;
 
     assert( pSigV4Params != NULL );
     assert( pHmacContext != NULL );
     assert( pSigningKey != NULL );
     assert( pBytesRemaining != NULL );
 
-    hmacStatus = hmacKey( pHmacContext,
-                          SIGV4_HMAC_SIGNING_KEY_PREFIX,
-                          SIGV4_HMAC_SIGNING_KEY_PREFIX_LEN );
-
     /* To calculate the final signing key, this function needs at least enough
      * buffer to hold the length of two digests since one digest is used to
      * calculate the other. */
     if( *pBytesRemaining < ( pSigV4Params->pCryptoInterface->hashDigestLen * 2U ) )
     {
-        returnStatus = SigV4InsufficientMemory;
+        isBufferSpaceSufficient = false;
         LOG_INSUFFICIENT_MEMORY_ERROR( "generate signing key",
                                        ( pSigV4Params->pCryptoInterface->hashDigestLen * 2U ) - *pBytesRemaining );
     }
 
-    if( hmacStatus == 0 )
+    if( isBufferSpaceSufficient )
+    {
+        /* Fill the key prefix, "AWS4" in the HMAC context cache.
+         * The prefix is part of the key for the first round of HMAC operation:
+         * HMAC("AWS4" + SecretKey, Date) */
+        hmacStatus = hmacAddKey( pHmacContext,
+                                 SIGV4_HMAC_SIGNING_KEY_PREFIX,
+                                 SIGV4_HMAC_SIGNING_KEY_PREFIX_LEN,
+                                 true /* Is key prefix. */ );
+        /* The above call should always succeed as it only populates the HMAC key cache. */
+        assert( hmacStatus == 0 );
+    }
+
+    if( isBufferSpaceSufficient )
     {
         hmacStatus = completeHmac( pHmacContext,
                                    pSigV4Params->pCredentials->pSecretAccessKey,
@@ -2774,7 +2835,7 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
         *pBytesRemaining -= pSigV4Params->pCryptoInterface->hashDigestLen;
     }
 
-    if( hmacStatus == 0 )
+    if( isBufferSpaceSufficient && ( hmacStatus == 0 ) )
     {
         pSigningKeyStart = pSigningKey->pData + pSigV4Params->pCryptoInterface->hashDigestLen + 1U;
         hmacStatus = completeHmac( pHmacContext,
@@ -2788,7 +2849,7 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
         *pBytesRemaining -= pSigV4Params->pCryptoInterface->hashDigestLen;
     }
 
-    if( hmacStatus == 0 )
+    if( isBufferSpaceSufficient && ( hmacStatus == 0 ) )
     {
         hmacStatus = completeHmac( pHmacContext,
                                    pSigningKeyStart,
@@ -2800,7 +2861,7 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
                                    pSigV4Params->pCryptoInterface );
     }
 
-    if( hmacStatus == 0 )
+    if( isBufferSpaceSufficient && ( hmacStatus == 0 ) )
     {
         hmacStatus = completeHmac( pHmacContext,
                                    pSigningKey->pData,
@@ -2812,14 +2873,24 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
                                    pSigV4Params->pCryptoInterface );
     }
 
-    if( hmacStatus == 0 )
+    if( isBufferSpaceSufficient && ( hmacStatus == 0 ) )
     {
         pSigningKey->pData = pSigningKeyStart;
         pSigningKey->dataLen = pSigV4Params->pCryptoInterface->hashDigestLen;
     }
-    else
+
+    /* Set the appropriate error code for failures. */
+    if( !isBufferSpaceSufficient )
+    {
+        returnStatus = SigV4InsufficientMemory;
+    }
+    else if( hmacStatus != 0 )
     {
         returnStatus = SigV4HashError;
+    }
+    else
+    {
+        /* Empty else for MISRA C:2012 compliance. */
     }
 
     return returnStatus;
@@ -2913,38 +2984,26 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
     char * pSignedHeaders = NULL;
     size_t encodedLen = 0U, algorithmLen = 0U, signedHeadersLen = 0U, authPrefixLen = 0U;
     HmacContext_t hmacContext = { 0 };
+
     SigV4String_t signingKey;
     ptrdiff_t bufferLen;
 
-    returnStatus = verifySigV4Parameters( pParams );
+    returnStatus = verifyParamsToGenerateAuthHeaderApi( pParams,
+                                                        pAuthBuf, authBufLen,
+                                                        pSignature, signatureLen );
 
-    authPrefixLen = *authBufLen;
-
-    /* Default arguments. */
-    if( ( pParams->pAlgorithm == NULL ) || ( pParams->algorithmLen == 0U ) )
+    if( returnStatus == SigV4Success )
     {
-        /* The default algorithm is AWS4-HMAC-SHA256. */
-        pAlgorithm = SIGV4_AWS4_HMAC_SHA256;
-        algorithmLen = SIGV4_AWS4_HMAC_SHA256_LENGTH;
-    }
-    else
-    {
-        pAlgorithm = pParams->pAlgorithm;
-        algorithmLen = pParams->algorithmLen;
+        /* If the SigV4 algorithm is not specified, use "AWS4-HMAC-256" as the default algorithm. */
+        pAlgorithm = ( pParams->pAlgorithm == NULL ) ? SIGV4_AWS4_HMAC_SHA256 : pParams->pAlgorithm;
+        algorithmLen = ( pParams->pAlgorithm == NULL ) ? SIGV4_AWS4_HMAC_SHA256_LENGTH : pParams->algorithmLen;
     }
 
     if( returnStatus == SigV4Success )
     {
-        returnStatus = generateCanonicalRequestUntilHeaders( pParams, &canonicalContext, &pSignedHeaders, &signedHeadersLen );
-    }
-
-    /* Write the prefix of the Authorizaton header value. */
-    if( returnStatus == SigV4Success )
-    {
-        returnStatus = generateAuthorizationValuePrefix( pParams,
-                                                         pAlgorithm, algorithmLen,
-                                                         pSignedHeaders, signedHeadersLen,
-                                                         pAuthBuf, &authPrefixLen );
+        returnStatus = generateCanonicalRequestUntilHeaders( pParams, &canonicalContext,
+                                                             &pSignedHeaders,
+                                                             &signedHeadersLen );
     }
 
     /* Hash and hex-encode the canonical request to the buffer. */
@@ -2956,6 +3015,16 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
                                                  canonicalContext.pBufCur,
                                                  &encodedLen,
                                                  pParams->pCryptoInterface );
+    }
+
+    /* Write the prefix of the Authorizaton header value. */
+    if( returnStatus == SigV4Success )
+    {
+        authPrefixLen = *authBufLen;
+        returnStatus = generateAuthorizationValuePrefix( pParams,
+                                                         pAlgorithm, algorithmLen,
+                                                         pSignedHeaders, signedHeadersLen,
+                                                         pAuthBuf, &authPrefixLen );
     }
 
     /* Write string to sign. */

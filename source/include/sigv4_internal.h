@@ -91,6 +91,9 @@
 #define LINEFEED_CHAR                          '\n'                                             /**< A linefeed character used to build the canonical request. */
 #define LINEFEED_CHAR_LEN                      1U                                               /**< The length of #LINEFEED_CHAR. */
 
+#define HTTP_REQUEST_LINE_ENDING               "\r\n"                                           /**< The string used in non-canonicalized HTTP headers to separate header entries in HTTP request. */
+#define HTTP_REQUEST_LINE_ENDING_LEN           ( sizeof( HTTP_REQUEST_LINE_ENDING ) - 1U )      /**< The length of #HTTP_REQUEST_LINE_ENDING. */
+
 #define SPACE_CHAR                             ' '                                              /**< A linefeed character used to build the Authorization header value. */
 #define SPACE_CHAR_LEN                         1U                                               /**< The length of #SPACE_CHAR. */
 
@@ -109,13 +112,16 @@
 #define AUTH_SIGNATURE_PREFIX                  "Signature="                                     /**< The prefix that goes before the signature in the Authorization header value. */
 #define AUTH_SIGNATURE_PREFIX_LEN              ( sizeof( AUTH_SIGNATURE_PREFIX ) - 1U )         /**< The length of #AUTH_SIGNATURE_PREFIX. */
 
+#define HMAC_INNER_PAD_BYTE                    ( 0x36U )                                        /**< The "ipad" byte used for generating the inner key in the HMAC calculation process. */
+#define HMAC_OUTER_PAD_BYTE                    ( 0x5CU )                                        /**< The "opad" byte used for generating the outer key in the HMAC calculation process. */
+
 /**
  * @brief A helper macro to print insufficient memory errors.
  */
-#define LOG_INSUFFICIENT_MEMORY_ERROR( purposeOfWrite, bytesExceeded )                       \
-    {                                                                                        \
-        LogError( ( "Insufficient memory provided to " purposeOfWrite ", bytesExceeded=%lu", \
-                    ( unsigned long ) ( bytesExceeded ) ) );                                 \
+#define LOG_INSUFFICIENT_MEMORY_ERROR( purposeOfWrite, bytesExceeded )                                                                             \
+    {                                                                                                                                              \
+        LogError( ( "Unable to " purposeOfWrite ": Insufficient memory configured in \"SIGV4_PROCESSING_BUFFER_LENGTH\" macro. BytesExceeded=%lu", \
+                    ( unsigned long ) ( bytesExceeded ) ) );                                                                                       \
     }
 
 /**

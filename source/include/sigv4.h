@@ -185,7 +185,15 @@ typedef enum SigV4Status
      * Functions that may return this value:
      * - #SigV4_GenerateHTTPAuthorization
      */
-    SigV4HashError
+    SigV4HashError,
+
+    /**
+     * @brief HTTP headers parsed to the library are invalid.
+     *
+     * Functions that may return this value:
+     * - #SigV4_GenerateHTTPAuthorization
+     */
+    SigV4InvalidHttpHeaders
 } SigV4Status_t;
 
 /**
@@ -281,15 +289,21 @@ typedef struct SigV4HttpParameters
      * question mark character ("?") that begins any query string parameters
      * (e.g. "/path/to/item.txt"). If SIGV4_HTTP_PATH_IS_CANONICAL_FLAG is set,
      * then this input must already be in canonical form.
+     *
+     * @note If there exists no path for the HTTP request, then this can be
+     * NULL.
      */
     const char * pPath;
     size_t pathLen; /**< @brief Length of pPath. */
 
     /**
-     * @brief The HTTP request query from the URL. This contains all characters
-     * following the question mark character ("?") that denotes the start of the
-     * query. If SIGV4_HTTP_QUERY_IS_CANONICAL_FLAG is set, then this input
+     * @brief The HTTP request query from the URL, if it exists. This contains all
+     * characters following the question mark character ("?") that denotes the start
+     * of the query. If SIGV4_HTTP_QUERY_IS_CANONICAL_FLAG is set, then this input
      * must already be in canonical form.
+     *
+     * @note If the HTTP request does not contain query string, this can
+     * be NULL.
      */
     const char * pQuery;
     size_t queryLen; /**< @brief Length of pQuery. */
@@ -299,6 +313,9 @@ typedef struct SigV4HttpParameters
      * should be the raw headers in HTTP request format. If
      * SIGV4_HTTP_HEADERS_IS_CANONICAL_FLAG is set, then this input must
      * already be in canonical form.
+     *
+     * @note The headers data MUST NOT be empty. For HTTP/1.1 requests, it is
+     * required that the "host" header MUST be part of the SigV4 signature.
      */
     const char * pHeaders;
     size_t headersLen; /**< @brief Length of pHeaders. */
@@ -330,22 +347,6 @@ typedef struct SigV4Credentials
      */
     const char * pSecretAccessKey;
     size_t secretAccessKeyLen; /**< @brief Length of pSecretAccessKey. */
-
-    /**
-     * @brief The security token from AWS Security Token Service (AWS STS) is of
-     * varying length. This can be NULL if the access key id and secret access
-     * key were not retrieved from a temporary token service.
-     */
-    const char * pSecurityToken;
-    size_t securityTokenLen; /**< @brief Length of pSecurityToken. */
-
-    /**
-     * @brief The expiration time for the pAccessKeyId, pSecretAccessKey, and
-     * pSecurityToken if the credentials were retrieved from a temporary token
-     * service. This is in ISO8601 date and time format.
-     */
-    const char * pExpiration;
-    size_t expirationLen; /**< @brief Length of pExpiration. */
 } SigV4Credentials_t;
 
 /**

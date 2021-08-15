@@ -21,18 +21,163 @@
  */
 
 #include <string.h>
+#include <stdlib.h>
+#include <openssl/sha.h>
 
 #include "unity.h"
 
 /* Include paths for public enums, structures, and macros. */
 #include "sigv4.h"
+/* We include the internal SigV4 macros so that they don't have to be redefined for these tests. */
+#include "sigv4_internal.h"
+
+#define STR_LIT_LEN( LIT )    ( sizeof( LIT ) - 1U )
 
 /* The number of invalid date inputs tested in
  * test_SigV4_AwsIotDateToIso8601_Formatting_Error() */
-#define SIGV4_TEST_INVALID_DATE_COUNT    24U
+#define SIGV4_TEST_INVALID_DATE_COUNT                         24U
+
+#define AUTH_BUF_LENGTH                                       1000
+#define PATH                                                  "/"
+
+#define PRECANON_PATH                                         "/path-%20"
+
+/* Iterator must not read beyond the null-terminator. */
+#define NULL_TERMINATED_PATH                                  "/pa\0th"
+#define NULL_TERMINATED_PATH_LEN                              ( sizeof( NULL_TERMINATED_PATH ) - 1U )
+/* An equal in the query string value must be double-encoded. */
+#define QUERY_VALUE_HAS_EQUALS                                "quantum==&->sha256=dead&maybe&&"
+/* A query string with parameter count exceeding SIGV4_MAX_HTTP_HEADER_COUNT=5. */
+#define QUERY_GT_MAX_PARAMS                                   "params&allowed&to&have&no&values"
+
+/* Query strings that represent different cases matching parameter names and values */
+#define QUERY_MATCHING_PARAMS                                 "param=value2&param=value1&param1=test"
+#define QUERY_MATCHING_PARAMS_AND_MATCHING_VALUES_PREFIX_1    "param=valueXY&param=value&param1=test"
+#define QUERY_MATCHING_PARAMS_AND_MATCHING_VALUES_PREFIX_2    "param=value&param=valueXY&param1=test"
+#define QUERY_MATCHING_PARAMS_AND_VALUES                      "param=valueXY&param=valueXY&param1=test"
+#define QUERY_WITH_MATCHING_PARAM_PREFIX                      "para=value1&param1=&value2&param=value3"
+
+/* Examples of Query Strings containing non-alphanumeric characters. */
+#define QUERY_WITH_NON_ALPHA_NUMBERIC_CHARS                   "param=-_.~/"
+#define QUERY_WITH_SPECIAL_CHARS                              "param=/"
+
+#define QUERY_STRING_NO_PARAM_VALUE                           "param=&param2="
+#define QUERY_STRING_STARTING_WITH_AMPERSANT                  "&param2="
+
+#define QUERY                                                 "Action=ListUsers&Version=2010-05-08"
+#define QUERY_LENGTH                                          ( sizeof( QUERY ) - 1U )
+#define ACCESS_KEY_ID                                         "AKIAIOSFODNN7EXAMPLE"
+#define SECRET_KEY                                            "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"
+#define SECRET_KEY_LEN                                        ( sizeof( SECRET_KEY ) - 1U )
+#define SECRET_KEY_LONGER_THAN_HASH_BLOCK                     "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEYwJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEYwJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEYwJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"
+#define SECRET_KEY_LONGER_THAN_HASH_BLOCK_LEN                 ( sizeof( SECRET_KEY_LONGER_THAN_HASH_BLOCK ) - 1U )
+#define DATE                                                  "20210811T001558Z"
+#define REGION                                                "us-east-1"
+#define SERVICE                                               "iam"
+#define HEADERS                                               "Host: iam.amazonaws.com\r\nContent-Type: application/x-www-form-urlencoded; charset=utf-8\r\nX-Amz-Date: "DATE "\r\n\r\n"
+#define HEADERS_LENGTH                                        ( sizeof( HEADERS ) - 1U )
+#define PRECANON_HEADER                                       "content-type:application/json;\nhost:iam.amazonaws.com\n"
+
+/* Header data containing leading, trailing and sequential trimmable spaces. */
+#define HEADERS_WITH_TRIMMABLE_SPACES                         "  Header-1 :  Value \t - \t 1  \r\n"
+
+/* Examples with more header pairs than SIGV4_MAX_HTTP_HEADER_COUNT=5. */
+#define PRECAN_HEADERS_PAIRS_GT_THAN_MAX                      "H1:a\nH2:b\nH3:c\nH4:d\nH5:e\nH6:\nH7:\nH8:\n"
+#define HEADERS_PAIRS_GT_THAN_MAX                             "H1:a\r\nH2:b\r\nH3:c\r\nH4:d\r\nH5:e\r\nH6:\r\nH7:\r\n:H8:\r\n\r\n"
+
+/* Examples of invalid HTTP headers data. */
+#define INVALID_HEADERS_NO_HEADER_VAL                         "Header1: Value1\r\nHeader2: Value2\n"
+#define INVALID_HEADERS_NO_HEADER_KEY                         "Header=Value\r\n"
+#define INVALID_PRECANON_HEADERS_NO_HEADER_KEY                "Header=Value\n"
+
+#define HEADERS_SORTED_COVERAGE_1                             "A:a\r\nB:b\r\nC:c\r\nE:e\r\nF:f\r\nD:d\r\n\r\n"
+#define HEADERS_SORTED_COVERAGE_2                             "A:a\r\nC:c\r\nE:e\r\nF:f\r\nD:d\r\n\r\n"
+
+
+#define STRING_TO_SIGN_LEN_WITH_DEFAULT_REGION                              \
+    SIGV4_AWS4_HMAC_SHA256_LENGTH + 1U +                                    \
+    SIGV4_ISO_STRING_LEN + 1U +                                             \
+    ISO_DATE_SCOPE_LEN +                                                    \
+    CREDENTIAL_SCOPE_SEPARATOR_LEN + sizeof( REGION ) - 1U +                \
+    CREDENTIAL_SCOPE_SEPARATOR_LEN + sizeof( SERVICE ) - 1U +               \
+    CREDENTIAL_SCOPE_SEPARATOR_LEN + CREDENTIAL_SCOPE_TERMINATOR_LEN + 1U + \
+    SIGV4_HASH_MAX_DIGEST_LENGTH * 2
+
+#define EXPECTED_AUTH_DATA_NOMINAL
+#define EXPECTED_AUTH_DATA_SECRET_KEY_LONGER_THAN_DIGEST
+
+/* Insufficient memory parameters for SIGV4_PROCESSING_BUFFER_LENGTH=350. In the comments below,
+ * + means concatenation, OOM means "Out of Memory", LF means newline character */
+
+/* HTTP method + URI-encoded variant of this string must be greater than SIGV4_PROCESSING_BUFFER_LENGTH. */
+#define PATH_FIRST_ENCODE_OOM                                                           \
+    "/path-to-victory-will-soon-come-to-a-close-and-then-we-can-finally-eat-our-errors" \
+    "-even-though-this-is-not-a-good-practice-at-all-so-obviously-this-is-just-a-joke-" \
+    "so-why-are-you-still-reading-this-i-mean-im-crazy-enough-to-type-this-very-"       \
+    "long-string-instead-of-using-a-lorem-ipsum-website-maybe-i-should-be-a-comedian-"  \
+    "instead-be-a-programmer-really"
+/* HTTP method + URI-encoded variant of this string + \n must be greater than SIGV4_PROCESSING_BUFFER_LENGTH. */
+#define PATH_FIRST_ENCODE_AND_LF_OOM                                                    \
+    "/path-to-victory-will-soon-come-to-a-close-and-then-we-can-finally-eat-our-errors" \
+    "-even-though-this-is-not-a-good-practice-at-all-so-obviously-this-is-just-a-joke-" \
+    "so-why-are-you-still-reading-this-i-mean-im-crazy-enough-to-type-this-very-"       \
+    "long-string-instead-of-using-a-lorem-ipsum-website-maybe-i-should-be-a-comedian-"  \
+    "instead-be-a-programmer-reall"
+/* HTTP method + this URI-encoded variant of this string + double-encoded variant must be greater than SIGV4_PROCESSING_BUFFER_LENGTH. */
+#define PATH_SECOND_ENCODE_OOM    "/path-to-victory-will-soon-come-to-a-close-and-then-we-can-finally-eat-our-errors-even-though-this-is-not-a-good-practice-at-all-so-obviously-this-is-just-a-joke-so-why-are-you-still-reading-this-i-mean-im-crazy-enough-to-type-this-very-long-string-instead-of-using-a-lorem-ipsum-website-maybe-i-should-be-a-comedian-instead"
+
+/* Encoding query string field in canonicalized query string causes OOM. */
+#define QUERY_ENCODE_FIELD_OOM                                                          \
+    "path-to-victory-will-soon-come-to-a-close-and-then-we-can-finally-eat-our-errors"  \
+    "-even-though-this-is-not-a-good-practice-at-all-so-obviously-this-is-just-a-joke-" \
+    "so-why-are-you-still-&m=reading-this-i-mean-im-crazy-enough-to-type-this-very-"    \
+    "long-string-instead-of-using-a-lorem-ipsum-website-maybe-i-should-be-a-comedian-"  \
+    "instead-be-a-programmer-reall&y=3"
+
+/* '=' before query string value in canonicalized query string causes OOM. */
+#define QUERY_EQUAL_BEFORE_VALUE_OOM                                                      \
+    "VwngXGfGGHUJcXAyjrfZapvWrAizcaCSSzWFgWVajgcHvPjiypSRThwgvGicnakSutzyFUNpFPXTtGp"     \
+    "XNNdzbbpmapMikCuizEKHXLqWWXwHbLhDRajbw"                                              \
+    "mlkzxncvlknlkanlkqwlerknlasdflkzxcnvklnlksqwerasdfklqwenrklnfsad"                    \
+    "reading-this-i-mean-im-crazy-enough-to-type-this-very-qCdrPnpyimHMDLPcQwxhNGYYTyyUG" \
+    "cApPMQygPCRMeVHpxdrFycVuEGZaFtGvdTXgMnPbzWvGNhLkecRqFGBgza=3"
+
+/* '&' before next query string field in canonicalized query string causes OOM. */
+#define QUERY_AMPERSAND_BEFORE_FIELD_OOM                                                  \
+    "VwngXGfGGHUJcXAyjrfZapvWrAizcaCSSzWFgWVajgcHvPjiypSRThwgvGicnakSutzyFUNpFPXTtGp"     \
+    "XNNdzbbpmapMikCuizEKHXLqWWXwHbLhDRajbw"                                              \
+    "mlkzxncvlknlkanlkqwlerknlasdflkzxcnvklnlksqwerasdfklqwenrklnfsad"                    \
+    "reading-this-i-mean-im-crazy-enough-to-type-this-very-qCdrPnpyimHMDLPcQwxhNGYYTyyUG" \
+    "cApPMQygPCRMeVHpxdrFycVuEGZaFtGvdTXgMnPbzWvGNhLkecRqFGBg=3&a"
+
+/* Encoding query string value in canonicalized query string causes OOM. */
+#define QUERY_ENCODE_VALUE_OOM                                                                       \
+    "hello-world&y=path-to-victory-will-soon-come-to-a-close-and-then-we-can-finally-eat-our-errors" \
+    "-even-though-this-is-not-a-good-practice-at-all-so-obviously-this-is-just-a-joke-"              \
+    "so-why-are-you-still-&m=reading-this-i-mean-im-crazy-enough-to-type-this-very-"                 \
+    "long-string-instead-of-using-a-lorem-ipsum-website-maybe-i-should-be-a-comedian-"               \
+    "instead-be-a-programmer-reall"
+
+/* Precanonicalized query string causes OOM. */
+#define PRECANON_QUERY_TOO_LONG                                                                                              \
+    "wnqjNXBkZXXQvpwaHryRkLQuCQnMqQYAaXLFAUQGCnpbfiBUHkJKWgvGbUGrEcjuveUijcfxvFvUXKcedDbHwSdWqTTeLRwnVZapMEKrYprSdYgVGzSUG=" \
+    "wnqjNXBkZXXQvpwaHryRkLQuCQnMqQYAaXLFAUQGCnpbfiBUHkJKWgvGbUGrEcjuveUijcfxvFvUXKcedDbHwSdWqTTeLRwnVZapMEKrYprSdYgVGzSUG&" \
+    "wnqjNXBkZXXQvpwaHryRkLQuCQnMqQYAaXLFAUQGCnpb=fiBUHkJKWgvGbUGrEcjuveUijcfxvFvUXKcedDbHwSdWqTTeLRwnVZapMEKrYprSdYgVGzSUG" \
 
 /* File-scoped global variables */
 static char pTestBufferValid[ SIGV4_ISO_STRING_LEN ] = { 0 };
+
+/* Input parameters. */
+static SigV4Parameters_t params;
+static SigV4HttpParameters_t httpParams;
+static SigV4CryptoInterface_t cryptoInterface;
+static SigV4Credentials_t creds;
+static SHA256_CTX sha256;
+
+static char authBuf[ AUTH_BUF_LENGTH ];
+static size_t authBufLen = AUTH_BUF_LENGTH;
+static char * signature = NULL;
+static size_t signatureLen;
 
 /* ============================ HELPER FUNCTIONS ============================ */
 
@@ -64,11 +209,156 @@ void formatAndVerifyInputDate( const char * pInputDate,
     tearDown();
 }
 
+/*==================== OpenSSL Based implementation of Crypto Interface ===================== */
+
+static int32_t valid_sha256_init( void * pHashContext )
+{
+    if( SHA256_Init( ( SHA256_CTX * ) pHashContext ) == 1 )
+    {
+        return 0;
+    }
+
+    return -1;
+}
+
+static int32_t valid_sha256_update( void * pHashContext,
+                                    const uint8_t * pInput,
+                                    size_t inputLen )
+{
+    if( SHA256_Update( ( SHA256_CTX * ) pHashContext, pInput, inputLen ) )
+    {
+        return 0;
+    }
+
+    return -1;
+}
+
+static int32_t valid_sha256_final( void * pHashContext,
+                                   uint8_t * pOutput,
+                                   size_t outputLen )
+{
+    if( SHA256_Final( ( uint8_t * ) pOutput, ( SHA256_CTX * ) pHashContext ) )
+    {
+        return 0;
+    }
+
+    return -1;
+}
+
+/*==================== Failable Implementation of Crypto Interface ===================== */
+
+#define HASH_ERROR_BRANCH_COVERAGE_ITERATIONS    12U
+
+static size_t hashInitCalledCount = 0U, hashInitCallToFail = SIZE_MAX;
+static size_t updateHashCalledCount = 0U, updateHashCallToFail = SIZE_MAX;
+static size_t finalHashCalledCount = 0U, finalHashCallToFail = SIZE_MAX;
+
+static int32_t hash_init_failable( void * pHashContext )
+{
+    int32_t ret = 0;
+
+    if( hashInitCalledCount++ == hashInitCallToFail )
+    {
+        ret = 1;
+    }
+
+    return ret;
+}
+
+static int32_t hash_update_failable( void * pHashContext,
+                                     const uint8_t * pInput,
+                                     size_t inputLen )
+{
+    int32_t ret = 0;
+
+    if( updateHashCalledCount++ == updateHashCallToFail )
+    {
+        ret = 1;
+    }
+
+    return ret;
+}
+
+static int32_t hash_final_failable( void * pHashContext,
+                                    uint8_t * pOutput,
+                                    size_t outputLen )
+{
+    int32_t ret = 0;
+
+    if( finalHashCalledCount++ == finalHashCallToFail )
+    {
+        ret = 1;
+    }
+
+    return ret;
+}
+
+/*============================ Test Helpers ========================== */
+
+static void resetFailableHashParams()
+{
+    hashInitCalledCount = 0U;
+    hashInitCallToFail = SIZE_MAX;
+    updateHashCalledCount = 0U;
+    updateHashCallToFail = SIZE_MAX;
+    finalHashCalledCount = 0U;
+    finalHashCallToFail = SIZE_MAX;
+
+    params.pCryptoInterface->hashInit = hash_init_failable;
+    params.pCryptoInterface->hashUpdate = hash_update_failable;
+    params.pCryptoInterface->hashFinal = hash_final_failable;
+}
+
+static void resetInputParams()
+{
+    /* Fill the input parameters with the happy path. */
+    memset( &params, 0, sizeof( params ) );
+    memset( &httpParams, 0, sizeof( httpParams ) );
+    memset( &cryptoInterface, 0, sizeof( cryptoInterface ) );
+    memset( &creds, 0, sizeof( creds ) );
+    memset( &sha256, 0, sizeof( sha256 ) );
+    memset( authBuf, 0, AUTH_BUF_LENGTH );
+    authBufLen = AUTH_BUF_LENGTH;
+    signature = NULL;
+    httpParams.pHttpMethod = "GET";
+    httpParams.httpMethodLen = 3;
+    httpParams.pPath = PATH;
+    httpParams.pathLen = sizeof( PATH ) - 1U;
+    httpParams.pQuery = QUERY;
+    httpParams.queryLen = QUERY_LENGTH;
+    httpParams.flags = 0;
+    httpParams.pHeaders = HEADERS;
+    httpParams.headersLen = HEADERS_LENGTH;
+    httpParams.pPayload = NULL;
+    httpParams.payloadLen = 0U;
+    params.pHttpParameters = &httpParams;
+    creds.pAccessKeyId = ACCESS_KEY_ID;
+    creds.accessKeyIdLen = sizeof( ACCESS_KEY_ID ) - 1U;
+    creds.pSecretAccessKey = SECRET_KEY;
+    creds.secretAccessKeyLen = SECRET_KEY_LEN;
+    params.pAlgorithm = SIGV4_AWS4_HMAC_SHA256;
+    params.algorithmLen = SIGV4_AWS4_HMAC_SHA256_LENGTH;
+    params.pCredentials = &creds;
+    params.pDateIso8601 = DATE;
+    params.pRegion = REGION;
+    params.regionLen = sizeof( REGION ) - 1U;
+    params.pService = SERVICE;
+    params.serviceLen = sizeof( SERVICE ) - 1U;
+    cryptoInterface.pHashContext = &sha256;
+    cryptoInterface.hashInit = valid_sha256_init;
+    cryptoInterface.hashUpdate = valid_sha256_update;
+    cryptoInterface.hashFinal = valid_sha256_final;
+    cryptoInterface.hashBlockLen = SIGV4_HASH_MAX_BLOCK_LENGTH;
+    cryptoInterface.hashDigestLen = SIGV4_HASH_MAX_DIGEST_LENGTH;
+    params.pCryptoInterface = &cryptoInterface;
+}
+
 /* ============================ UNITY FIXTURES ============================== */
 
 /* Called before each test method. */
 void setUp()
 {
+    resetInputParams();
 }
 
 /* Called after each test method. */
@@ -213,4 +503,730 @@ void test_SigV4_AwsIotDateToIso8601_Formatting_Error()
         formatAndVerifyInputDate( pInvalidDateInputs[ index ], SigV4ISOFormattingError, NULL );
         formatAndVerifyInputDate( pInvalidDateInputs[ index + 1 ], SigV4ISOFormattingError, NULL );
     }
+}
+
+/* ======================= Testing SigV4_GenerateHTTPAuthorization =========================== */
+
+void test_SigV4_GenerateHTTPAuthorization_Invalid_Params()
+{
+    SigV4Status_t returnStatus;
+
+    /******* All cases of NULL input parameters. ******/
+    returnStatus = SigV4_GenerateHTTPAuthorization( NULL, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, NULL, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, NULL, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, NULL, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, NULL );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    /******** All cases of invalid HTTP parameters. *********/
+    resetInputParams();
+    params.pHttpParameters = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pHttpParameters->pHttpMethod = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+    resetInputParams();
+    params.pHttpParameters->httpMethodLen = 0U;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pHttpParameters->pHeaders = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+    resetInputParams();
+    params.pHttpParameters->headersLen = 0U;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    /******** All cases of invalid Credential Parameters. *********/
+    resetInputParams();
+    params.pCredentials = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pCredentials->pAccessKeyId = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+    resetInputParams();
+    params.pCredentials->accessKeyIdLen = 0U;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pCredentials->pSecretAccessKey = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+    resetInputParams();
+    params.pCredentials->secretAccessKeyLen = 0U;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    /******** All cases of invalid Crypto interface members. *********/
+    resetInputParams();
+    params.pCryptoInterface = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pCryptoInterface->hashInit = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pCryptoInterface->hashUpdate = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pCryptoInterface->hashFinal = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pCryptoInterface->hashBlockLen = SIGV4_HASH_MAX_BLOCK_LENGTH + 1;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pCryptoInterface->hashDigestLen = SIGV4_HASH_MAX_DIGEST_LENGTH + 1;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    /******** All remaining cases of invalid SigV4Params_t members. *********/
+    resetInputParams();
+    params.pDateIso8601 = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pRegion = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+    resetInputParams();
+    params.regionLen = 0U;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pService = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+    resetInputParams();
+    params.serviceLen = 0U;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+}
+
+/* TODO - Verify the generated signatures. */
+void test_SigV4_GenerateHTTPAuthorization_Happy_Paths()
+{
+    SigV4Status_t returnStatus;
+
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+
+    /* Attempt to generate the signature with a secret longer than the digest length. This
+     * causes the inner-most HMAC key of the signing key to be hashed down. */
+    creds.pSecretAccessKey = SECRET_KEY_LONGER_THAN_HASH_BLOCK;
+    creds.secretAccessKeyLen = SECRET_KEY_LONGER_THAN_HASH_BLOCK_LEN;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+
+    /* Test case when the first step of the Signing Key generation HMAC operation encounters a key that is
+     * less than hash block in length. */
+    char secretKeyGeneratingBlockLenHMACKey[ SIGV4_HASH_MAX_BLOCK_LENGTH - strlen( SIGV4_HMAC_SIGNING_KEY_PREFIX ) ];
+    memset( secretKeyGeneratingBlockLenHMACKey, ( int ) 'K', sizeof( secretKeyGeneratingBlockLenHMACKey ) );
+    creds.pSecretAccessKey = secretKeyGeneratingBlockLenHMACKey;
+    creds.secretAccessKeyLen = sizeof( secretKeyGeneratingBlockLenHMACKey );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+
+    /* S3 is the only service in which the URI is only encoded once. */
+    params.serviceLen = S3_SERVICE_NAME_LEN;
+    params.pService = S3_SERVICE_NAME;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+
+    /* Coverage for the case where the service name has the same length as "s3". */
+    params.serviceLen = S3_SERVICE_NAME_LEN;
+    params.pService = SERVICE;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+
+    /* Coverage for the null-terminated path. */
+    params.pHttpParameters->pPath = NULL_TERMINATED_PATH;
+    params.pHttpParameters->pathLen = NULL_TERMINATED_PATH_LEN;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+
+    /* Coverage for double-encoded equals in query string value. */
+    params.pHttpParameters->pQuery = QUERY_VALUE_HAS_EQUALS;
+    params.pHttpParameters->queryLen = STR_LIT_LEN( QUERY_VALUE_HAS_EQUALS );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+}
+
+/* Test the API for handling corner cases of sorting the Query Parameters (when generating Canonical Query) */
+void test_SigV4_GenerateHTTPAuthorization_Sorting_Query_Params_Corner_Cases()
+{
+    SigV4Status_t returnStatus;
+
+    /* Test when the query string contains query parameters with exactly matching names. */
+    params.pHttpParameters->pQuery = QUERY_MATCHING_PARAMS;
+    params.pHttpParameters->queryLen = strlen( QUERY_MATCHING_PARAMS );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+
+    /* Test when the query string contains query parameters which do not match in name length but match in
+     * the name data for the common length between 2 parameters. */
+    params.pHttpParameters->pQuery = QUERY_WITH_MATCHING_PARAM_PREFIX;
+    params.pHttpParameters->queryLen = strlen( QUERY_WITH_MATCHING_PARAM_PREFIX );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+
+    /* Test when the query string contains query parameters with exactly matching parameter names as well
+     * as matching values for those parameters. The query values of matching parameters differ in length though. */
+    params.pHttpParameters->pQuery = QUERY_MATCHING_PARAMS_AND_MATCHING_VALUES_PREFIX_1;
+    params.pHttpParameters->queryLen = strlen( QUERY_MATCHING_PARAMS_AND_MATCHING_VALUES_PREFIX_1 );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+    params.pHttpParameters->pQuery = QUERY_MATCHING_PARAMS_AND_MATCHING_VALUES_PREFIX_2;
+    params.pHttpParameters->queryLen = strlen( QUERY_MATCHING_PARAMS_AND_MATCHING_VALUES_PREFIX_2 );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+
+    /* Test when the query string contains query parameters with exactly matching parameter names as well
+     * as matching values for those parameters. The query values of matching parameters differ in length though. */
+    params.pHttpParameters->pQuery = QUERY_MATCHING_PARAMS_AND_VALUES;
+    params.pHttpParameters->queryLen = strlen( QUERY_MATCHING_PARAMS_AND_VALUES );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+}
+
+/* Test that the library can handle HTTP headers data containing trimmable spaces. */
+void test_SigV4_GenerateAuthorization_Headers_With_Trimmable_Spaces()
+{
+    params.pHttpParameters->pHeaders = HEADERS_WITH_TRIMMABLE_SPACES;
+    params.pHttpParameters->headersLen = strlen( HEADERS_WITH_TRIMMABLE_SPACES );
+
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+}
+
+/* Test that the library can handle query string that contains empty values for its parameters. */
+void test_SigV4_GenerateAuthorization_Query_With_No_Param_Values()
+{
+    params.pHttpParameters->pQuery = QUERY_STRING_NO_PARAM_VALUE;
+    params.pHttpParameters->queryLen = strlen( QUERY_STRING_NO_PARAM_VALUE );
+
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+
+    params.pHttpParameters->pQuery = QUERY_STRING_STARTING_WITH_AMPERSANT;
+    params.pHttpParameters->queryLen = strlen( QUERY_STRING_STARTING_WITH_AMPERSANT );
+
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+}
+
+void test_SigV4_GenerateHTTPAuthorization_Default_Arguments()
+{
+    SigV4Status_t returnStatus;
+
+    /* Default algorithm is the macro defined by SIGV4_AWS4_HMAC_SHA256. */
+    params.pAlgorithm = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+    params.pAlgorithm = SIGV4_AWS4_HMAC_SHA256;
+    params.algorithmLen = 0;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+    /* Default path is "/". */
+    params.pHttpParameters->pPath = NULL;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+    params.pHttpParameters->pPath = "/";
+    params.pHttpParameters->pathLen = 0;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+}
+
+/**
+ * @brief Test the case when some input parameters are precanonicalized.
+ */
+void test_SigV4_GenerateHTTPAuthorization_Precanonicalized()
+{
+    SigV4Status_t returnStatus;
+
+    params.pHttpParameters->pPath = PRECANON_PATH;
+    params.pHttpParameters->pathLen = strlen( PRECANON_PATH );
+    params.pHttpParameters->flags = SIGV4_HTTP_PATH_IS_CANONICAL_FLAG;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+
+    params.pHttpParameters->pHeaders = PRECANON_HEADER;
+    params.pHttpParameters->headersLen = STR_LIT_LEN( PRECANON_HEADER );
+    params.pHttpParameters->flags |= SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+}
+
+/* Test that the library fails when invalid HTTP headers are passed. */
+void test_SigV4_GenerateHTTPAuthorization_InvalidHTTPHeaders()
+{
+    SigV4Status_t returnStatus;
+
+    params.pHttpParameters->pHeaders = INVALID_HEADERS_NO_HEADER_VAL;
+    params.pHttpParameters->headersLen = strlen( INVALID_HEADERS_NO_HEADER_VAL );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidHttpHeaders, returnStatus );
+
+    params.pHttpParameters->pHeaders = INVALID_HEADERS_NO_HEADER_KEY;
+    params.pHttpParameters->headersLen = strlen( INVALID_HEADERS_NO_HEADER_KEY );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidHttpHeaders, returnStatus );
+
+    params.pHttpParameters->pHeaders = INVALID_PRECANON_HEADERS_NO_HEADER_KEY;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidHttpHeaders, returnStatus );
+
+    params.pHttpParameters->pHeaders = INVALID_PRECANON_HEADERS_NO_HEADER_KEY;
+    params.pHttpParameters->headersLen = strlen( INVALID_PRECANON_HEADERS_NO_HEADER_KEY );
+    params.pHttpParameters->flags = SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidHttpHeaders, returnStatus );
+}
+
+/**
+ * @brief Test for all cases where the processing buffer runs out of space.
+ * @note While writing these tests, the inputs were deliberately crafted for
+ * a buffer with 350 bytes as its maximum length.
+ */
+void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
+{
+    SigV4Status_t returnStatus;
+
+    authBufLen = params.pCryptoInterface->hashDigestLen * 2;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+
+    /* Insufficient memory error when there is not enough space to write the
+     * Method data in the processing buffer. This case is created by using a method string
+     * longer than the processing buffer length. */
+    char * pMethodData = malloc( SIGV4_PROCESSING_BUFFER_LENGTH );
+    memset( pMethodData, ( int ) 'M', SIGV4_PROCESSING_BUFFER_LENGTH );
+    params.pHttpParameters->pHttpMethod = pMethodData;
+    params.pHttpParameters->httpMethodLen = SIGV4_PROCESSING_BUFFER_LENGTH;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    free( pMethodData );
+
+    /* BEGIN: Coverage for generateCanonicalURI(). */
+    /* The path here will cause the error for the first time the path is encoded. */
+    resetInputParams();
+    params.pHttpParameters->pPath = PATH_FIRST_ENCODE_OOM;
+    params.pHttpParameters->pathLen = STR_LIT_LEN( PATH_FIRST_ENCODE_OOM );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+
+    /* Same as previous but need for adding a linefeed character causes the error. We also explicitly use S3
+     * service so that out of memory does not occur when double encoding. */
+    resetInputParams();
+    params.pService = S3_SERVICE_NAME;
+    params.serviceLen = S3_SERVICE_NAME_LEN;
+    params.pHttpParameters->pPath = PATH_FIRST_ENCODE_AND_LF_OOM;
+    params.pHttpParameters->pathLen = STR_LIT_LEN( PATH_FIRST_ENCODE_AND_LF_OOM );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+
+    /* The path here will cause the error for the second time the path is encoded. */
+    resetInputParams();
+    params.pHttpParameters->pPath = PATH_SECOND_ENCODE_OOM;
+    params.pHttpParameters->pathLen = STR_LIT_LEN( PATH_SECOND_ENCODE_OOM );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    /* END: Coverage for generateCanonicalURI(). */
+
+    /* BEGIN: Coverage for writeCanonicalQueryParameters(). */
+    /* The attempt to encode the query field causes OOM (out of memory). */
+    resetInputParams();
+    params.pHttpParameters->pQuery = QUERY_ENCODE_FIELD_OOM;
+    params.pHttpParameters->queryLen = STR_LIT_LEN( QUERY_ENCODE_FIELD_OOM );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+
+    /* The attempt to encode the query value causes OOM (out of memory). */
+    resetInputParams();
+    params.pHttpParameters->pQuery = QUERY_ENCODE_VALUE_OOM;
+    params.pHttpParameters->queryLen = STR_LIT_LEN( QUERY_ENCODE_VALUE_OOM );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+
+    /* The attempt to write the '=' character before a value causes OOM (out of memory). */
+    resetInputParams();
+    params.pHttpParameters->pQuery = QUERY_EQUAL_BEFORE_VALUE_OOM;
+    params.pHttpParameters->queryLen = STR_LIT_LEN( QUERY_EQUAL_BEFORE_VALUE_OOM );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+
+    /* The attempt to write the '&' character before a field causes OOM (out of memory). */
+    resetInputParams();
+    params.pHttpParameters->pQuery = QUERY_AMPERSAND_BEFORE_FIELD_OOM;
+    params.pHttpParameters->queryLen = STR_LIT_LEN( QUERY_AMPERSAND_BEFORE_FIELD_OOM );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    /* END: Coverage for writeCanonicalQueryParameters(). */
+
+    /* BEGIN: Coverage for writeLineToCanonicalRequest(). */
+    /* Writing a precanonicalized query to the processing buffer causes OOM. */
+    resetInputParams();
+    params.pHttpParameters->pQuery = PRECANON_QUERY_TOO_LONG;
+    params.pHttpParameters->queryLen = STR_LIT_LEN( PRECANON_QUERY_TOO_LONG );
+    params.pHttpParameters->flags = SIGV4_HTTP_QUERY_IS_CANONICAL_FLAG;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    /* END: Coverage for writeLineToCanonicalRequest(). */
+
+    /* Test case of insufficient memory when "String to Sign" cannot be stored in processing buffer.
+     * This scenario is produced by using a long AWS Region string (which is one of the parameters of String To Sign). */
+    char * longRegion = malloc( SIGV4_PROCESSING_BUFFER_LENGTH );
+    /* Fill gibberish string data in the buffer for region. */
+    memset( longRegion, 'x', SIGV4_PROCESSING_BUFFER_LENGTH );
+    resetInputParams();
+    params.pRegion = longRegion;
+    params.regionLen = SIGV4_PROCESSING_BUFFER_LENGTH;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    free( longRegion );
+
+    /* Test case of insufficient memory when hexstring of hash cannot be stored in processing buffer.
+     * This case is created by using long pre-canonicalized headers that does not leave space for Payload
+     * hash in the processing buffer. */
+    size_t headersLen = SIGV4_PROCESSING_BUFFER_LENGTH - ( SIGV4_HASH_MAX_DIGEST_LENGTH * 2 );
+    char * longPrecanonHeader = malloc( headersLen );
+    TEST_ASSERT_NOT_NULL( longPrecanonHeader );
+    longPrecanonHeader[ 0 ] = 'H';
+    longPrecanonHeader[ 1 ] = ':';
+    /* Fill gibberish string data in the buffer for the precanonical header. */
+    memset( longPrecanonHeader + 2, ( char ) 'V', headersLen - 3 );
+    longPrecanonHeader[ headersLen - 1 ] = '\n';
+    resetInputParams();
+    params.pHttpParameters->pPath = NULL;
+    params.pHttpParameters->pathLen = 0;
+    params.pHttpParameters->pHeaders = longPrecanonHeader;
+    params.pHttpParameters->headersLen = headersLen;
+    params.pHttpParameters->pQuery = NULL;
+    params.pHttpParameters->queryLen = 0;
+    params.pHttpParameters->flags = SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    free( longPrecanonHeader );
+
+    /* Test case of insufficient memory from failure to encode a special character when
+     * writing canonical path. This is achieved by using a long path that ends with the special
+     * character for which there doesn't exist space in the processing buffer. */
+    size_t longPathLen = SIGV4_PROCESSING_BUFFER_LENGTH - httpParams.httpMethodLen - LINEFEED_CHAR_LEN;
+    char specialCharAtEndOfLongPath[ longPathLen ];
+    specialCharAtEndOfLongPath[ 0 ] = '/';
+    memset( specialCharAtEndOfLongPath + 1, ( int ) '-', longPathLen );
+    specialCharAtEndOfLongPath[ longPathLen - 1 ] = '*';
+    resetInputParams();
+    params.pHttpParameters->pPath = specialCharAtEndOfLongPath;
+    params.pHttpParameters->pathLen = longPathLen;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+
+    /* Test case of insufficient memory when there is no space in the processing buffer for
+     * double encoding '=' character, that is part of query parameter value, while creating
+     * canonical query. */
+    size_t longQueryLen = SIGV4_PROCESSING_BUFFER_LENGTH - httpParams.httpMethodLen -
+                          LINEFEED_CHAR_LEN - HTTP_EMPTY_PATH_LEN - LINEFEED_CHAR_LEN;
+    char * longQuery = malloc( longQueryLen );
+    TEST_ASSERT_NOT_NULL( longQuery );
+    longQuery[ 0 ] = 'P';
+    longQuery[ 1 ] = '=';
+    memset( longQuery + 2, ( int ) 'V', longQueryLen - 2 );
+    /* Use '=' as the second last URI query value character. */
+    longQuery[ longQueryLen - 2 ] = '=';
+    resetInputParams();
+    params.pHttpParameters->pPath = NULL;
+    params.pHttpParameters->pathLen = 0;
+    params.pHttpParameters->pQuery = longQuery;
+    params.pHttpParameters->queryLen = longQueryLen;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    free( longQuery );
+
+    /* Case of insufficient memory when adding Header part of Canonical Header to processing buffer.
+     * This case is created by using a long header name that causes space to run out when adding
+     * Canonical Headers.  */
+    headersLen = ( SIGV4_PROCESSING_BUFFER_LENGTH - httpParams.httpMethodLen - LINEFEED_CHAR_LEN -
+                   HTTP_EMPTY_PATH_LEN - LINEFEED_CHAR_LEN -
+                   /* Empty Query*/
+                   LINEFEED_CHAR_LEN ) +
+
+                 /* Extra characters to complete the Precanonicalized Headers with
+                  * empty value and newline character. */
+                 4U;
+    char * longHeader = malloc( headersLen );
+    TEST_ASSERT_NOT_NULL( longHeader );
+    /* Set gibberish header key data. */
+    memset( longHeader, ( int ) 'H', headersLen - 4 );
+    longHeader[ headersLen - 4 ] = ':';
+    longHeader[ headersLen - 3 ] = 'V';
+    longHeader[ headersLen - 2 ] = '\r';
+    longHeader[ headersLen - 1 ] = LINEFEED_CHAR;
+    resetInputParams();
+    params.pHttpParameters->pPath = NULL;
+    params.pHttpParameters->pathLen = 0U;
+    params.pHttpParameters->pQuery = NULL;
+    params.pHttpParameters->queryLen = 0U;
+    params.pHttpParameters->pHeaders = longHeader;
+    params.pHttpParameters->headersLen = headersLen;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    free( longHeader );
+
+    /* Case of insufficient memory when newline character after Canonical Headers to processing buffer.
+     * This case is created by using a long header name that causes no space availability for the
+     * new line character after the Canonical headers in the processing buffer .  */
+    headersLen = SIGV4_PROCESSING_BUFFER_LENGTH - httpParams.httpMethodLen - LINEFEED_CHAR_LEN -
+                 HTTP_EMPTY_PATH_LEN - LINEFEED_CHAR_LEN -
+                 /* Empty Query*/
+                 LINEFEED_CHAR_LEN +
+                 /* The carriage return character that is trimmed in canonical form. */
+                 1U;
+    longHeader = malloc( headersLen );
+    TEST_ASSERT_NOT_NULL( longHeader );
+    /* Set gibberish header key data. */
+    memset( longHeader, ( int ) 'H', headersLen - 3 );
+    longHeader[ headersLen - 3 ] = ':';
+    longHeader[ headersLen - 2 ] = '\r';
+    longHeader[ headersLen - 1 ] = LINEFEED_CHAR;
+    resetInputParams();
+    params.pHttpParameters->pPath = NULL;
+    params.pHttpParameters->pathLen = 0U;
+    params.pHttpParameters->pQuery = NULL;
+    params.pHttpParameters->queryLen = 0U;
+    params.pHttpParameters->pHeaders = longHeader;
+    params.pHttpParameters->headersLen = headersLen;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    free( longHeader );
+
+    /* Case of insufficient memory when adding signed headers to processing buffer.
+     * This case is created by using a long header name that causes the Signed Header part of the
+     * Canonical Request run out of memory.  */
+    headersLen = SIGV4_PROCESSING_BUFFER_LENGTH - httpParams.httpMethodLen - LINEFEED_CHAR_LEN -
+                 HTTP_EMPTY_PATH_LEN - LINEFEED_CHAR_LEN -
+                 /* Empty Query*/
+                 LINEFEED_CHAR_LEN -
+                 /* New line after Canonical Headers just before writing Signed Headers. */
+                 LINEFEED_CHAR_LEN;
+    longPrecanonHeader = malloc( headersLen );
+    TEST_ASSERT_NOT_NULL( longPrecanonHeader );
+    /* Set gibberish header key data. */
+    memset( longPrecanonHeader, ( int ) 'H', headersLen - 2 );
+    longPrecanonHeader[ headersLen - 2 ] = ':';
+    longPrecanonHeader[ headersLen - 1 ] = LINEFEED_CHAR;
+    resetInputParams();
+    params.pHttpParameters->pPath = NULL;
+    params.pHttpParameters->pathLen = 0U;
+    params.pHttpParameters->pQuery = NULL;
+    params.pHttpParameters->queryLen = 0U;
+    params.pHttpParameters->pHeaders = longPrecanonHeader;
+    params.pHttpParameters->headersLen = headersLen;
+    params.pHttpParameters->flags = SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    free( longPrecanonHeader );
+
+    /* Case of insufficient memory when adding '=' character between query parameter and value.
+    * This case is created by using a long query parameter that causes the processing buffer
+    * to have no space when writing the equals to separator after the query parameter name.  */
+    longQueryLen = SIGV4_PROCESSING_BUFFER_LENGTH - httpParams.httpMethodLen - LINEFEED_CHAR_LEN -
+                   HTTP_EMPTY_PATH_LEN - LINEFEED_CHAR_LEN +
+                   /* '=' separate and parameter value. */
+                   2U;
+    longQuery = malloc( longQueryLen );
+    TEST_ASSERT_NOT_NULL( longQuery );
+    /* Set gibberish query parameter name data. */
+    memset( longQuery, ( int ) 'P', longQueryLen - 2 );
+    longQuery[ longQueryLen - 2 ] = '=';
+    longQuery[ longQueryLen - 1 ] = 'V';
+    resetInputParams();
+    params.pHttpParameters->pPath = NULL;
+    params.pHttpParameters->pathLen = 0U;
+    params.pHttpParameters->pQuery = longQuery;
+    params.pHttpParameters->queryLen = longQueryLen;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    free( longQuery );
+
+    /* Case of insufficient memory when adding '&' character between query parameter entries.
+     * This case is created by using a long query parameter that causes the processing buffer
+     * to have no space when encoding the '&' character for the second query parameter.  */
+    longQueryLen = SIGV4_PROCESSING_BUFFER_LENGTH - httpParams.httpMethodLen - LINEFEED_CHAR_LEN -
+                   HTTP_EMPTY_PATH_LEN - LINEFEED_CHAR_LEN +
+                   /* 2nd query parameter entry. */
+                   4U;
+    longQuery = malloc( longQueryLen );
+    TEST_ASSERT_NOT_NULL( longQuery );
+    /* Populate a long query parameter name for 1st entry. */
+    memset( longQuery, ( int ) 'P', longQueryLen - 6 );
+    /* Populate the value for the 1st param and a second parameter entry. */
+    memcpy( longQuery + longQueryLen - 6, "=V&Q=X", 6 );
+    resetInputParams();
+    params.pHttpParameters->pPath = NULL;
+    params.pHttpParameters->pathLen = 0U;
+    params.pHttpParameters->pQuery = longQuery;
+    params.pHttpParameters->queryLen = longQueryLen;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    free( longQuery );
+
+    /* Case of insufficient memory when adding newline character after query canonical data in processing
+     * buffer.
+     * This case is created by using a long query parameter that leaves no space for the newline character
+     * after the canonical query data. */
+    longQueryLen = SIGV4_PROCESSING_BUFFER_LENGTH - httpParams.httpMethodLen - LINEFEED_CHAR_LEN -
+                   HTTP_EMPTY_PATH_LEN - LINEFEED_CHAR_LEN;
+    longQuery = malloc( longQueryLen );
+    TEST_ASSERT_NOT_NULL( longQuery );
+    /* Populate a long query parameter name. */
+    memset( longQuery, ( int ) 'P', longQueryLen );
+    resetInputParams();
+    params.pHttpParameters->pPath = NULL;
+    params.pHttpParameters->pathLen = 0U;
+    params.pHttpParameters->pQuery = longQuery;
+    params.pHttpParameters->queryLen = longQueryLen;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    free( longQuery );
+
+    /* Test case when there is insufficient processing buffer space for writing signing key.
+     * This case is created by using a long Region value that causes the "String to Sign" data
+     * to crowd out space for the Signing Key. */
+    size_t lenOfStringToSignWithoutRegion = ( STRING_TO_SIGN_LEN_WITH_DEFAULT_REGION ) -strlen( REGION );
+    size_t longRegionLen = SIGV4_PROCESSING_BUFFER_LENGTH - lenOfStringToSignWithoutRegion;
+    /*size_t longRegionLen = SIGV4_PROCESSING_BUFFER_LENGTH - 4 * SIGV4_HASH_MAX_DIGEST_LENGTH; */
+    longRegion = malloc( longRegionLen );
+    /* Fill gibberish in the long region name. */
+    memset( longRegion, ( int ) 'R', longRegionLen );
+    resetInputParams();
+    params.pRegion = longRegion;
+    params.regionLen = longRegionLen;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InsufficientMemory, returnStatus );
+    free( longRegion );
+}
+
+/* Test that the library can encode non-alphanumeric characters in a query string. */
+void test_SigV4_GenerateHTTPAuthorization_Encode_URI_Non_AlphaNumeric()
+{
+    SigV4Status_t returnStatus;
+
+    resetInputParams();
+    params.pHttpParameters->pQuery = QUERY_WITH_NON_ALPHA_NUMBERIC_CHARS;
+    params.pHttpParameters->queryLen = strlen( QUERY_WITH_NON_ALPHA_NUMBERIC_CHARS );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+
+    params.pHttpParameters->pQuery = QUERY_WITH_SPECIAL_CHARS;
+    params.pHttpParameters->queryLen = strlen( QUERY_WITH_SPECIAL_CHARS );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+}
+
+/**
+ * @brief Coverage for cases when the hashing functions return errors.
+ */
+void test_SigV4_GenerateHTTPAuthorization_Hash_Errors()
+{
+    SigV4Status_t returnStatus;
+    size_t i;
+
+    params.pCredentials->pSecretAccessKey = SECRET_KEY_LONGER_THAN_HASH_BLOCK;
+    params.pCredentials->secretAccessKeyLen = strlen( SECRET_KEY_LONGER_THAN_HASH_BLOCK );
+    char failureMessage[ 250 ];
+
+    for( i = 0U; i < HASH_ERROR_BRANCH_COVERAGE_ITERATIONS; i++ )
+    {
+        resetFailableHashParams();
+        hashInitCallToFail = i;
+        params.pCryptoInterface->hashInit = hash_init_failable;
+        returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+        snprintf( failureMessage, sizeof( failureMessage ), "Expected SigV4HashError from hashInit failure at call count %ld", i );
+        TEST_ASSERT_EQUAL_MESSAGE( SigV4HashError, returnStatus, failureMessage );
+
+        resetFailableHashParams();
+        updateHashCallToFail = i;
+        returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+        snprintf( failureMessage, sizeof( failureMessage ), "Expected SigV4HashError from hashUpdate failure at call count %ld", i );
+        TEST_ASSERT_EQUAL_MESSAGE( SigV4HashError, returnStatus, failureMessage );
+
+        resetFailableHashParams();
+        finalHashCallToFail = i;
+        returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+        snprintf( failureMessage, sizeof( failureMessage ), "Expected SigV4HashError from hashFinal failure at call count %ld", i );
+        TEST_ASSERT_EQUAL_MESSAGE( SigV4HashError, returnStatus, failureMessage );
+    }
+}
+
+/**
+ * @brief Test the case when the query string or header parameters exceed the max.
+ */
+void test_SigV4_GenerateHTTPAuthorization_Greater_Than_Max_Header_Query_Count()
+{
+    SigV4Status_t returnStatus;
+
+    params.pHttpParameters->pQuery = QUERY_GT_MAX_PARAMS;
+    params.pHttpParameters->queryLen = STR_LIT_LEN( QUERY_GT_MAX_PARAMS );
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4MaxQueryPairCountExceeded, returnStatus );
+}
+
+
+/* Test that the library returns error when the HTTP request data contains more Headers
+ * the configured maximum threshold in SIGV4_MAX_HTTP_HEADER_COUNT. */
+void test_SigV4_GenerateAuthorization_Headers_Greater_Than_Configured_Max()
+{
+    params.pHttpParameters->pHeaders = HEADERS_PAIRS_GT_THAN_MAX;
+    params.pHttpParameters->headersLen = strlen( HEADERS_PAIRS_GT_THAN_MAX );
+
+    TEST_ASSERT_EQUAL( SigV4MaxHeaderPairCountExceeded, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+
+    params.pHttpParameters->pHeaders = PRECAN_HEADERS_PAIRS_GT_THAN_MAX;
+    params.pHttpParameters->headersLen = strlen( PRECAN_HEADERS_PAIRS_GT_THAN_MAX );
+    params.pHttpParameters->flags = SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG;
+    TEST_ASSERT_EQUAL( SigV4MaxHeaderPairCountExceeded, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+}
+
+void test_SigV4_GenerateAuthorization_Sorting_Algorithm_Coverage()
+{
+    params.pHttpParameters->pHeaders = HEADERS_SORTED_COVERAGE_1;
+    params.pHttpParameters->headersLen = strlen( HEADERS_SORTED_COVERAGE_1 );
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+
+    params.pHttpParameters->pPath = NULL;
+    params.pHttpParameters->pathLen = 0U;
+    params.pHttpParameters->pQuery = NULL;
+    params.pHttpParameters->queryLen = 0U;
+    params.pHttpParameters->pHeaders = HEADERS_SORTED_COVERAGE_2;
+    params.pHttpParameters->headersLen = strlen( HEADERS_SORTED_COVERAGE_2 );
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
 }
