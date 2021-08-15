@@ -2310,7 +2310,7 @@ static int32_t hmacAddKey( HmacContext_t * pHmacContext,
     {
         returnStatus = pCryptoInterface->hashInit( pCryptoInterface->pHashContext );
 
-        /* Has part of the key that is cached in the HMAC context. */
+        /* Hash part of the key that is cached in the HMAC context. */
         if( returnStatus == 0 )
         {
             returnStatus = pCryptoInterface->hashUpdate( pCryptoInterface->pHashContext,
