@@ -46,7 +46,7 @@
         __CPROVER_assert( ( n == 0 ) || __CPROVER_r_ok( src, n ), "read" );
         return dest;
     }
-#else  /* if __has_builtin( __builtin___memcpy_chk ) */
+#else /* if __has_builtin( __builtin___memcpy_chk ) */
     void * memcpy( void * dest,
                    const void * src,
                    size_t n )

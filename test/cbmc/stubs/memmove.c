@@ -22,8 +22,8 @@
 
 /**
  * @file memmove.c
- * @brief Creates a stub for memmove so that it runs quickly
- * when running CBMC for URI encoding functionality.
+ * @brief A stub for memmove so that the proofs for functions that call
+ * memmove run much faster.
  */
 
 #include <string.h>
