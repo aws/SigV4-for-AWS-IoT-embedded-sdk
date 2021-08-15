@@ -3025,12 +3025,12 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
 
     if( returnStatus == SigV4Success )
     {
-        authPrefixLen = *authBufLen;
         assignDefaultArguments( pParams, &pAlgorithm, &algorithmLen );
     }
 
     if( returnStatus == SigV4Success )
     {
+        authPrefixLen = *authBufLen;
         returnStatus = generateCanonicalRequestUntilHeaders( pParams, &canonicalContext,
                                                              &pSignedHeaders,
                                                              &signedHeadersLen );
