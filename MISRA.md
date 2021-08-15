@@ -9,8 +9,10 @@ Deviations from the MISRA standard are listed below:
 | Deviation | Category | Justification |
 | :-: | :-: | :-: |
 | Directive 4.9 | Advisory | Allow inclusion of function like macros. Asserts and logging macros use function like macros. |
+| Rule 2.4 | Advisory | Allow unused tags. Some compilers warn if types are not tagged. |
 | Rule 2.5 | Advisory | Allow unused macros. |
 | Rule 3.1 | Required | Allow nested comments. C++ style `//` comments are used in example code within Doxygen documentation blocks. |
+| Rule 11.5 | Advisory | Allow casts from `void *`. Functions with `void *` parameters are used while sorting. |
 
 ### Flagged by Coverity
 | Deviation | Category | Justification |

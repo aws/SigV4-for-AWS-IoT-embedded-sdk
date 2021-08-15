@@ -187,8 +187,6 @@ typedef struct SigV4KeyValuePair
     SigV4ConstString_t value; /**< SigV4 data */
 } SigV4KeyValuePair_t;
 
-typedef SigV4KeyValuePair_t SigV4Header_t; /**< SigV4 header representation */
-
 /**
  * @brief An aggregator to maintain the internal state of canonicalization
  * during intermediate calculations.
