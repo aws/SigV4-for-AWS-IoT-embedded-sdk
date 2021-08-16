@@ -1,9 +1,9 @@
 /**
 @mainpage Overview
 @anchor sigv4
-@brief AWS IoT SigV4 Library
+@brief AWS SigV4 Library
 
-The AWS IoT SigV4 Library is a standalone library for generating signatures
+The AWS SigV4 Library is a standalone library for generating signatures
 and authorization headers according to the specifications of the AWS Signature
 Version 4 signing process. This library aids applications in sending direct
 HTTP requests to AWS services requiring SigV4 authentication. The library is
@@ -37,7 +37,7 @@ coverage.
 
 /**
 @page sigv4_config Configurations
-@brief Configurations of the AWS IoT SigV4 Library.
+@brief Configurations of the AWS SigV4 Library.
 <!-- @par configpagestyle allows the @section titles to be styled according to
      style.css -->
 @par configpagestyle
@@ -64,7 +64,7 @@ compiler option such as -D in gcc.
 
 /**
 @page sigv4_functions Functions
-@brief Primary functions of the AWS IoT SigV4 library:<br><br>
+@brief Primary functions of the AWS SigV4 library:<br><br>
 @subpage sigV4_generateHTTPAuthorization_function <br>
 @subpage sigV4_awsIotDateToIso8601_function <br>
 
