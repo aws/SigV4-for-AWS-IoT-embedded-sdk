@@ -11,7 +11,7 @@ written in C and designed to be compliant with ISO C90 and MISRA C and has no
 dependencies on any additional libraries other than the standard C library.
 
 @section sigv4_memory_requirements Memory Requirements
-@brief Memory requirements of the SigV4 Utility library.
+@brief Memory requirements of the SigV4 Library.
 
 @include{doc} size_table.md
 
