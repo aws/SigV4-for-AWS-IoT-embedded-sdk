@@ -29,6 +29,7 @@ const
 constness
 copydoc
 crypto
+cryptointerface
 css
 ctype
 currentparameter
@@ -43,6 +44,7 @@ doubleencodeequals
 doxygen
 encodeslash
 encodetwice
+endcode
 endif
 enums
 expirationlen
@@ -143,6 +145,7 @@ pbytesremaining
 pcanonicalcontext
 pcanonicalrequest
 pcanonicaluri
+pcredentials
 pcredscope
 pcryptointerface
 pdata
@@ -158,6 +161,7 @@ pheadersloc
 phexoutput
 phmaccontext
 phttpmethod
+phttpparameters
 pinput
 pinputstr
 pkey
@@ -219,6 +223,7 @@ sscanf
 standalone
 strftime
 stringtosign
+strlen
 struct
 structs
 sts

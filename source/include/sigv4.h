@@ -453,7 +453,7 @@ typedef struct SigV4Parameters
  *     .serviceLen       = strlen( AWS_SERVICE_NAME ),
  *     // SigV4 crypto interface. See SigV4CryptoInterface_t interface documentation.
  *     .pCryptoInterface = &cryptoInterface,
- *     // HTTP paramters for the HTTP request to generate a SigV4 authorization header for.
+ *     // HTTP parameters for the HTTP request to generate a SigV4 authorization header for.
  *     .pHttpParameters  = &sigv4HttpParams
  * };
  *
