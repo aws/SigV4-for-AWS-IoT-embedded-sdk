@@ -32,6 +32,12 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/* *INDENT-OFF* */
+#ifdef __cplusplus
+    extern "C" {
+#endif
+/* *INDENT-ON* */
+
 /* SIGV4_DO_NOT_USE_CUSTOM_CONFIG allows building of the SigV4 library without a
  * config file. If a config file is provided, the SIGV4_DO_NOT_USE_CUSTOM_CONFIG
  * macro must not be defined.
@@ -67,5 +73,11 @@ void quickSort( void * pArray,
                 size_t numItems,
                 size_t itemSize,
                 ComparisonFunc_t comparator );
+
+/* *INDENT-OFF* */
+#ifdef __cplusplus
+    }
+#endif
+/* *INDENT-ON* */
 
 #endif /* ifndef SIGV4_QUICKSORT_H_ */

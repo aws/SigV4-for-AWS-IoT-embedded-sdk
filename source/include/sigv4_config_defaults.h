@@ -35,6 +35,12 @@
 #ifndef SIGV4_CONFIG_DEFAULTS_H_
 #define SIGV4_CONFIG_DEFAULTS_H_
 
+/* *INDENT-OFF* */
+#ifdef __cplusplus
+    extern "C" {
+#endif
+/* *INDENT-ON* */
+
 /* The macro definition for SIGV4_DO_NOT_USE_CUSTOM_CONFIG is for Doxygen
  * documentation only. */
 
@@ -240,5 +246,11 @@
 #ifndef LogDebug
     #define LogDebug( message )
 #endif
+
+/* *INDENT-OFF* */
+#ifdef __cplusplus
+    }
+#endif
+/* *INDENT-ON* */
 
 #endif /* ifndef SIGV4_CONFIG_DEFAULTS_H_ */
