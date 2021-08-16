@@ -32,6 +32,12 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/* *INDENT-OFF* */
+#ifdef __cplusplus
+    extern "C" {
+#endif
+/* *INDENT-ON* */
+
 /* SIGV4_DO_NOT_USE_CUSTOM_CONFIG allows building of the SigV4 library without a
  * config file. If a config file is provided, the SIGV4_DO_NOT_USE_CUSTOM_CONFIG
  * macro must not be defined.
@@ -480,5 +486,11 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
                                          char * pDateISO8601,
                                          size_t dateISO8601Len );
 /* @[declare_sigV4_awsIotDateToIso8601_function] */
+
+/* *INDENT-OFF* */
+#ifdef __cplusplus
+    }
+#endif
+/* *INDENT-ON* */
 
 #endif /* SIGV4_H_ */

@@ -1,7 +1,8 @@
 {
     "lib_name": "AWS IoT SigV4",
     "src": [
-        "source/sigv4.c"
+        "source/sigv4.c",
+        "source/sigv4_quicksort.c"
     ],
     "include": [
         "source/include"
