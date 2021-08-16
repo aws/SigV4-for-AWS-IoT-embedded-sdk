@@ -422,6 +422,48 @@ typedef struct SigV4Parameters
  * @param[out] signatureLen The length of @p pSignature.
  *
  * @return #SigV4Success if successful, error code otherwise.
+ *
+ * <b>Example</b>
+ * @code{c}
+ * // The following example shows how to use the SigV4_GenerateHTTPAuthorization
+ * // function to generate the HTTP Authorization header value for HTTP requests
+ * // to AWS services using SigV4.
+ *
+ * SigV4Status_t status = SigV4Success;
+ *
+ * // Buffer to hold the authorization header.
+ * char pSigv4Auth[ 2048U ];
+ * size_t sigv4AuthLen = sizeof( pSigv4Auth );
+ *
+ * // Pointer to signature used in AWS HTTP requests generated using SigV4 library.
+ * char * signature = NULL;
+ * size_t signatureLen = 0;
+ *
+ * SigV4Parameters_t sigv4Params =
+ * {
+ *     // Parsed credentials obtained from AWS IoT Credential Provider.
+ *     .pCredentials     = &sigv4Creds,
+ *     // Date in ISO8601 format.
+ *     .pDateIso8601     = pDateISO8601,
+ *     // The AWS region for the request.
+ *     .pRegion          = AWS_REGION,
+ *     .regionLen        = strlen( AWS_REGION ),
+ *     // The AWS service for the request.
+ *     .pService         = AWS_SERVICE_NAME,
+ *     .serviceLen       = strlen( AWS_SERVICE_NAME ),
+ *     // SigV4 crypto interface. See SigV4CryptoInterface_t interface documentation.
+ *     .pCryptoInterface = &cryptoInterface,
+ *     // HTTP paramters for the HTTP request to generate a SigV4 authorization header for.
+ *     .pHttpParameters  = &sigv4HttpParams
+ * };
+ *
+ * status = SigV4_GenerateHTTPAuthorization( &sigv4Params, pSigv4Auth, &sigv4AuthLen, &signature, &signatureLen );
+ *
+ * if( status != SigV4Success )
+ * {
+ *    // Failed to generate authorization header.
+ * }
+ * @endcode
  */
 /* @[declare_sigV4_generateHTTPAuthorization_function] */
 SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams,
@@ -473,6 +515,26 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
  * SIGV4_ISO_STRING_LEN bytes, for valid input parameters.
  *
  * @return #SigV4Success code if successful, error code otherwise.
+ *
+ *
+ * <b>Example</b>
+ * @code{c}
+ * // The following example shows how to use the SigV4_AwsIotDateToIso8601
+ * // function to convert an AWS IoT date header to a ISO 8601 date.
+ *
+ * SigV4Status_t status = SigV4Success;
+ * char pDateISO8601[SIGV4_ISO_STRING_LEN] = {0};
+ * size_t pDateISO8601Len = SIGV4_ISO_STRING_LEN;
+ *
+ * // pDate and dateLen are the date header and length which were parsed from
+ * // an AWS IoT HTTP response, usually using an HTTP library.
+ * status = SigV4_AwsIotDateToIso8601( pDate, dateLen, pDateISO8601, pDateISO8601Len );
+ *
+ * if( status != SigV4Success )
+ * {
+ *    // Failed to parse date
+ * }
+ * @endcode
  */
 /* @[declare_sigV4_awsIotDateToIso8601_function] */
 SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
