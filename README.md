@@ -1,4 +1,4 @@
-# AWS IoT SigV4 Library
+# AWS SigV4 Library
 
 The AWS SigV4 Library is a standalone library for generating authorization headers and signatures according to the specifications of the [Signature Version 4](https://docs.aws.amazon.com/general/latest/gr/signature-version-4.html) signing process. Authorization headers are required for authentication when sending HTTP requests to AWS. This library can optionally be used by applications sending direct HTTP requests to AWS services requiring SigV4 authentication. This library has no dependencies on any additional libraries other than the standard C library. This library is distributed under the MIT Open Source License.
 
@@ -8,8 +8,8 @@ See memory requirements for this library [here][memory_table].
 
 [memory_table]: ./docs/doxygen/include/size_table.md
 
-## AWS IoT SigV4 Library Config File
-The AWS IoT SigV4 library exposes build configuration
+## AWS SigV4 Library Config File
+The AWS SigV4 library exposes build configuration
 macros that are required for building the library. A list of all the
 configurations and their default values are defined in
 [sigv4_config_defaults.h][default_config]. To provide custom values for the
