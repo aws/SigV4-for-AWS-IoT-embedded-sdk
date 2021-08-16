@@ -427,7 +427,7 @@ typedef struct SigV4Parameters
  * @code{c}
  * // The following example shows how to use the SigV4_GenerateHTTPAuthorization
  * // function to generate the HTTP Authorization header value for HTTP requests
- * // to AWS services using SigV4.
+ * // to AWS services requiring SigV4 authentication.
  *
  * SigV4Status_t status = SigV4Success;
  *
@@ -435,13 +435,14 @@ typedef struct SigV4Parameters
  * char pSigv4Auth[ 2048U ];
  * size_t sigv4AuthLen = sizeof( pSigv4Auth );
  *
- * // Pointer to signature used in AWS HTTP requests generated using SigV4 library.
+ * // Pointer to signature in the Authorization header that will be populated in
+ * // pSigv4Auth by the SigV4_GenerateHTTPAuthorization API function.
  * char * signature = NULL;
  * size_t signatureLen = 0;
  *
  * SigV4Parameters_t sigv4Params =
  * {
- *     // Parsed credentials obtained from AWS IoT Credential Provider.
+ *     // Parsed temporary credentials obtained from AWS IoT Credential Provider.
  *     .pCredentials     = &sigv4Creds,
  *     // Date in ISO8601 format.
  *     .pDateIso8601     = pDateISO8601,
@@ -527,7 +528,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
  * size_t pDateISO8601Len = SIGV4_ISO_STRING_LEN;
  *
  * // pDate and dateLen are the date header and length which were parsed from
- * // an AWS IoT HTTP response, usually using an HTTP library.
+ * // an AWS IoT Credential Provider HTTP response, using an HTTP library.
  * status = SigV4_AwsIotDateToIso8601( pDate, dateLen, pDateISO8601, pDateISO8601Len );
  *
  * if( status != SigV4Success )
