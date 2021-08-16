@@ -2729,7 +2729,7 @@ TAGFILES               =
 # external documentation" for more information about the usage of tag files.
 
 
-GENERATE_TAGFILE       = docs/doxygen/output/http.tag
+GENERATE_TAGFILE       = docs/doxygen/output/sigV4.tag
 
 
 # If the ALLEXTERNALS tag is set to YES, all external class will be listed in
