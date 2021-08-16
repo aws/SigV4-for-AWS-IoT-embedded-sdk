@@ -521,13 +521,13 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
  * <b>Example</b>
  * @code{c}
  * // The following example shows how to use the SigV4_AwsIotDateToIso8601
- * // function to convert an AWS IoT date header to a ISO 8601 date.
+ * // function to convert an AWS IoT date header value to a ISO 8601 date.
  *
  * SigV4Status_t status = SigV4Success;
  * char pDateISO8601[SIGV4_ISO_STRING_LEN] = {0};
  * size_t pDateISO8601Len = SIGV4_ISO_STRING_LEN;
  *
- * // pDate and dateLen are the date header and length which were parsed from
+ * // pDate and dateLen are the date header and length which are parsed from
  * // an AWS IoT Credential Provider HTTP response, using an HTTP library.
  * status = SigV4_AwsIotDateToIso8601( pDate, dateLen, pDateISO8601, pDateISO8601Len );
  *
