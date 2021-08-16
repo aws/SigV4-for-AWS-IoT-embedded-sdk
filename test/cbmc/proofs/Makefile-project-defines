@@ -33,7 +33,7 @@ INCLUDES += -I$(SRCDIR)/source/include
 
 # Preprocessor definitions -D...
 # DEFINES =
-DEFINES += -DSIGV4_DO_NOT_USE_CUSTOM_CONFIG=1
+DEFINES +=
 
 # Path to arpa executable
 # ARPA =

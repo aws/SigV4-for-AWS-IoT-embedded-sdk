@@ -424,7 +424,6 @@ static int32_t hmacFinal( HmacContext_t * pHmacContext,
  * @param[out] pOutput The buffer onto which to write the HMAC digest.
  * @param[out] outputLen The length of @p pOutput and must be greater
  * than pCryptoInterface->hashDigestLen for this function to succeed.
- * @param[in] pCryptoInterface The interface used to call hash functions.
  * @return Zero on success, all other return values are failures.
  */
 static int32_t completeHmac( HmacContext_t * pHmacContext,
@@ -433,8 +432,7 @@ static int32_t completeHmac( HmacContext_t * pHmacContext,
                              const char * pData,
                              size_t dataLen,
                              char * pOutput,
-                             size_t outputLen,
-                             const SigV4CryptoInterface_t * pCryptoInterface );
+                             size_t outputLen );
 
 /**
  * @brief Generates the complete hash of an input string, then write
@@ -628,6 +626,17 @@ static SigV4Status_t verifyParamsToGenerateAuthHeaderApi( const SigV4Parameters_
                                                           const size_t * authBufLen,
                                                           char * const * pSignature,
                                                           const size_t * signatureLen );
+
+/**
+ * @brief Assign default arguments based on parameters set in @p pParams.
+ *
+ * @param[in] pParams Complete SigV4 configurations passed by application.
+ * @param[out] pAlgorithm The algorithm used for SigV4 authentication.
+ * @param[out] algorithmLen The length of @p pAlgorithm.
+ */
+static void assignDefaultArguments( const SigV4Parameters_t * pParams,
+                                    const char ** pAlgorithm,
+                                    size_t * algorithmLen );
 
 /**
  * @brief Hex digest of provided string parameter.
@@ -1283,7 +1292,6 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         assert( pUri != NULL );
         assert( pCanonicalURI != NULL );
         assert( canonicalURILen != NULL );
-        assert( *canonicalURILen > 0U );
 
         bufferLen = *canonicalURILen;
 
@@ -1718,6 +1726,8 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         assert( pHeaders != NULL );
         assert( canonicalRequest != NULL );
         assert( canonicalRequest->pBufCur != NULL );
+        assert( pSignedHeaders != NULL );
+        assert( pSignedHeadersLen != NULL );
 
         /* Parsing header string to extract key and value. */
         sigV4Status = parseHeaderKeyValueEntries( pHeaders,
@@ -2028,7 +2038,14 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         assert( pCanonicalContext != NULL );
         assert( pCanonicalContext->pBufCur != NULL );
 
-        returnStatus = setQueryStringFieldsAndValues( pQuery, queryLen, &numberOfParameters, pCanonicalContext );
+        if( pQuery != NULL )
+        {
+            returnStatus = setQueryStringFieldsAndValues( pQuery, queryLen, &numberOfParameters, pCanonicalContext );
+        }
+        else
+        {
+            numberOfParameters = 0U;
+        }
 
         if( ( returnStatus == SigV4Success ) && ( numberOfParameters > 0U ) )
         {
@@ -2091,12 +2108,12 @@ static SigV4Status_t verifyParamsToGenerateAuthHeaderApi( const SigV4Parameters_
     }
     else if( ( pParams->pCredentials->pAccessKeyId == NULL ) || ( pParams->pCredentials->accessKeyIdLen == 0U ) )
     {
-        LogError( ( "Parameter check failed: Access Key ID data is invalid." ) );
+        LogError( ( "Parameter check failed: Access Key ID data is empty." ) );
         returnStatus = SigV4InvalidParameter;
     }
     else if( ( pParams->pCredentials->pSecretAccessKey == NULL ) || ( pParams->pCredentials->secretAccessKeyLen == 0U ) )
     {
-        LogError( ( "Parameter check failed: Secret Access Key data is invalid." ) );
+        LogError( ( "Parameter check failed: Secret Access Key data is empty." ) );
         returnStatus = SigV4InvalidParameter;
     }
     else if( pParams->pDateIso8601 == NULL )
@@ -2106,12 +2123,12 @@ static SigV4Status_t verifyParamsToGenerateAuthHeaderApi( const SigV4Parameters_
     }
     else if( ( pParams->pRegion == NULL ) || ( pParams->regionLen == 0U ) )
     {
-        LogError( ( "Parameter check failed: Region data is invalid." ) );
+        LogError( ( "Parameter check failed: Region data is empty." ) );
         returnStatus = SigV4InvalidParameter;
     }
     else if( ( pParams->pService == NULL ) || ( pParams->serviceLen == 0U ) )
     {
-        LogError( ( "Parameter check failed: Service data is invalid." ) );
+        LogError( ( "Parameter check failed: Service data is empty." ) );
         returnStatus = SigV4InvalidParameter;
     }
     else if( pParams->pCryptoInterface == NULL )
@@ -2158,6 +2175,25 @@ static SigV4Status_t verifyParamsToGenerateAuthHeaderApi( const SigV4Parameters_
     }
 
     return returnStatus;
+}
+
+/*-----------------------------------------------------------*/
+
+static void assignDefaultArguments( const SigV4Parameters_t * pParams,
+                                    const char ** pAlgorithm,
+                                    size_t * algorithmLen )
+{
+    if( ( pParams->pAlgorithm == NULL ) || ( pParams->algorithmLen == 0U ) )
+    {
+        /* The default algorithm is AWS4-HMAC-SHA256. */
+        *pAlgorithm = SIGV4_AWS4_HMAC_SHA256;
+        *algorithmLen = SIGV4_AWS4_HMAC_SHA256_LENGTH;
+    }
+    else
+    {
+        *pAlgorithm = pParams->pAlgorithm;
+        *algorithmLen = pParams->algorithmLen;
+    }
 }
 
 /*-----------------------------------------------------------*/
@@ -2272,14 +2308,9 @@ static int32_t hmacAddKey( HmacContext_t * pHmacContext,
     }
     else
     {
-        /* To reduce the key length to less than the hash block size, this branch performs
-         * hash operations. We want to perform hash operations only when we have received the
-         * entire key. */
-        assert( isKeyPrefix == false );
-
         returnStatus = pCryptoInterface->hashInit( pCryptoInterface->pHashContext );
 
-        /* Has part of the key that is cached in the HMAC context. */
+        /* Hash part of the key that is cached in the HMAC context. */
         if( returnStatus == 0 )
         {
             returnStatus = pCryptoInterface->hashUpdate( pCryptoInterface->pHashContext,
@@ -2445,7 +2476,7 @@ static SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
 {
     SigV4Status_t returnStatus = SigV4Success;
 
-    assert( ( pLine != NULL ) && ( lineLen > 0 ) );
+    assert( pLine != NULL );
     assert( ( pCanonicalContext != NULL ) && ( pCanonicalContext->pBufCur != NULL ) );
 
     /* Make sure that there is space for the Method and the newline character.*/
@@ -2475,8 +2506,7 @@ static int32_t completeHmac( HmacContext_t * pHmacContext,
                              const char * pData,
                              size_t dataLen,
                              char * pOutput,
-                             size_t outputLen,
-                             const SigV4CryptoInterface_t * pCryptoInterface )
+                             size_t outputLen )
 {
     int32_t returnStatus = 0;
 
@@ -2486,7 +2516,7 @@ static int32_t completeHmac( HmacContext_t * pHmacContext,
     assert( pData != NULL );
     assert( dataLen > 0U );
     assert( pOutput != NULL );
-    assert( outputLen >= pCryptoInterface->hashDigestLen );
+    assert( outputLen >= pHmacContext->pCryptoInterface->hashDigestLen );
 
     returnStatus = hmacAddKey( pHmacContext,
                                pKey,
@@ -2662,7 +2692,8 @@ static SigV4Status_t generateCanonicalRequestUntilHeaders( const SigV4Parameters
     if( returnStatus == SigV4Success )
     {
         /* Write the query to the canonical request. */
-        if( FLAG_IS_SET( pParams->pHttpParameters->flags, SIGV4_HTTP_QUERY_IS_CANONICAL_FLAG ) )
+        if( FLAG_IS_SET( pParams->pHttpParameters->flags, SIGV4_HTTP_QUERY_IS_CANONICAL_FLAG ) &&
+            ( pParams->pHttpParameters->pQuery != NULL ) )
         {
             /* HTTP query is already canonicalized, so just write it to the buffer as is. */
             returnStatus = writeLineToCanonicalRequest( pParams->pHttpParameters->pQuery,
@@ -2711,7 +2742,7 @@ static SigV4Status_t generateAuthorizationValuePrefix( const SigV4Parameters_t *
     assert( pSignedHeaders != NULL );
     assert( signedHeadersLen > 0 );
     assert( pAuthBuf != NULL );
-    assert( ( pAuthPrefixLen != NULL ) && ( *pAuthPrefixLen > 0 ) );
+    assert( pAuthPrefixLen != NULL );
 
     /* Since the signed headers are required to be a part of final Authorization header value,
      * we copy the signed headers onto the auth buffer before continuing to generate the signature
@@ -2818,11 +2849,9 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
                                  SIGV4_HMAC_SIGNING_KEY_PREFIX,
                                  SIGV4_HMAC_SIGNING_KEY_PREFIX_LEN,
                                  true /* Is key prefix. */ );
-        /* The above call should always succeed as it only populates the HMAC key cache. */
-        assert( hmacStatus == 0 );
     }
 
-    if( isBufferSpaceSufficient )
+    if( isBufferSpaceSufficient && ( hmacStatus == 0 ) )
     {
         hmacStatus = completeHmac( pHmacContext,
                                    pSigV4Params->pCredentials->pSecretAccessKey,
@@ -2830,8 +2859,7 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
                                    pSigV4Params->pDateIso8601,
                                    ISO_DATE_SCOPE_LEN,
                                    pSigningKey->pData,
-                                   pSigningKey->dataLen,
-                                   pSigV4Params->pCryptoInterface );
+                                   pSigningKey->dataLen );
         *pBytesRemaining -= pSigV4Params->pCryptoInterface->hashDigestLen;
     }
 
@@ -2844,8 +2872,7 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
                                    pSigV4Params->pRegion,
                                    pSigV4Params->regionLen,
                                    pSigningKeyStart,
-                                   *pBytesRemaining,
-                                   pSigV4Params->pCryptoInterface );
+                                   *pBytesRemaining );
         *pBytesRemaining -= pSigV4Params->pCryptoInterface->hashDigestLen;
     }
 
@@ -2857,8 +2884,7 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
                                    pSigV4Params->pService,
                                    pSigV4Params->serviceLen,
                                    pSigningKey->pData,
-                                   pSigV4Params->pCryptoInterface->hashDigestLen,
-                                   pSigV4Params->pCryptoInterface );
+                                   pSigV4Params->pCryptoInterface->hashDigestLen );
     }
 
     if( isBufferSpaceSufficient && ( hmacStatus == 0 ) )
@@ -2869,8 +2895,7 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
                                    CREDENTIAL_SCOPE_TERMINATOR,
                                    CREDENTIAL_SCOPE_TERMINATOR_LEN,
                                    pSigningKeyStart,
-                                   pSigV4Params->pCryptoInterface->hashDigestLen,
-                                   pSigV4Params->pCryptoInterface );
+                                   pSigV4Params->pCryptoInterface->hashDigestLen );
     }
 
     if( isBufferSpaceSufficient && ( hmacStatus == 0 ) )
@@ -2994,9 +3019,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
 
     if( returnStatus == SigV4Success )
     {
-        /* If the SigV4 algorithm is not specified, use "AWS4-HMAC-256" as the default algorithm. */
-        pAlgorithm = ( pParams->pAlgorithm == NULL ) ? SIGV4_AWS4_HMAC_SHA256 : pParams->pAlgorithm;
-        algorithmLen = ( pParams->pAlgorithm == NULL ) ? SIGV4_AWS4_HMAC_SHA256_LENGTH : pParams->algorithmLen;
+        assignDefaultArguments( pParams, &pAlgorithm, &algorithmLen );
     }
 
     if( returnStatus == SigV4Success )
@@ -3060,8 +3083,8 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
                                        ( char * ) canonicalContext.pBufProcessing,
                                        ( size_t ) bufferLen,
                                        canonicalContext.pBufCur,
-                                       pParams->pCryptoInterface->hashDigestLen,
-                                       pParams->pCryptoInterface ) != 0 ) ? SigV4HashError : SigV4Success;
+                                       pParams->pCryptoInterface->hashDigestLen ) != 0 )
+                       ? SigV4HashError : SigV4Success;
     }
 
     /* Hex-encode the final signature beforehand to its precalculated

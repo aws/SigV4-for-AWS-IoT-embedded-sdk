@@ -739,6 +739,29 @@ void test_SigV4_GenerateAuthorization_Query_With_No_Param_Values()
                            &params, authBuf, &authBufLen, &signature, &signatureLen ) );
 }
 
+/* Test that the library can handle an empty query string. */
+void test_SigV4_GenerateAuthorization_Empty_Query()
+{
+    /* Happy path when both query and length are NULL and 0 respectively. */
+    params.pHttpParameters->pQuery = NULL;
+    params.pHttpParameters->queryLen = 0U;
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+
+    /* The query is NULL, length is greater than 0, and the query is precanonicalized. */
+    params.pHttpParameters->flags = SIGV4_HTTP_QUERY_IS_CANONICAL_FLAG;
+    params.pHttpParameters->pQuery = NULL;
+    params.pHttpParameters->queryLen = 3U;
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+
+    /* The query is non-NULL but length is 0. */
+    params.pHttpParameters->pQuery = QUERY;
+    params.pHttpParameters->queryLen = 0U;
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+}
+
 void test_SigV4_GenerateHTTPAuthorization_Default_Arguments()
 {
     SigV4Status_t returnStatus;
@@ -1181,6 +1204,24 @@ void test_SigV4_GenerateHTTPAuthorization_Hash_Errors()
         snprintf( failureMessage, sizeof( failureMessage ), "Expected SigV4HashError from hashFinal failure at call count %ld", i );
         TEST_ASSERT_EQUAL_MESSAGE( SigV4HashError, returnStatus, failureMessage );
     }
+}
+
+/**
+ * @brief Coverage for the case when hashing the SigV4 signing key prefix fails.
+ */
+void test_SigV4_Hash_Key_Prefix_Small_Than_Block_Size()
+{
+    SigV4Status_t returnStatus;
+
+    resetFailableHashParams();
+
+    /* By keeping the block size smaller than the length of the key prefix,
+     * we are able to attain coverage in the case when hashing the key prefix fails. */
+    params.pCryptoInterface->hashBlockLen = SIGV4_HMAC_SIGNING_KEY_PREFIX_LEN - 1U;
+    hashInitCallToFail = 2U;
+    params.pCryptoInterface->hashInit = hash_init_failable;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL_MESSAGE( SigV4HashError, returnStatus, "2nd call to hashInit should fail when hashing SigV4 key prefix." );
 }
 
 /**

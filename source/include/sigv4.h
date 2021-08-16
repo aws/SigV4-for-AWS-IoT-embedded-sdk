@@ -337,7 +337,8 @@ typedef struct SigV4HttpParameters
 typedef struct SigV4Credentials
 {
     /**
-     * @brief The pAccessKeyId MUST be at least 16 characters long.
+     * @brief The pAccessKeyId MUST be at least 16 characters long
+     * but not more than 128 characters long.
      */
     const char * pAccessKeyId;
     size_t accessKeyIdLen; /**< @brief Length of pAccessKeyId. */

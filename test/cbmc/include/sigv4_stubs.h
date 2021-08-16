@@ -29,6 +29,8 @@
 #ifndef SIGV4_STUBS_H_
 #define SIGV4_STUBS_H_
 
+#include <stdbool.h>
+
 #include <sigv4.h>
 #include <sigv4_internal.h>
 
@@ -41,5 +43,27 @@ SigV4Status_t scanValue( const char * pDate,
                          size_t readLoc,
                          size_t lenToRead,
                          SigV4DateTime_t * pDateElements );
+
+SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
+                                           size_t lineLen,
+                                           CanonicalContext_t * pCanonicalContext );
+
+SigV4Status_t encodeURI( const char * pUri,
+                         size_t uriLen,
+                         char * pCanonicalURI,
+                         size_t * canonicalURILen,
+                         bool encodeSlash,
+                         bool doubleEncodeEquals );
+
+SigV4Status_t generateCanonicalQuery( const char * pQuery,
+                                      size_t queryLen,
+                                      CanonicalContext_t * pCanonicalContext );
+
+SigV4Status_t generateCanonicalAndSignedHeaders( const char * pHeaders,
+                                                 size_t headersLen,
+                                                 uint32_t flags,
+                                                 CanonicalContext_t * canonicalRequest,
+                                                 char ** pSignedHeaders,
+                                                 size_t * pSignedHeadersLen );
 
 #endif /* ifndef SIGV4_STUBS_H_ */
