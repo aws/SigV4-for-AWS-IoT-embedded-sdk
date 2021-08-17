@@ -112,12 +112,21 @@
 
 /**
  * @ingroup sigv4_canonical_flags
- * @brief Set this flag to indicate that the HTTP request path, query, and
- * headers are all already canonicalized.
+ * @brief Set this flag to indicate that the HTTP request payload is
+ * already hashed.
  *
  * This flag is valid only for #SigV4HttpParameters_t.flags.
  */
-#define SIGV4_HTTP_ALL_ARE_CANONICAL_FLAG        0x7U
+#define SIGV4_HTTP_PAYLOAD_IS_HASH               0x8U
+
+/**
+ * @ingroup sigv4_canonical_flags
+ * @brief Set this flag to indicate that the HTTP request path, query, and
+ * headers are all already canonicalized. and request payload is already hashed.
+ *
+ * This flag is valid only for #SigV4HttpParameters_t.flags.
+ */
+#define SIGV4_HTTP_ALL_ARE_CANONICAL_FLAG        0xFU
 
 /**
  * @ingroup sigv4_enum_types
