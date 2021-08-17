@@ -3063,12 +3063,8 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
                                                      canonicalContext.pBufCur,
                                                      &encodedLen,
                                                      pParams->pCryptoInterface );
-
-            if( returnStatus == SigV4Success )
-            {
-                canonicalContext.pBufCur += encodedLen;
-                canonicalContext.bufRemaining -= encodedLen;
-            }
+            canonicalContext.pBufCur += encodedLen;
+            canonicalContext.bufRemaining -= encodedLen;
         }
     }
 
