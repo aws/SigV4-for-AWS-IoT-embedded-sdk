@@ -625,6 +625,12 @@ void test_SigV4_GenerateHTTPAuthorization_Invalid_Params()
     params.serviceLen = 0U;
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pAlgorithm = "Test-Algo";
+    params.algorithmLen = 0U;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
 }
 
 /* TODO - Verify the generated signatures. */
@@ -768,10 +774,6 @@ void test_SigV4_GenerateHTTPAuthorization_Default_Arguments()
 
     /* Default algorithm is the macro defined by SIGV4_AWS4_HMAC_SHA256. */
     params.pAlgorithm = NULL;
-    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
-    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
-    params.pAlgorithm = SIGV4_AWS4_HMAC_SHA256;
-    params.algorithmLen = 0;
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
     /* Default path is "/". */

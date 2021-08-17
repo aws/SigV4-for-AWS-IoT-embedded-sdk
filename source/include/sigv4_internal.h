@@ -124,10 +124,10 @@
 /**
  * @brief A helper macro to print insufficient memory errors.
  */
-#define LOG_INSUFFICIENT_MEMORY_ERROR( purposeOfWrite, bytesExceeded )                                                                             \
-    {                                                                                                                                              \
-        LogError( ( "Unable to " purposeOfWrite ": Insufficient memory configured in \"SIGV4_PROCESSING_BUFFER_LENGTH\" macro. BytesExceeded=%lu", \
-                    ( unsigned long ) ( bytesExceeded ) ) );                                                                                       \
+#define LOG_INSUFFICIENT_MEMORY_ERROR( purposeOfWrite, bytesExceeded )                                                                         \
+    {                                                                                                                                          \
+        LogError( ( "Unable to " purposeOfWrite ": Insufficient memory configured in SIGV4_PROCESSING_BUFFER_LENGTH macro. BytesExceeded=%lu", \
+                    ( unsigned long ) ( bytesExceeded ) ) );                                                                                   \
     }
 
 /**

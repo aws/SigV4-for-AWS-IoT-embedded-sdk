@@ -1917,6 +1917,8 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 
         assert( pBufCur != NULL );
         assert( pEncodedLen != NULL );
+        assert( pValue != NULL );
+        assert( valueLen > 0U );
 
         /* Check that there is space at least for the equals to character. */
         if( bufferLen < 1U )
@@ -1972,8 +1974,8 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                                       pCanonicalRequest->pQueryLoc[ paramsIndex ].key.dataLen,
                                       pBufLoc,
                                       &encodedLen,
-                                      true,
-                                      false );
+                                      true /* Encode slash (/) */,
+                                      false /* Do not encode '='. */ );
 
             if( returnStatus == SigV4Success )
             {
@@ -2018,10 +2020,10 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             {
                 /* Empty else for MISRA C:2012 compliance. */
             }
-
-            pCanonicalRequest->pBufCur = pBufLoc;
-            pCanonicalRequest->bufRemaining = remainingLen;
         }
+
+        pCanonicalRequest->pBufCur = pBufLoc;
+        pCanonicalRequest->bufRemaining = remainingLen;
 
         return returnStatus;
     }
@@ -2131,6 +2133,11 @@ static SigV4Status_t verifyParamsToGenerateAuthHeaderApi( const SigV4Parameters_
         LogError( ( "Parameter check failed: Service data is empty." ) );
         returnStatus = SigV4InvalidParameter;
     }
+    else if( ( pParams->pAlgorithm != NULL ) && ( pParams->algorithmLen == 0U ) )
+    {
+        LogError( ( "Parameter check failed: Algorithm is specified but length (pParams->algorithmLen) passed is 0U." ) );
+        returnStatus = SigV4InvalidParameter;
+    }
     else if( pParams->pCryptoInterface == NULL )
     {
         LogError( ( "Parameter check failed: pParams->pCryptoInterface is NULL." ) );
@@ -2183,7 +2190,7 @@ static void assignDefaultArguments( const SigV4Parameters_t * pParams,
                                     const char ** pAlgorithm,
                                     size_t * algorithmLen )
 {
-    if( ( pParams->pAlgorithm == NULL ) || ( pParams->algorithmLen == 0U ) )
+    if( pParams->pAlgorithm == NULL )
     {
         /* The default algorithm is AWS4-HMAC-SHA256. */
         *pAlgorithm = SIGV4_AWS4_HMAC_SHA256;
@@ -2434,7 +2441,8 @@ static int32_t hmacFinal( HmacContext_t * pHmacContext,
          * this is by performing XOR on each byte of the inner-padded key (ipad ^ opad).  */
         for( i = 0U; i < pCryptoInterface->hashBlockLen; i++ )
         {
-            pHmacContext->key[ i ] ^= ( HMAC_INNER_PAD_BYTE ^ HMAC_OUTER_PAD_BYTE );
+            static const uint8_t padByteForOuterKey = HMAC_INNER_PAD_BYTE ^ HMAC_OUTER_PAD_BYTE;
+            pHmacContext->key[ i ] ^= padByteForOuterKey;
         }
 
         returnStatus = pCryptoInterface->hashInit( pCryptoInterface->pHashContext );
@@ -2823,7 +2831,6 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
     SigV4Status_t returnStatus = SigV4Success;
     int32_t hmacStatus = 0;
     char * pSigningKeyStart = NULL;
-    bool isBufferSpaceSufficient = true;
 
     assert( pSigV4Params != NULL );
     assert( pHmacContext != NULL );
@@ -2835,12 +2842,12 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
      * calculate the other. */
     if( *pBytesRemaining < ( pSigV4Params->pCryptoInterface->hashDigestLen * 2U ) )
     {
-        isBufferSpaceSufficient = false;
+        returnStatus = SigV4InsufficientMemory;
         LOG_INSUFFICIENT_MEMORY_ERROR( "generate signing key",
                                        ( pSigV4Params->pCryptoInterface->hashDigestLen * 2U ) - *pBytesRemaining );
     }
 
-    if( isBufferSpaceSufficient )
+    if( returnStatus != SigV4InsufficientMemory )
     {
         /* Fill the key prefix, "AWS4" in the HMAC context cache.
          * The prefix is part of the key for the first round of HMAC operation:
@@ -2849,9 +2856,12 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
                                  SIGV4_HMAC_SIGNING_KEY_PREFIX,
                                  SIGV4_HMAC_SIGNING_KEY_PREFIX_LEN,
                                  true /* Is key prefix. */ );
+
+        /* The above call should always succeed as it only populates the HMAC key cache. */
+        assert( hmacStatus == 0 );
     }
 
-    if( isBufferSpaceSufficient && ( hmacStatus == 0 ) )
+    if( ( returnStatus != SigV4InsufficientMemory ) && ( hmacStatus == 0 ) )
     {
         hmacStatus = completeHmac( pHmacContext,
                                    pSigV4Params->pCredentials->pSecretAccessKey,
@@ -2863,7 +2873,7 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
         *pBytesRemaining -= pSigV4Params->pCryptoInterface->hashDigestLen;
     }
 
-    if( isBufferSpaceSufficient && ( hmacStatus == 0 ) )
+    if( ( returnStatus != SigV4InsufficientMemory ) && ( hmacStatus == 0 ) )
     {
         pSigningKeyStart = pSigningKey->pData + pSigV4Params->pCryptoInterface->hashDigestLen + 1U;
         hmacStatus = completeHmac( pHmacContext,
@@ -2876,7 +2886,7 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
         *pBytesRemaining -= pSigV4Params->pCryptoInterface->hashDigestLen;
     }
 
-    if( isBufferSpaceSufficient && ( hmacStatus == 0 ) )
+    if( ( returnStatus != SigV4InsufficientMemory ) && ( hmacStatus == 0 ) )
     {
         hmacStatus = completeHmac( pHmacContext,
                                    pSigningKeyStart,
@@ -2887,7 +2897,7 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
                                    pSigV4Params->pCryptoInterface->hashDigestLen );
     }
 
-    if( isBufferSpaceSufficient && ( hmacStatus == 0 ) )
+    if( ( returnStatus != SigV4InsufficientMemory ) && ( hmacStatus == 0 ) )
     {
         hmacStatus = completeHmac( pHmacContext,
                                    pSigningKey->pData,
@@ -2898,24 +2908,16 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
                                    pSigV4Params->pCryptoInterface->hashDigestLen );
     }
 
-    if( isBufferSpaceSufficient && ( hmacStatus == 0 ) )
+    if( ( returnStatus != SigV4InsufficientMemory ) && ( hmacStatus == 0 ) )
     {
         pSigningKey->pData = pSigningKeyStart;
         pSigningKey->dataLen = pSigV4Params->pCryptoInterface->hashDigestLen;
     }
 
-    /* Set the appropriate error code for failures. */
-    if( !isBufferSpaceSufficient )
-    {
-        returnStatus = SigV4InsufficientMemory;
-    }
-    else if( hmacStatus != 0 )
+    /* If there was a hashing error in HMAC operations, set the appropriate error code. */
+    if( hmacStatus != 0 )
     {
         returnStatus = SigV4HashError;
-    }
-    else
-    {
-        /* Empty else for MISRA C:2012 compliance. */
     }
 
     return returnStatus;
