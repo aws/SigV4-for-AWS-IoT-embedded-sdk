@@ -193,6 +193,16 @@ static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
                                                  CanonicalContext_t * canonicalRequest );
 
 /**
+ * @brief Store the location of HTTP request hashed payload in the HTTP request.
+ *
+ * @param[in] headerIndex Index of HTTP request Header.
+ * @param[in,out] canonicalRequest Struct to maintain intermediary buffer
+ * and state of canonicalization.
+ */
+static void storeHashedPayloadLocation( size_t headerIndex,
+                                        CanonicalContext_t * canonicalRequest );
+
+/**
  * @brief Parse each header key and value pair from HTTP headers.
  *
  * @param[in] pHeaders HTTP headers to parse.
@@ -349,6 +359,20 @@ static void setQueryParameterValue( size_t currentParameter,
                                     const char * pValue,
                                     size_t valueLen,
                                     CanonicalContext_t * pCanonicalRequest );
+
+/**
+ * @brief Write the HTTP request payload hash to the canonical request.
+ *
+ * @param[in] pParams The application-defined parameters used for writing
+ * the payload hash.
+ * @param[out] canonicalContext The canonical context where the payload
+ * hash should be wriiten.
+ *
+ * @return SigV4InsufficientMemory if the length of the canonical request
+ * buffer cannot write the desired line, #SigV4Success otherwise.
+ */
+static SigV4Status_t writePayloadHashToCanonicalRequest( const SigV4Parameters_t * pParams,
+                                                         CanonicalContext_t * canonicalContext );
 
 /**
  * @brief Generates the key for the HMAC operation.
@@ -1583,6 +1607,17 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
     }
 
 /*-----------------------------------------------------------*/
+    static void storeHashedPayloadLocation( size_t headerIndex,
+                                            CanonicalContext_t * canonicalRequest )
+    {
+        assert( canonicalRequest != NULL );
+
+        if( memcmp( canonicalRequest->pHeadersLoc[ headerIndex ].key.pData, ( const char * ) SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER, canonicalRequest->pHeadersLoc[ headerIndex ].key.dataLen ) == 0 )
+        {
+            canonicalRequest->pHashPayloadLoc = canonicalRequest->pHeadersLoc[ headerIndex ].value.pData;
+            canonicalRequest->hashPayloadLen = canonicalRequest->pHeadersLoc[ headerIndex ].value.dataLen;
+        }
+    }
 
     static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
                                                      uint32_t flags,
@@ -1672,11 +1707,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( size_t ) dataLen;
 
                 /* Storing location of hashed request payload */
-                if( memcmp( canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData, ( const char * ) SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER, canonicalRequest->pHeadersLoc[ noOfHeaders ].key.dataLen ) == 0 )
-                {
-                    canonicalRequest->pHashPayloadLoc = pKeyOrValStartLoc;
-                    canonicalRequest->hashPayloadLen = dataLen;
-                }
+                storeHashedPayloadLocation( noOfHeaders, canonicalRequest );
 
                 /* Set starting location of the next header key string after the "\r\n". */
                 pKeyOrValStartLoc = pCurrLoc + 2U;
@@ -1691,11 +1722,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( size_t ) dataLen;
 
                 /* Storing location of hashed request payload */
-                if( memcmp( canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData, ( const char * ) SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER, canonicalRequest->pHeadersLoc[ noOfHeaders ].key.dataLen ) == 0 )
-                {
-                    canonicalRequest->pHashPayloadLoc = pKeyOrValStartLoc;
-                    canonicalRequest->hashPayloadLen = dataLen;
-                }
+                storeHashedPayloadLocation( noOfHeaders, canonicalRequest );
 
                 /* Set starting location of the next header key string after the "\n". */
                 pKeyOrValStartLoc = pCurrLoc + 1U;
@@ -2937,6 +2964,38 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
     return returnStatus;
 }
 
+static SigV4Status_t writePayloadHashToCanonicalRequest( const SigV4Parameters_t * pParams,
+                                                         CanonicalContext_t * canonicalContext )
+{
+    size_t encodedLen = 0U;
+    SigV4Status_t returnStatus = SigV4Success;
+
+    assert( pParams != NULL );
+    assert( canonicalContext != NULL );
+
+    if( FLAG_IS_SET( pParams->pHttpParameters->flags, SIGV4_HTTP_PAYLOAD_IS_HASH ) )
+    {
+        /* Copy the hashed payload data supplied by the user in the headers data list. */
+        returnStatus = copyHeaderStringToCanonicalBuffer( canonicalContext->pHashPayloadLoc, canonicalContext->hashPayloadLen, pParams->pHttpParameters->flags, '\n', canonicalContext );
+        canonicalContext->pBufCur--;
+    }
+    else
+    {
+        encodedLen = canonicalContext->bufRemaining;
+        /* Calculate hash of the request payload. */
+        returnStatus = completeHashAndHexEncode( pParams->pHttpParameters->pPayload,
+                                                 pParams->pHttpParameters->payloadLen,
+                                                 canonicalContext->pBufCur,
+                                                 &encodedLen,
+                                                 pParams->pCryptoInterface );
+        canonicalContext->pBufCur += encodedLen;
+        canonicalContext->bufRemaining -= encodedLen;
+    }
+
+    return returnStatus;
+}
+
+
 SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
                                          size_t dateLen,
                                          char * pDateISO8601,
@@ -3048,24 +3107,8 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
     /* Hash and hex-encode the canonical request to the buffer. */
     if( returnStatus == SigV4Success )
     {
-        /* Check if request payload is already hashed. */
-        if( FLAG_IS_SET( pParams->pHttpParameters->flags, SIGV4_HTTP_PAYLOAD_IS_HASH ) )
-        {
-            /* Copy the hashed payload data supplied by the user in the headers data list. */
-            copyHeaderStringToCanonicalBuffer( canonicalContext.pHashPayloadLoc, canonicalContext.hashPayloadLen, pParams->pHttpParameters->flags, '\n', &canonicalContext );
-            canonicalContext.pBufCur--;
-        }
-        else
-        {
-            encodedLen = canonicalContext.bufRemaining;
-            returnStatus = completeHashAndHexEncode( pParams->pHttpParameters->pPayload,
-                                                     pParams->pHttpParameters->payloadLen,
-                                                     canonicalContext.pBufCur,
-                                                     &encodedLen,
-                                                     pParams->pCryptoInterface );
-            canonicalContext.pBufCur += encodedLen;
-            canonicalContext.bufRemaining -= encodedLen;
-        }
+        /* Write HTTP request payload hash to the canonical request. */
+        returnStatus = writePayloadHashToCanonicalRequest( pParams, &canonicalContext );
     }
 
     /* Write the prefix of the Authorizaton header value. */
