@@ -1231,7 +1231,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         *pBuffer = '%';
         *( pBuffer + 1U ) = '2';
         *( pBuffer + 2U ) = '5';
-        *( pBuffer + URI_ENCODED_SPECIAL_CHAR_SIZE ) = '3';
+        *( pBuffer + 3U ) = '3';
         *( pBuffer + 4U ) = 'D';
 
         return URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE;
@@ -1324,6 +1324,11 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                     returnStatus = SigV4InsufficientMemory;
                     LogError( ( "Failed to encode URI in buffer due to insufficient memory" ) );
                 }
+            }
+            else if( pUri[ uriIndex ] == '\0' )
+            {
+                /* The URI path beyond the NULL terminator is not encoded. */
+                uriIndex = uriLen;
             }
             else
             {
@@ -2013,7 +2018,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             else if( thereExistsNextParameter )
             {
                 returnStatus = SigV4InsufficientMemory;
-                LogError( ( "Unable to write canonical query: Insufficient memory configured in \"SIGV4_PROCESSING_BUFFER_LENGTH\"" ) );
+                LOG_INSUFFICIENT_MEMORY_ERROR( "write query parameter separator, '&'", 1U );
                 break;
             }
             else
@@ -2022,8 +2027,12 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             }
         }
 
-        pCanonicalRequest->pBufCur = pBufLoc;
-        pCanonicalRequest->bufRemaining = remainingLen;
+        /* Update the context state if canonical query generation was successful. */
+        if( returnStatus == SigV4Success )
+        {
+            pCanonicalRequest->pBufCur = pBufLoc;
+            pCanonicalRequest->bufRemaining = remainingLen;
+        }
 
         return returnStatus;
     }
@@ -2637,6 +2646,13 @@ static SigV4Status_t writeStringToSign( const SigV4Parameters_t * pParams,
         *pBufStart = LINEFEED_CHAR;
     }
 
+    if( returnStatus == SigV4Success )
+    {
+        LogDebug( ( "Generated String To Sign Key: %.*s",
+                    ( unsigned int ) ( pCanonicalContext->pBufCur - pBufStart ),
+                    pBufStart ) );
+    }
+
     return returnStatus;
 }
 
@@ -3045,6 +3061,10 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
     /* Write the prefix of the Authorizaton header value. */
     if( returnStatus == SigV4Success )
     {
+        LogDebug( ( "Generated Canonical Request: %.*s",
+                    ( unsigned int ) ( ( uint8_t * ) canonicalContext.pBufCur - canonicalContext.pBufProcessing ),
+                    canonicalContext.pBufProcessing ) );
+
         authPrefixLen = *authBufLen;
         returnStatus = generateAuthorizationValuePrefix( pParams,
                                                          pAlgorithm, algorithmLen,
