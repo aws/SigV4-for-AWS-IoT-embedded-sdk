@@ -1292,3 +1292,12 @@ void test_SigV4_GenerateAuthorization_Headers_With_X_Amz_Content_Sha256_Header()
     TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
                            &params, authBuf, &authBufLen, &signature, &signatureLen ) );
 }
+
+void test_SigV4_GenerateAuthorization_Headers_With_X_Amz_Content_Sha256_Header_Without_Flag()
+{
+    params.pHttpParameters->pHeaders = HEADERS_WITH_X_AMZ_CONTENT_SHA256;
+    params.pHttpParameters->headersLen = strlen( HEADERS_WITH_X_AMZ_CONTENT_SHA256 );
+
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+}
