@@ -1833,7 +1833,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         assert( pCanonicalRequest != NULL );
 
         /* Ignore unnecessary '&' that represent empty parameter names.
-         * Trimmable '&'s can be leading, trailing or repeated as separators between paramater
+         * Trimmable '&'s can be leading, trailing or repeated as separators between parameter
          * pairs.
          * For example, this function will prune "&p1=v1&&p2=v2&" to "p1=v1&p2=v2". */
         if( !( fieldHasValue ) && ( ( ( currQueryIndex - startOfFieldOrValue ) == 0U ) ) )
@@ -1885,7 +1885,6 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
     {
         size_t currentParameter = 0U, i = 0U, startOfFieldOrValue = 0U;
         bool fieldHasValue = false;
-        bool fieldFound = false;
         SigV4Status_t returnStatus = SigV4Success;
 
         assert( pNumberOfParameters != NULL );
@@ -2004,7 +2003,6 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         SigV4Status_t returnStatus = SigV4Success;
         char * pBufLoc = NULL;
         size_t encodedLen = 0U, remainingLen = 0U, paramsIndex = 0U;
-        bool thereExistsNextParameter = false;
 
         assert( pCanonicalRequest != NULL );
         assert( pCanonicalRequest->pBufCur != NULL );
