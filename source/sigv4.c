@@ -365,14 +365,14 @@ static void setQueryParameterValue( size_t currentParameter,
  *
  * @param[in] pParams The application-defined parameters used for writing
  * the payload hash.
- * @param[out] canonicalContext The canonical context where the payload
- * hash should be wriiten.
+ * @param[out] pCanonicalContext The canonical context where the payload
+ * hash should be written.
  *
  * @return SigV4InsufficientMemory if the length of the canonical request
  * buffer cannot write the desired line, #SigV4Success otherwise.
  */
 static SigV4Status_t writePayloadHashToCanonicalRequest( const SigV4Parameters_t * pParams,
-                                                         CanonicalContext_t * canonicalContext );
+                                                         CanonicalContext_t * pCanonicalContext );
 
 /**
  * @brief Generates the key for the HMAC operation.
@@ -2965,31 +2965,31 @@ static SigV4Status_t generateSigningKey( const SigV4Parameters_t * pSigV4Params,
 }
 
 static SigV4Status_t writePayloadHashToCanonicalRequest( const SigV4Parameters_t * pParams,
-                                                         CanonicalContext_t * canonicalContext )
+                                                         CanonicalContext_t * pCanonicalContext )
 {
     size_t encodedLen = 0U;
     SigV4Status_t returnStatus = SigV4Success;
 
     assert( pParams != NULL );
-    assert( canonicalContext != NULL );
+    assert( pCanonicalContext != NULL );
 
     if( FLAG_IS_SET( pParams->pHttpParameters->flags, SIGV4_HTTP_PAYLOAD_IS_HASH ) )
     {
         /* Copy the hashed payload data supplied by the user in the headers data list. */
-        returnStatus = copyHeaderStringToCanonicalBuffer( canonicalContext->pHashPayloadLoc, canonicalContext->hashPayloadLen, pParams->pHttpParameters->flags, '\n', canonicalContext );
-        canonicalContext->pBufCur--;
+        returnStatus = copyHeaderStringToCanonicalBuffer( pCanonicalContext->pHashPayloadLoc, pCanonicalContext->hashPayloadLen, pParams->pHttpParameters->flags, '\n', pCanonicalContext );
+        pCanonicalContext->pBufCur--;
     }
     else
     {
-        encodedLen = canonicalContext->bufRemaining;
+        encodedLen = pCanonicalContext->bufRemaining;
         /* Calculate hash of the request payload. */
         returnStatus = completeHashAndHexEncode( pParams->pHttpParameters->pPayload,
                                                  pParams->pHttpParameters->payloadLen,
-                                                 canonicalContext->pBufCur,
+                                                 pCanonicalContext->pBufCur,
                                                  &encodedLen,
                                                  pParams->pCryptoInterface );
-        canonicalContext->pBufCur += encodedLen;
-        canonicalContext->bufRemaining -= encodedLen;
+        pCanonicalContext->pBufCur += encodedLen;
+        pCanonicalContext->bufRemaining -= encodedLen;
     }
 
     return returnStatus;
@@ -3082,7 +3082,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
     CanonicalContext_t canonicalContext;
     const char * pAlgorithm = NULL;
     char * pSignedHeaders = NULL;
-    size_t encodedLen = 0U, algorithmLen = 0U, signedHeadersLen = 0U, authPrefixLen = 0U;
+    size_t algorithmLen = 0U, signedHeadersLen = 0U, authPrefixLen = 0U;
     HmacContext_t hmacContext = { 0 };
 
     SigV4String_t signingKey;
