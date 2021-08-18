@@ -2977,6 +2977,7 @@ static SigV4Status_t writePayloadHashToCanonicalRequest( const SigV4Parameters_t
     {
         /* Copy the hashed payload data supplied by the user in the headers data list. */
         returnStatus = copyHeaderStringToCanonicalBuffer( pCanonicalContext->pHashPayloadLoc, pCanonicalContext->hashPayloadLen, pParams->pHttpParameters->flags, '\n', pCanonicalContext );
+        /* Remove new line at the end of the payload. */
         pCanonicalContext->pBufCur--;
     }
     else
