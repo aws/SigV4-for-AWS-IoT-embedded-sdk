@@ -1612,11 +1612,11 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
     {
         assert( canonicalRequest != NULL );
 
-        if( memcmp( canonicalRequest->pHeadersLoc[ headerIndex ].key.pData, ( const char * ) SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER, canonicalRequest->pHeadersLoc[ headerIndex ].key.dataLen ) == 0 )
-        {
-            canonicalRequest->pHashPayloadLoc = canonicalRequest->pHeadersLoc[ headerIndex ].value.pData;
-            canonicalRequest->hashPayloadLen = canonicalRequest->pHeadersLoc[ headerIndex ].value.dataLen;
-        }
+        // if( memcmp( canonicalRequest->pHeadersLoc[ headerIndex ].key.pData, ( const char * ) SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER, canonicalRequest->pHeadersLoc[ headerIndex ].key.dataLen ) == 0 )
+        // {
+        //     canonicalRequest->pHashPayloadLoc = canonicalRequest->pHeadersLoc[ headerIndex ].value.pData;
+        //     canonicalRequest->hashPayloadLen = canonicalRequest->pHeadersLoc[ headerIndex ].value.dataLen;
+        // }
     }
 
     static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
