@@ -195,7 +195,7 @@ static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
 /**
  * @brief Store the location of HTTP request hashed payload in the HTTP request.
  *
- * @param[in] headerIndex Index of HTTP request Header.
+ * @param[in] headerIndex Index of request Header in the list of parsed headers.
  * @param[in,out] canonicalRequest Struct to maintain intermediary buffer
  * and state of canonicalization.
  */
