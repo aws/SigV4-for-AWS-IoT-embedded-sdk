@@ -1819,13 +1819,73 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 
 /*-----------------------------------------------------------*/
 
-    static SigV4Status_t setQueryStringFieldsAndValues( const char * pQuery,
-                                                        size_t queryLen,
-                                                        size_t * pNumberOfParameters,
-                                                        CanonicalContext_t * pCanonicalRequest )
+    static void processAmpersantInQueryString( bool fieldHasValue,
+                                               size_t currQueryIndex,
+                                               size_t startOfFieldOrValue,
+                                               size_t * pCurrParamCount,
+                                               const char * pQuery,
+                                               CanonicalContext_t * pCanonicalRequest )
+    {
+        bool previousParamIsValid = true;
+
+        assert( pCurrParamCount != NULL );
+        assert( pQuery != NULL );
+        assert( pCanonicalRequest != NULL );
+
+        /* Ignore unnecessary '&' that represent empty parameter names.
+         * Trimmable '&'s can be leading, trailing or repeated as separators between paramater
+         * pairs.
+         * For example, this function will prune "&p1=v1&&p2=v2&" to "p1=v1&p2=v2". */
+        if( !( fieldHasValue ) && ( ( ( currQueryIndex - startOfFieldOrValue ) == 0U ) ) )
+        {
+            /* Do nothing as previous parameter name is empty. */
+            previousParamIsValid = false;
+        }
+
+        /* Case when parameter has empty value even though the query parameter entry has the form
+         * "<param>=". */
+        else if( ( fieldHasValue ) && ( ( currQueryIndex - startOfFieldOrValue ) == 0U ) )
+        {
+            /* Store the previous parameter's empty value information. Use NULL to represent empty value. */
+            setQueryParameterValue( *pCurrParamCount, NULL, 0U, pCanonicalRequest );
+        }
+
+        /* Case when a new query parameter pair has begun without the previous parameter having an associated value,
+         * i.e. of the format "<param1>&<param2>=<value>" where "<param1>".
+         * In thus case, as the previous parameter does not have a value, we will store an empty value for it. */
+        else if( !( fieldHasValue ) )
+        {
+            /* Store information about previous query parameter name. The query parameter has no associated value. */
+            setQueryParameterKey( *pCurrParamCount, &pQuery[ startOfFieldOrValue ], currQueryIndex - startOfFieldOrValue, pCanonicalRequest );
+
+            /* Store the previous parameter's empty value information. Use NULL to represent empty value. */
+            setQueryParameterValue( *pCurrParamCount, NULL, 0U, pCanonicalRequest );
+        }
+        /* This represents the case when the previous parameter has a value associated with it. */
+        else
+        {
+            /* End of value reached, so store a pointer to the previously set value. */
+            setQueryParameterValue( *pCurrParamCount, &pQuery[ startOfFieldOrValue ], currQueryIndex - startOfFieldOrValue, pCanonicalRequest );
+        }
+
+        if( previousParamIsValid == true )
+        {
+            /* As the previous parameter is valid, increment the total parameters
+             * parsed so far from the query string. */
+            ( *pCurrParamCount )++;
+        }
+    }
+
+/*-----------------------------------------------------------*/
+
+    static SigV4Status_t parseQueryString( const char * pQuery,
+                                           size_t queryLen,
+                                           size_t * pNumberOfParameters,
+                                           CanonicalContext_t * pCanonicalRequest )
     {
         size_t currentParameter = 0U, i = 0U, startOfFieldOrValue = 0U;
         bool fieldHasValue = false;
+        bool fieldFound = false;
         SigV4Status_t returnStatus = SigV4Success;
 
         assert( pNumberOfParameters != NULL );
@@ -1835,7 +1895,10 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         /* Note: Constness of the query string is casted out here, taking care not to modify
          * its contents in any way. */
 
-        /* Set cursors to each field and value in the query string. */
+        /* Set cursors to each field and value in the query string.
+         * Note: We iterate the index to queryLen (instead of queryLen - 1) for the
+         * special case of handling the last index as a terminating value of a query
+         * parameter. */
         for( i = 0U; i <= queryLen; i++ )
         {
             /* This test is at the beginning of the loop to ensure that
@@ -1854,38 +1917,15 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
              * old value (or key if the field has no value). The last value will not be
              * followed by anything, so we iterate to one beyond the end of the string.
              * Short circuit evaluation ensures the string is not dereferenced for that case. */
-            if( ( i == queryLen ) || ( ( pQuery[ i ] == '&' ) && ( i != 0U ) ) )
+            if( ( i == queryLen ) || ( pQuery[ i ] == '&' ) )
             {
-                if( ( i - startOfFieldOrValue ) == 0U )
-                {
-                    /* A field should never be empty, but a value can be empty
-                     * provided a field was specified first. */
-                }
-                /* If the previous parameter did not have a value, write the name and empty value for it. */
-                else if( !fieldHasValue )
-                {
-                    /* Store information about previous query parameter name. The query parameter has no associated value. */
-                    setQueryParameterKey( currentParameter, &pQuery[ startOfFieldOrValue ], i - startOfFieldOrValue, pCanonicalRequest );
+                processAmpersantInQueryString( fieldHasValue, i, startOfFieldOrValue,
+                                               &currentParameter, pQuery, pCanonicalRequest );
 
-                    /* Store the previous parameter's empty value information. Use NULL to represent empty value. */
-                    setQueryParameterValue( currentParameter, NULL, 0U, pCanonicalRequest );
-
-                    /* Set the starting index for the new query parameter name. */
-                    startOfFieldOrValue = i + 1U;
-                    currentParameter++;
-                }
-                else
-                {
-                    /* End of value reached, so store a pointer to the previously set value. */
-                    setQueryParameterValue( currentParameter, &pQuery[ startOfFieldOrValue ], i - startOfFieldOrValue, pCanonicalRequest );
-
-                    /* Set the starting index for the new query parameter name. */
-                    startOfFieldOrValue = i + 1U;
-                    currentParameter++;
-
-                    /* Reset the parameter value state of the new parameter entry. */
-                    fieldHasValue = false;
-                }
+                /* As '&' is always treated as a separator, update the starting index to represent the next
+                 * query parameter and reset the flag about parameter value state of the new parameter. */
+                startOfFieldOrValue = i + 1U;
+                fieldHasValue = false;
             }
             else if( ( pQuery[ i ] == '=' ) && !fieldHasValue )
             {
@@ -1918,12 +1958,11 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                                                                size_t * pEncodedLen )
     {
         SigV4Status_t returnStatus = SigV4Success;
-        size_t bytesWritten = 0U;
+        size_t valueBytesWritten = 0U;
 
         assert( pBufCur != NULL );
         assert( pEncodedLen != NULL );
-        assert( pValue != NULL );
-        assert( valueLen > 0U );
+        assert( ( pValue == NULL ) || ( valueLen != 0U ) );
 
         /* Check that there is space at least for the equals to character. */
         if( bufferLen < 1U )
@@ -1934,19 +1973,24 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         else
         {
             *pBufCur = '=';
-            bytesWritten = bufferLen - 1U;
+            *pEncodedLen = 1U;
+            valueBytesWritten = bufferLen - 1U;
 
-            returnStatus = encodeURI( pValue,
-                                      valueLen,
-                                      pBufCur + 1U,
-                                      &bytesWritten,
-                                      true,
-                                      true );
-        }
+            /* Encode parameter value if non-empty. Query parameters can have empty values. */
+            if( valueLen > 0U )
+            {
+                returnStatus = encodeURI( pValue,
+                                          valueLen,
+                                          pBufCur + 1U,
+                                          &valueBytesWritten,
+                                          true,
+                                          true );
 
-        if( returnStatus == SigV4Success )
-        {
-            *pEncodedLen = ( 1U + bytesWritten );
+                if( returnStatus == SigV4Success )
+                {
+                    *pEncodedLen += valueBytesWritten;
+                }
+            }
         }
 
         return returnStatus;
@@ -1987,43 +2031,36 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                 pBufLoc += encodedLen;
                 remainingLen -= encodedLen;
 
-                /* Encode parameter value if non-empty. Query parameters can have empty values. */
-                if( pCanonicalRequest->pQueryLoc[ paramsIndex ].value.dataLen > 0U )
+                assert( pCanonicalRequest->pQueryLoc[ paramsIndex ].value.pData != NULL );
+                returnStatus = writeValueInCanonicalizedQueryString( pBufLoc,
+                                                                     remainingLen,
+                                                                     pCanonicalRequest->pQueryLoc[ paramsIndex ].value.pData,
+                                                                     pCanonicalRequest->pQueryLoc[ paramsIndex ].value.dataLen,
+                                                                     &encodedLen );
+                pBufLoc += encodedLen;
+                remainingLen -= encodedLen;
+            }
+
+            /* If there is a succeeding query parameter, add the '&' separator in the canonical query. */
+            if( ( returnStatus == SigV4Success ) && ( ( paramsIndex + 1U ) != numberOfParameters ) )
+            {
+                /* Before adding the '&' for the next query parameter, check that there is
+                 * space in the buffer. */
+                if( remainingLen > 0U )
                 {
-                    assert( pCanonicalRequest->pQueryLoc[ paramsIndex ].value.pData != NULL );
-                    returnStatus = writeValueInCanonicalizedQueryString( pBufLoc,
-                                                                         remainingLen,
-                                                                         pCanonicalRequest->pQueryLoc[ paramsIndex ].value.pData,
-                                                                         pCanonicalRequest->pQueryLoc[ paramsIndex ].value.dataLen,
-                                                                         &encodedLen );
-                    pBufLoc += encodedLen;
-                    remainingLen -= encodedLen;
+                    *pBufLoc = '&';
+                    ++pBufLoc;
+                    remainingLen--;
                 }
-            }
 
-            /* Check if there is a next parameter. */
-            thereExistsNextParameter = ( ( paramsIndex + 1U ) != numberOfParameters );
-
-            /* Before adding the '&' for the next query parameter, check that this is not
-             * the last parameter. */
-            if( thereExistsNextParameter && ( remainingLen > 0U ) )
-            {
-                *pBufLoc = '&';
-                ++pBufLoc;
-                remainingLen--;
-            }
-
-            /* There is at least another query parameter entry to encode
-             * but no space in the buffer. */
-            else if( thereExistsNextParameter )
-            {
-                returnStatus = SigV4InsufficientMemory;
-                LOG_INSUFFICIENT_MEMORY_ERROR( "write query parameter separator, '&'", 1U );
-                break;
-            }
-            else
-            {
-                /* Empty else for MISRA C:2012 compliance. */
+                /* There is at least another query parameter entry to encode
+                 * but no space in the buffer. */
+                else
+                {
+                    returnStatus = SigV4InsufficientMemory;
+                    LOG_INSUFFICIENT_MEMORY_ERROR( "write query parameter separator, '&'", 1U );
+                    break;
+                }
             }
         }
 
@@ -2044,18 +2081,14 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                                                  CanonicalContext_t * pCanonicalContext )
     {
         SigV4Status_t returnStatus = SigV4Success;
-        size_t numberOfParameters;
+        size_t numberOfParameters = 0U;
 
         assert( pCanonicalContext != NULL );
         assert( pCanonicalContext->pBufCur != NULL );
 
         if( pQuery != NULL )
         {
-            returnStatus = setQueryStringFieldsAndValues( pQuery, queryLen, &numberOfParameters, pCanonicalContext );
-        }
-        else
-        {
-            numberOfParameters = 0U;
+            returnStatus = parseQueryString( pQuery, queryLen, &numberOfParameters, pCanonicalContext );
         }
 
         if( ( returnStatus == SigV4Success ) && ( numberOfParameters > 0U ) )

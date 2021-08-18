@@ -62,7 +62,8 @@
 #define QUERY_WITH_SPECIAL_CHARS                              "param=/"
 
 #define QUERY_STRING_NO_PARAM_VALUE                           "param=&param2="
-#define QUERY_STRING_STARTING_WITH_AMPERSANT                  "&param2="
+#define QUERY_STRING_WITH_TRAILING_N_LEADING_AMPERSANTS       "&&param2=&&"
+#define QUERY_STRING_WITH_REPEATED_AMPERSANTS                 "param1=val&&param2=val"
 
 #define QUERY                                                 "Action=ListUsers&Version=2010-05-08"
 #define QUERY_LENGTH                                          ( sizeof( QUERY ) - 1U )
@@ -756,19 +757,37 @@ void test_SigV4_GenerateAuthorization_Headers_With_Trimmable_Spaces()
 }
 
 /* Test that the library can handle query string that contains empty values for its parameters. */
-void test_SigV4_GenerateAuthorization_Query_With_No_Param_Values()
+void test_SigV4_GenerateAuthorization_Query_Strings_Special_Cases()
 {
     params.pHttpParameters->pQuery = QUERY_STRING_NO_PARAM_VALUE;
     params.pHttpParameters->queryLen = strlen( QUERY_STRING_NO_PARAM_VALUE );
 
-    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
-                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
-
-    params.pHttpParameters->pQuery = QUERY_STRING_STARTING_WITH_AMPERSANT;
-    params.pHttpParameters->queryLen = strlen( QUERY_STRING_STARTING_WITH_AMPERSANT );
+    const char * pExpectedSignature = "9eed8862e36ac9861f0ea0be863ef6d825de854c8eb9da072637dcc64e5ef919";
 
     TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
                            &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+    TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
+    printf( "%.*s\n", authBufLen, authBuf );
+    TEST_ASSERT_EQUAL_MEMORY( pExpectedSignature, signature, signatureLen );
+
+    params.pHttpParameters->pQuery = QUERY_STRING_WITH_TRAILING_N_LEADING_AMPERSANTS;
+    params.pHttpParameters->queryLen = strlen( QUERY_STRING_WITH_TRAILING_N_LEADING_AMPERSANTS );
+
+    pExpectedSignature = "576a0348d54591e15bed920586936f9263656470197adf7ce79c5fc8ef44d825";
+
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+    TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
+    TEST_ASSERT_EQUAL_MEMORY( pExpectedSignature, signature, signatureLen );
+
+    params.pHttpParameters->pQuery = QUERY_STRING_WITH_REPEATED_AMPERSANTS;
+    params.pHttpParameters->queryLen = strlen( QUERY_STRING_WITH_REPEATED_AMPERSANTS );
+
+    pExpectedSignature = "4fcf6c89d5ddb944c0e386817d52835f578769e100d7e92d433bf4a946b7e6c3";
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+    TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
+    TEST_ASSERT_EQUAL_MEMORY( pExpectedSignature, signature, signatureLen );
 }
 
 /* Test that the library can handle an empty query string. */
