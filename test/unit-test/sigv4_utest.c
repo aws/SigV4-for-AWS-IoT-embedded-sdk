@@ -134,7 +134,8 @@
     "-even-though-this-is-not-a-good-practice-at-all-so-obviously-this-is-just-a-joke-" \
     "so-why-are-you-still-&m=reading-this-i-mean-im-crazy-enough-to-type-this-very-"    \
     "long-string-instead-of-using-a-lorem-ipsum-website-maybe-i-should-be-a-comedian-"  \
-    "instead-be-a-programmer-reall&ymxchykldfghiwbdcjhjdddkkgddsdhshdkshdhsskgfkjgfggcgjfhjxgxgheeeeeeee=3"
+    "instead-be-a-programmer-reall&ymxchykldfghiwbdcjhjdddkkgddsdhshdkshdhsskgfkjgfggc" \
+    "gjfhjxgxghsgfdwfdfdfdffhfdhdhfhdfhd=3"
 
 /* '=' before query string value in canonicalized query string causes OOM. */
 #define QUERY_EQUAL_BEFORE_VALUE_OOM                                                      \
