@@ -1174,7 +1174,8 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
     longQuery = malloc( longQueryLen );
     TEST_ASSERT_NOT_NULL( longQuery );
     /* Populate a long query parameter name. */
-    memset( longQuery, ( int ) 'P', longQueryLen );
+    memset( longQuery, ( int ) 'P', longQueryLen - 1 );
+    longQuery[ longQueryLen - 1U ] = '=';
     resetInputParams();
     params.pHttpParameters->pPath = NULL;
     params.pHttpParameters->pathLen = 0U;
