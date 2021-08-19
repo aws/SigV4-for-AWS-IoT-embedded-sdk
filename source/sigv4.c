@@ -1819,9 +1819,9 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 
 /*-----------------------------------------------------------*/
 
-    static void processAmpersantInQueryString( bool fieldHasValue,
+    static void processAmpersandInQueryString( bool fieldHasValue,
                                                size_t currQueryIndex,
-                                               size_t startOfFieldOrValue,
+                                               size_t * pStartOfFieldOrValue,
                                                size_t * pCurrParamCount,
                                                const char * pQuery,
                                                CanonicalContext_t * pCanonicalRequest )
@@ -1829,51 +1829,66 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         bool previousParamIsValid = true;
 
         assert( pCurrParamCount != NULL );
+        assert( pStartOfFieldOrValue != NULL );
         assert( pQuery != NULL );
         assert( pCanonicalRequest != NULL );
 
-        /* Ignore unnecessary '&' that represent empty parameter names.
-         * Trimmable '&'s can be leading, trailing or repeated as separators between parameter
-         * pairs.
-         * For example, this function will prune "&p1=v1&&p2=v2&" to "p1=v1&p2=v2". */
-        if( !( fieldHasValue ) && ( ( ( currQueryIndex - startOfFieldOrValue ) == 0U ) ) )
+        /* Process scenarios when a value for the previous parameter entry has been detected. */
+        if( fieldHasValue )
         {
-            /* Do nothing as previous parameter name is empty. */
-            previousParamIsValid = false;
-        }
+            /* Case when parameter has empty value even though the query parameter entry has the form
+             * "<param>=". */
+            if( ( currQueryIndex - *pStartOfFieldOrValue ) == 0U )
+            {
+                /* Store the previous parameter's empty value information. Use NULL to represent empty value. */
+                setQueryParameterValue( *pCurrParamCount, NULL, 0U, pCanonicalRequest );
+            }
 
-        /* Case when parameter has empty value even though the query parameter entry has the form
-         * "<param>=". */
-        else if( ( fieldHasValue ) && ( ( currQueryIndex - startOfFieldOrValue ) == 0U ) )
-        {
-            /* Store the previous parameter's empty value information. Use NULL to represent empty value. */
-            setQueryParameterValue( *pCurrParamCount, NULL, 0U, pCanonicalRequest );
+            /* This represents the case when the previous parameter has a value associated with it. */
+            else
+            {
+                /* End of value reached, so store a pointer to the previously set value. */
+                setQueryParameterValue( *pCurrParamCount, &pQuery[ *pStartOfFieldOrValue ], currQueryIndex - *pStartOfFieldOrValue, pCanonicalRequest );
+            }
         }
-
-        /* Case when a new query parameter pair has begun without the previous parameter having an associated value,
-         * i.e. of the format "<param1>&<param2>=<value>" where "<param1>".
-         * In thus case, as the previous parameter does not have a value, we will store an empty value for it. */
-        else if( !( fieldHasValue ) )
-        {
-            /* Store information about previous query parameter name. The query parameter has no associated value. */
-            setQueryParameterKey( *pCurrParamCount, &pQuery[ startOfFieldOrValue ], currQueryIndex - startOfFieldOrValue, pCanonicalRequest );
-
-            /* Store the previous parameter's empty value information. Use NULL to represent empty value. */
-            setQueryParameterValue( *pCurrParamCount, NULL, 0U, pCanonicalRequest );
-        }
-        /* This represents the case when the previous parameter has a value associated with it. */
+        /* A parameter value has not been found for the previous parameter. */
         else
         {
-            /* End of value reached, so store a pointer to the previously set value. */
-            setQueryParameterValue( *pCurrParamCount, &pQuery[ startOfFieldOrValue ], currQueryIndex - startOfFieldOrValue, pCanonicalRequest );
+            /* Ignore unnecessary '&' that represent empty parameter names.
+             * Trimmable '&'s can be leading, trailing or repeated as separators between parameter
+             * pairs.
+             * For example, this function will prune "&p1=v1&&p2=v2&" to "p1=v1&p2=v2". */
+            if( ( currQueryIndex - *pStartOfFieldOrValue ) == 0U )
+            {
+                /* Do nothing as previous parameter name is empty. */
+                previousParamIsValid = false;
+            }
+
+            /* Case when a new query parameter pair has begun without the previous parameter having an associated value,
+             * i.e. of the format "<param1>&<param2>=<value>" where "<param1>".
+             * In thus case, as the previous parameter does not have a value, we will store an empty value for it. */
+            else
+            {
+                /* Store information about previous query parameter name. The query parameter has no associated value. */
+                setQueryParameterKey( *pCurrParamCount, &pQuery[ *pStartOfFieldOrValue ], currQueryIndex - *pStartOfFieldOrValue, pCanonicalRequest );
+
+                /* Store the previous parameter's empty value information. Use NULL to represent empty value. */
+                setQueryParameterValue( *pCurrParamCount, NULL, 0U, pCanonicalRequest );
+            }
         }
 
+        /* Increment the parameter count if the previous parameter is not empty
+         * An empty previous parameter is caused in query strings where the '&' are unnecessary. */
         if( previousParamIsValid == true )
         {
             /* As the previous parameter is valid, increment the total parameters
              * parsed so far from the query string. */
             ( *pCurrParamCount )++;
         }
+
+        /* As '&' is always treated as a separator, update the starting index to represent the next
+         * query parameter. */
+        *pStartOfFieldOrValue = currQueryIndex + 1U;
     }
 
 /*-----------------------------------------------------------*/
@@ -1918,12 +1933,10 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
              * Short circuit evaluation ensures the string is not dereferenced for that case. */
             if( ( i == queryLen ) || ( pQuery[ i ] == '&' ) )
             {
-                processAmpersantInQueryString( fieldHasValue, i, startOfFieldOrValue,
+                processAmpersandInQueryString( fieldHasValue, i, &startOfFieldOrValue,
                                                &currentParameter, pQuery, pCanonicalRequest );
 
-                /* As '&' is always treated as a separator, update the starting index to represent the next
-                 * query parameter and reset the flag about parameter value state of the new parameter. */
-                startOfFieldOrValue = i + 1U;
+                /* As '&' represents a new parameter, reset the flag about parameter value state.*/
                 fieldHasValue = false;
             }
             else if( ( pQuery[ i ] == '=' ) && !fieldHasValue )
