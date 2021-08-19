@@ -206,7 +206,7 @@ typedef struct CanonicalContext
     char * pBufCur;                                                 /**< pBufProcessing cursor. */
     size_t bufRemaining;                                            /**< pBufProcessing value used during internal calculation. */
     const char * pHashPayloadLoc;                                   /**< Pointer used to store the location of hashed HTTP request payload. */
-    size_t hashPayloadLen;                                          /**< Length of HTTP request hashed payload. */
+    size_t hashPayloadLen;                                          /**< Length of hashed HTTP request payload. */
 } CanonicalContext_t;
 
 /**
