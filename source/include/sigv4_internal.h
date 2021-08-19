@@ -205,7 +205,7 @@ typedef struct CanonicalContext
     uint8_t pBufProcessing[ SIGV4_PROCESSING_BUFFER_LENGTH ];       /**< Internal calculation buffer used during canonicalization. */
     char * pBufCur;                                                 /**< pBufProcessing cursor. */
     size_t bufRemaining;                                            /**< pBufProcessing value used during internal calculation. */
-    const char * pHashPayloadLoc;                                   /**< Pointer used to store the location of HTTP request hashed payload. */
+    const char * pHashPayloadLoc;                                   /**< Pointer used to store the location of hashed HTTP request payload. */
     size_t hashPayloadLen;                                          /**< Length of HTTP request hashed payload. */
 } CanonicalContext_t;
 
