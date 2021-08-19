@@ -196,10 +196,12 @@ static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
  * @brief Store the location of HTTP request hashed payload in the HTTP request.
  *
  * @param[in] headerIndex Index of request Header in the list of parsed headers.
+ * @param[in] pAmzSHA256Header Literal for x-amz-content-sha256 header in HTTP request.
  * @param[in,out] canonicalRequest Struct to maintain intermediary buffer
  * and state of canonicalization.
  */
 static void storeHashedPayloadLocation( size_t headerIndex,
+                                        const char * pAmzSHA256Header,
                                         CanonicalContext_t * canonicalRequest );
 
 /**
@@ -1608,11 +1610,15 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 
 /*-----------------------------------------------------------*/
     static void storeHashedPayloadLocation( size_t headerIndex,
+                                            const char * pAmzSHA256Header,
                                             CanonicalContext_t * canonicalRequest )
     {
         assert( canonicalRequest != NULL );
 
-        if( memcmp( canonicalRequest->pHeadersLoc[ headerIndex ].key.pData, ( const char * ) SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER, canonicalRequest->pHeadersLoc[ headerIndex ].key.dataLen ) == 0 )
+        const uint8_t * pHeaderData = ( const uint8_t * ) canonicalRequest->pHeadersLoc[ headerIndex ].key.pData;
+        const uint8_t * pHeaderLiteral = ( const uint8_t * ) pAmzSHA256Header;
+
+        if( memcmp( pHeaderData, pHeaderLiteral, canonicalRequest->pHeadersLoc[ headerIndex ].key.dataLen ) == 0 )
         {
             canonicalRequest->pHashPayloadLoc = canonicalRequest->pHeadersLoc[ headerIndex ].value.pData;
             canonicalRequest->hashPayloadLen = canonicalRequest->pHeadersLoc[ headerIndex ].value.dataLen;
@@ -1707,7 +1713,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( size_t ) dataLen;
 
                 /* Storing location of hashed request payload */
-                storeHashedPayloadLocation( noOfHeaders, canonicalRequest );
+                storeHashedPayloadLocation( noOfHeaders, ( const char * ) SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER, canonicalRequest );
 
                 /* Set starting location of the next header key string after the "\r\n". */
                 pKeyOrValStartLoc = pCurrLoc + 2U;
@@ -1722,7 +1728,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( size_t ) dataLen;
 
                 /* Storing location of hashed request payload */
-                storeHashedPayloadLocation( noOfHeaders, canonicalRequest );
+                storeHashedPayloadLocation( noOfHeaders, ( const char * ) SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER, canonicalRequest );
 
                 /* Set starting location of the next header key string after the "\n". */
                 pKeyOrValStartLoc = pCurrLoc + 1U;
