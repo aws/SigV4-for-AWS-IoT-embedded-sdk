@@ -120,6 +120,7 @@
 
 #define HMAC_INNER_PAD_BYTE                    ( 0x36U )                                        /**< The "ipad" byte used for generating the inner key in the HMAC calculation process. */
 #define HMAC_OUTER_PAD_BYTE                    ( 0x5CU )                                        /**< The "opad" byte used for generating the outer key in the HMAC calculation process. */
+#define HMAX_IPAD_XOR_OPAD_BYTE                ( 0x6AU )                                        /**< The XOR of the "ipad" and "opad" bytes to extract outer key from inner key. */
 
 /**
  * @brief A helper macro to print insufficient memory errors.

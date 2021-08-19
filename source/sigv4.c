@@ -2494,8 +2494,7 @@ static int32_t hmacFinal( HmacContext_t * pHmacContext,
          * this is by performing XOR on each byte of the inner-padded key (ipad ^ opad).  */
         for( i = 0U; i < pCryptoInterface->hashBlockLen; i++ )
         {
-            static const uint8_t padByteForOuterKey = HMAC_INNER_PAD_BYTE ^ HMAC_OUTER_PAD_BYTE;
-            pHmacContext->key[ i ] ^= padByteForOuterKey;
+            pHmacContext->key[ i ] ^= HMAX_IPAD_XOR_OPAD_BYTE;
         }
 
         returnStatus = pCryptoInterface->hashInit( pCryptoInterface->pHashContext );

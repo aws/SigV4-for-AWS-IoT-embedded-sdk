@@ -62,8 +62,8 @@
 #define QUERY_WITH_SPECIAL_CHARS                              "param=/"
 
 #define QUERY_STRING_NO_PARAM_VALUE                           "param=&param2="
-#define QUERY_STRING_WITH_TRAILING_N_LEADING_AMPERSANT        "&&param2=&&"
-#define QUERY_STRING_WITH_REPEATED_AMPERSANT                  "param1=val&&param2=val"
+#define QUERY_STRING_WITH_TRAILING_N_LEADING_AMPERSAND        "&&param2=&&"
+#define QUERY_STRING_WITH_REPEATED_AMPERSAND                  "param1=val&&param2=val"
 
 #define QUERY                                                 "Action=ListUsers&Version=2010-05-08"
 #define QUERY_LENGTH                                          ( sizeof( QUERY ) - 1U )
@@ -769,8 +769,8 @@ void test_SigV4_GenerateAuthorization_Query_Strings_Special_Cases()
     printf( "%.*s\n", authBufLen, authBuf );
     TEST_ASSERT_EQUAL_MEMORY( pExpectedSignature, signature, signatureLen );
 
-    params.pHttpParameters->pQuery = QUERY_STRING_WITH_TRAILING_N_LEADING_AMPERSANT;
-    params.pHttpParameters->queryLen = strlen( QUERY_STRING_WITH_TRAILING_N_LEADING_AMPERSANT );
+    params.pHttpParameters->pQuery = QUERY_STRING_WITH_TRAILING_N_LEADING_AMPERSAND;
+    params.pHttpParameters->queryLen = strlen( QUERY_STRING_WITH_TRAILING_N_LEADING_AMPERSAND );
 
     pExpectedSignature = "576a0348d54591e15bed920586936f9263656470197adf7ce79c5fc8ef44d825";
 
@@ -779,8 +779,8 @@ void test_SigV4_GenerateAuthorization_Query_Strings_Special_Cases()
     TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
     TEST_ASSERT_EQUAL_MEMORY( pExpectedSignature, signature, signatureLen );
 
-    params.pHttpParameters->pQuery = QUERY_STRING_WITH_REPEATED_AMPERSANT;
-    params.pHttpParameters->queryLen = strlen( QUERY_STRING_WITH_REPEATED_AMPERSANT );
+    params.pHttpParameters->pQuery = QUERY_STRING_WITH_REPEATED_AMPERSAND;
+    params.pHttpParameters->queryLen = strlen( QUERY_STRING_WITH_REPEATED_AMPERSAND );
 
     pExpectedSignature = "4fcf6c89d5ddb944c0e386817d52835f578769e100d7e92d433bf4a946b7e6c3";
     TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
