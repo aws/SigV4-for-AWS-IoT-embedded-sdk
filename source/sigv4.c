@@ -1501,7 +1501,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             else
             {
                 /* Lowercase header key only. '\n' character marks the end of the value and header value
-                 * does not need to be lowercased. */
+                 * does not need to be lowercased.  */
                 if( separator == '\n' )
                 {
                     *pCurrBufLoc = ( pData[ index ] );
