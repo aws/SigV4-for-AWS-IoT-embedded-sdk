@@ -55,21 +55,22 @@
 /** @addtogroup sigv4_constants
  *  @{
  */
-#define SIGV4_AWS4_HMAC_SHA256                      "AWS4-HMAC-SHA256"                        /**< AWS identifier for SHA256 signing algorithm. */
-#define SIGV4_AWS4_HMAC_SHA256_LENGTH               ( sizeof( SIGV4_AWS4_HMAC_SHA256 ) - 1U ) /**< AWS identifier for SHA256 signing algorithm. */
-#define SIGV4_HTTP_X_AMZ_DATE_HEADER                "x-amz-date"                              /**< AWS identifier for HTTP date header. */
-#define SIGV4_HTTP_X_AMZ_SECURITY_TOKEN_HEADER      "x-amz-security-token"                    /**< AWS identifier for security token. */
+#define SIGV4_AWS4_HMAC_SHA256                           "AWS4-HMAC-SHA256"                                         /**< AWS identifier for SHA256 signing algorithm. */
+#define SIGV4_AWS4_HMAC_SHA256_LENGTH                    ( sizeof( SIGV4_AWS4_HMAC_SHA256 ) - 1U )                  /**< Length of AWS identifier for SHA256 signing algorithm. */
+#define SIGV4_HTTP_X_AMZ_DATE_HEADER                     "x-amz-date"                                               /**< AWS identifier for HTTP date header. */
+#define SIGV4_HTTP_X_AMZ_SECURITY_TOKEN_HEADER           "x-amz-security-token"                                     /**< AWS identifier for security token. */
 
-#define SIGV4_STREAMING_AWS4_HMAC_SHA256_PAYLOAD    "STREAMING-AWS4-HMAC-SHA256-PAYLOAD"      /**< S3 identifier for chunked payloads. */
-#define SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER      "x-amz-content-sha256"                    /**< S3 identifier for streaming requests. */
-#define SIGV4_HTTP_X_AMZ_STORAGE_CLASS_HEADER       "x-amz-storage-class"                     /**< S3 identifier for reduced streaming redundancy. */
+#define SIGV4_STREAMING_AWS4_HMAC_SHA256_PAYLOAD         "STREAMING-AWS4-HMAC-SHA256-PAYLOAD"                       /**< S3 identifier for chunked payloads. */
+#define SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER           "x-amz-content-sha256"                                     /**< S3 identifier for streaming requests. */
+#define SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER_LENGTH    ( sizeof( SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER ) - 1U )  /**< Length of S3 identifier for streaming requests. */
+#define SIGV4_HTTP_X_AMZ_STORAGE_CLASS_HEADER            "x-amz-storage-class"                                      /**< S3 identifier for reduced streaming redundancy. */
 
-#define SIGV4_ACCESS_KEY_ID_LENGTH                  20U                                       /**< Length of access key ID. */
-#define SIGV4_SECRET_ACCESS_KEY_LENGTH              40U                                       /**< Length of secret access key. */
+#define SIGV4_ACCESS_KEY_ID_LENGTH                       20U                                                        /**< Length of access key ID. */
+#define SIGV4_SECRET_ACCESS_KEY_LENGTH                   40U                                                        /**< Length of secret access key. */
 
-#define SIGV4_ISO_STRING_LEN                        16U                                       /**< Length of ISO 8601 date string. */
-#define SIGV4_EXPECTED_LEN_RFC_3339                 20U                                       /**< Length of RFC 3339 date input. */
-#define SIGV4_EXPECTED_LEN_RFC_5322                 29U
+#define SIGV4_ISO_STRING_LEN                             16U                                                        /**< Length of ISO 8601 date string. */
+#define SIGV4_EXPECTED_LEN_RFC_3339                      20U                                                        /**< Length of RFC 3339 date input. */
+#define SIGV4_EXPECTED_LEN_RFC_5322                      29U
 /**< Length of RFC 5322 date input. */
 
 /** @}*/
@@ -109,6 +110,15 @@
  * This flag is valid only for #SigV4HttpParameters_t.flags.
  */
 #define SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG    0x4U
+
+/**
+ * @ingroup sigv4_canonical_flags
+ * @brief Set this flag to indicate that the HTTP request payload is
+ * already hashed.
+ *
+ * This flag is valid only for #SigV4HttpParameters_t.flags.
+ */
+#define SIGV4_HTTP_PAYLOAD_IS_HASH               0x8U
 
 /**
  * @ingroup sigv4_canonical_flags
