@@ -78,6 +78,7 @@
 #define HEADERS_LENGTH                                        ( sizeof( HEADERS ) - 1U )
 #define PRECANON_HEADER                                       "content-type:application/json;\nhost:iam.amazonaws.com\n"
 #define HEADERS_WITH_X_AMZ_CONTENT_SHA256                     "Host: iam.amazonaws.com\r\nContent-Type: application/x-www-form-urlencoded; charset=utf-8\r\nx-amz-content-sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\r\nX-Amz-Date: "DATE "\r\n\r\n"
+#define HEADERS_WITHOUT_X_AMZ_CONTENT_SHA256                  "Host: iam.amazonaws.com\r\nContent-Type: application/x-www-form-urlencoded; charset=utf-8\r\nx-amz-content-sha512: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\r\nX-Amz-Date: "DATE "\r\n\r\n"
 
 /* Header data containing leading, trailing and sequential trimmable spaces. */
 #define HEADERS_WITH_TRIMMABLE_SPACES                         "  Header-1 :  Value \t - \t 1  \r\n"
@@ -1284,13 +1285,23 @@ void test_SigV4_GenerateAuthorization_Sorting_Algorithm_Coverage()
                            &params, authBuf, &authBufLen, &signature, &signatureLen ) );
 }
 
-/* Test that the library does not calculate the hash of the request payload if it is already hashed by the application. */
+/* Test that the library does not calculate the HTTP hash of the request payload if it is already hashed by the application. */
 void test_SigV4_GenerateAuthorization_Headers_With_X_Amz_Content_Sha256_Header()
 {
     params.pHttpParameters->pHeaders = HEADERS_WITH_X_AMZ_CONTENT_SHA256;
     params.pHttpParameters->headersLen = strlen( HEADERS_WITH_X_AMZ_CONTENT_SHA256 );
 
     params.pHttpParameters->flags = SIGV4_HTTP_PAYLOAD_IS_HASH;
+
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+}
+
+/* Test that the library calculates the hash of the HTTP request payload if it is not already hashed by the application. */
+void test_SigV4_GenerateAuthorization_Headers_Without_X_Amz_Content_Sha256_Header()
+{
+    params.pHttpParameters->pHeaders = HEADERS_WITHOUT_X_AMZ_CONTENT_SHA256;
+    params.pHttpParameters->headersLen = strlen( HEADERS_WITHOUT_X_AMZ_CONTENT_SHA256 );
 
     TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
                            &params, authBuf, &authBufLen, &signature, &signatureLen ) );

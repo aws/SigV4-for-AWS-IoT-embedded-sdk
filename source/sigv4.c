@@ -1622,7 +1622,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         size_t headerLen = pCanonicalRequest->pHeadersLoc[ headerIndex ].key.dataLen;
         const uint8_t * pHeaderLiteral = ( const uint8_t * ) pAmzSHA256Header;
 
-        if( ( headerLen == amzSHA256HeaderLen ) && ( memcmp( pHeaderData, pHeaderLiteral, pCanonicalRequest->pHeadersLoc[ headerIndex ].key.dataLen ) == 0 ) )
+        if( ( headerLen == amzSHA256HeaderLen ) && ( memcmp( pHeaderData, pHeaderLiteral, headerLen ) == 0 ) )
         {
             pCanonicalRequest->pHashPayloadLoc = pCanonicalRequest->pHeadersLoc[ headerIndex ].value.pData;
             pCanonicalRequest->hashPayloadLen = pCanonicalRequest->pHeadersLoc[ headerIndex ].value.dataLen;
@@ -1717,7 +1717,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( size_t ) dataLen;
 
                 /* Storing location of hashed request payload */
-                storeHashedPayloadLocation( noOfHeaders, SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER, SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER_LEN, canonicalRequest );
+                storeHashedPayloadLocation( noOfHeaders, SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER, SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER_LENGTH, canonicalRequest );
 
                 /* Set starting location of the next header key string after the "\r\n". */
                 pKeyOrValStartLoc = pCurrLoc + 2U;
@@ -1732,7 +1732,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                 canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( size_t ) dataLen;
 
                 /* Storing location of hashed request payload */
-                storeHashedPayloadLocation( noOfHeaders, SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER, SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER_LEN, canonicalRequest );
+                storeHashedPayloadLocation( noOfHeaders, SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER, SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER_LENGTH, canonicalRequest );
 
                 /* Set starting location of the next header key string after the "\n". */
                 pKeyOrValStartLoc = pCurrLoc + 1U;
