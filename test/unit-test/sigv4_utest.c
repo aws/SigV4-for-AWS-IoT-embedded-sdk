@@ -38,15 +38,15 @@
 #define SIGV4_TEST_INVALID_DATE_COUNT                         24U
 
 #define AUTH_BUF_LENGTH                                       1000
-#define PATH                                                  "/"
 
+#define PATH                                                  "/"
 #define PRECANON_PATH                                         "/path-%20"
 
 /* Iterator must not read beyond the null-terminator. */
 #define NULL_TERMINATED_PATH                                  "/pa\0th"
 #define NULL_TERMINATED_PATH_LEN                              ( sizeof( NULL_TERMINATED_PATH ) - 1U )
 /* An equal in the query string value must be double-encoded. */
-#define QUERY_VALUE_HAS_EQUALS                                "quantum==&->sha256=dead&maybe&&"
+#define QUERY_VALUE_HAS_EQUALS                                "quantum==value"
 /* A query string with parameter count exceeding SIGV4_MAX_HTTP_HEADER_COUNT=5. */
 #define QUERY_GT_MAX_PARAMS                                   "params&allowed&to&have&no&values"
 
@@ -62,7 +62,8 @@
 #define QUERY_WITH_SPECIAL_CHARS                              "param=/"
 
 #define QUERY_STRING_NO_PARAM_VALUE                           "param=&param2="
-#define QUERY_STRING_STARTING_WITH_AMPERSANT                  "&param2="
+#define QUERY_STRING_WITH_TRAILING_N_LEADING_AMPERSAND        "&&param2=&&"
+#define QUERY_STRING_WITH_REPEATED_AMPERSAND                  "param1=val&&param2=val"
 
 #define QUERY                                                 "Action=ListUsers&Version=2010-05-08"
 #define QUERY_LENGTH                                          ( sizeof( QUERY ) - 1U )
@@ -625,22 +626,34 @@ void test_SigV4_GenerateHTTPAuthorization_Invalid_Params()
     params.serviceLen = 0U;
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+
+    resetInputParams();
+    params.pAlgorithm = "Test-Algo";
+    params.algorithmLen = 0U;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
 }
 
-/* TODO - Verify the generated signatures. */
 void test_SigV4_GenerateHTTPAuthorization_Happy_Paths()
 {
     SigV4Status_t returnStatus;
 
+    const char * pExpectedSignature = "20fdb62349e7104f9ce4184a444fedfbd19e40a5e31d57d433689c5a5138fa99";
+
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+    TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
+    TEST_ASSERT_EQUAL_MEMORY( pExpectedSignature, signature, signatureLen );
 
     /* Attempt to generate the signature with a secret longer than the digest length. This
      * causes the inner-most HMAC key of the signing key to be hashed down. */
     creds.pSecretAccessKey = SECRET_KEY_LONGER_THAN_HASH_BLOCK;
     creds.secretAccessKeyLen = SECRET_KEY_LONGER_THAN_HASH_BLOCK_LEN;
+    pExpectedSignature = "842f14580889c0d25727eee03310b17dcb3811a2e915172ba2f0db42a6c5b0e8";
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+    TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
+    TEST_ASSERT_EQUAL_MEMORY( pExpectedSignature, signature, signatureLen );
 
     /* Test case when the first step of the Signing Key generation HMAC operation encounters a key that is
      * less than hash block in length. */
@@ -648,32 +661,47 @@ void test_SigV4_GenerateHTTPAuthorization_Happy_Paths()
     memset( secretKeyGeneratingBlockLenHMACKey, ( int ) 'K', sizeof( secretKeyGeneratingBlockLenHMACKey ) );
     creds.pSecretAccessKey = secretKeyGeneratingBlockLenHMACKey;
     creds.secretAccessKeyLen = sizeof( secretKeyGeneratingBlockLenHMACKey );
+    pExpectedSignature = "35a27666bdb88c391c47017927d4f9bd5b7c7dbc63b1ab348b4ee73f1ff3cdb2";
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+    TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
+    TEST_ASSERT_EQUAL_MEMORY( pExpectedSignature, signature, signatureLen );
 
     /* S3 is the only service in which the URI is only encoded once. */
     params.serviceLen = S3_SERVICE_NAME_LEN;
     params.pService = S3_SERVICE_NAME;
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+    TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
+    printf( "%.*s\n", authBufLen, authBuf );
 
     /* Coverage for the case where the service name has the same length as "s3". */
     params.serviceLen = S3_SERVICE_NAME_LEN;
     params.pService = SERVICE;
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+    TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
+    printf( "%.*s\n", authBufLen, authBuf );
 
     /* Coverage for the null-terminated path. */
+    resetInputParams();
     params.pHttpParameters->pPath = NULL_TERMINATED_PATH;
     params.pHttpParameters->pathLen = NULL_TERMINATED_PATH_LEN;
+    pExpectedSignature = "81bb660522155dc9038c37c2fbcbc7379d7eb8a987d6e42ac10bf08b1c37db1e";
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+    TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
+    TEST_ASSERT_EQUAL_MEMORY( pExpectedSignature, signature, signatureLen );
 
     /* Coverage for double-encoded equals in query string value. */
+    resetInputParams();
     params.pHttpParameters->pQuery = QUERY_VALUE_HAS_EQUALS;
     params.pHttpParameters->queryLen = STR_LIT_LEN( QUERY_VALUE_HAS_EQUALS );
+    pExpectedSignature = "2e005dbe8d1223309467fc3f3b14310110bd45358a4f598e9f5e32723036461d";
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+    TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
+    TEST_ASSERT_EQUAL_MEMORY( pExpectedSignature, signature, signatureLen );
 }
 
 /* Test the API for handling corner cases of sorting the Query Parameters (when generating Canonical Query) */
@@ -719,24 +747,46 @@ void test_SigV4_GenerateAuthorization_Headers_With_Trimmable_Spaces()
     params.pHttpParameters->pHeaders = HEADERS_WITH_TRIMMABLE_SPACES;
     params.pHttpParameters->headersLen = strlen( HEADERS_WITH_TRIMMABLE_SPACES );
 
+    const char * pExpectedSignature = "41dfba73a35f6cff18fc02e991f6499d4e0fb1209a4d42e9155a623ae0f36831";
+
     TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
                            &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+    TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
+    TEST_ASSERT_EQUAL_MEMORY( pExpectedSignature, signature, signatureLen );
 }
 
 /* Test that the library can handle query string that contains empty values for its parameters. */
-void test_SigV4_GenerateAuthorization_Query_With_No_Param_Values()
+void test_SigV4_GenerateAuthorization_Query_Strings_Special_Cases()
 {
     params.pHttpParameters->pQuery = QUERY_STRING_NO_PARAM_VALUE;
     params.pHttpParameters->queryLen = strlen( QUERY_STRING_NO_PARAM_VALUE );
 
-    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
-                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
-
-    params.pHttpParameters->pQuery = QUERY_STRING_STARTING_WITH_AMPERSANT;
-    params.pHttpParameters->queryLen = strlen( QUERY_STRING_STARTING_WITH_AMPERSANT );
+    const char * pExpectedSignature = "9eed8862e36ac9861f0ea0be863ef6d825de854c8eb9da072637dcc64e5ef919";
 
     TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
                            &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+    TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
+    printf( "%.*s\n", authBufLen, authBuf );
+    TEST_ASSERT_EQUAL_MEMORY( pExpectedSignature, signature, signatureLen );
+
+    params.pHttpParameters->pQuery = QUERY_STRING_WITH_TRAILING_N_LEADING_AMPERSAND;
+    params.pHttpParameters->queryLen = strlen( QUERY_STRING_WITH_TRAILING_N_LEADING_AMPERSAND );
+
+    pExpectedSignature = "576a0348d54591e15bed920586936f9263656470197adf7ce79c5fc8ef44d825";
+
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+    TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
+    TEST_ASSERT_EQUAL_MEMORY( pExpectedSignature, signature, signatureLen );
+
+    params.pHttpParameters->pQuery = QUERY_STRING_WITH_REPEATED_AMPERSAND;
+    params.pHttpParameters->queryLen = strlen( QUERY_STRING_WITH_REPEATED_AMPERSAND );
+
+    pExpectedSignature = "4fcf6c89d5ddb944c0e386817d52835f578769e100d7e92d433bf4a946b7e6c3";
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+    TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
+    TEST_ASSERT_EQUAL_MEMORY( pExpectedSignature, signature, signatureLen );
 }
 
 /* Test that the library can handle an empty query string. */
@@ -768,10 +818,6 @@ void test_SigV4_GenerateHTTPAuthorization_Default_Arguments()
 
     /* Default algorithm is the macro defined by SIGV4_AWS4_HMAC_SHA256. */
     params.pAlgorithm = NULL;
-    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
-    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
-    params.pAlgorithm = SIGV4_AWS4_HMAC_SHA256;
-    params.algorithmLen = 0;
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
     /* Default path is "/". */
@@ -1127,7 +1173,8 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
     longQuery = malloc( longQueryLen );
     TEST_ASSERT_NOT_NULL( longQuery );
     /* Populate a long query parameter name. */
-    memset( longQuery, ( int ) 'P', longQueryLen );
+    memset( longQuery, ( int ) 'P', longQueryLen - 1 );
+    longQuery[ longQueryLen - 1U ] = '=';
     resetInputParams();
     params.pHttpParameters->pPath = NULL;
     params.pHttpParameters->pathLen = 0U;

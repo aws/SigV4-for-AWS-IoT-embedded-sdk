@@ -120,14 +120,15 @@
 
 #define HMAC_INNER_PAD_BYTE                    ( 0x36U )                                        /**< The "ipad" byte used for generating the inner key in the HMAC calculation process. */
 #define HMAC_OUTER_PAD_BYTE                    ( 0x5CU )                                        /**< The "opad" byte used for generating the outer key in the HMAC calculation process. */
+#define HMAX_IPAD_XOR_OPAD_BYTE                ( 0x6AU )                                        /**< The XOR of the "ipad" and "opad" bytes to extract outer key from inner key. */
 
 /**
  * @brief A helper macro to print insufficient memory errors.
  */
-#define LOG_INSUFFICIENT_MEMORY_ERROR( purposeOfWrite, bytesExceeded )                                                                             \
-    {                                                                                                                                              \
-        LogError( ( "Unable to " purposeOfWrite ": Insufficient memory configured in \"SIGV4_PROCESSING_BUFFER_LENGTH\" macro. BytesExceeded=%lu", \
-                    ( unsigned long ) ( bytesExceeded ) ) );                                                                                       \
+#define LOG_INSUFFICIENT_MEMORY_ERROR( purposeOfWrite, bytesExceeded )                                                                         \
+    {                                                                                                                                          \
+        LogError( ( "Unable to " purposeOfWrite ": Insufficient memory configured in SIGV4_PROCESSING_BUFFER_LENGTH macro. BytesExceeded=%lu", \
+                    ( unsigned long ) ( bytesExceeded ) ) );                                                                                   \
     }
 
 /**
