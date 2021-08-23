@@ -72,7 +72,7 @@ The AWS IoT Embedded C-SDK repository contains [HTTP demos](https://github.com/a
 ## Generating documentation
 
 The Doxygen references found in this repository were created using Doxygen
-version 1.8.20. To generate these Doxygen pages, please run the following
+version 1.9.2. To generate these Doxygen pages, please run the following
 command from the root of this repository:
 
 ```shell
