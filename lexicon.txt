@@ -61,6 +61,7 @@ hashblocklen
 hashdigestlen
 hashfinal
 hashinit
+hashpayloadlen
 hashtofail
 hashupdate
 headercount
@@ -156,6 +157,7 @@ pfirstitem
 pfirstval
 pformat
 phashcontext
+phashpayloadloc
 pheaders
 pheadersloc
 phexoutput

@@ -78,6 +78,8 @@
 #define HEADERS                                               "Host: iam.amazonaws.com\r\nContent-Type: application/x-www-form-urlencoded; charset=utf-8\r\nX-Amz-Date: "DATE "\r\n\r\n"
 #define HEADERS_LENGTH                                        ( sizeof( HEADERS ) - 1U )
 #define PRECANON_HEADER                                       "content-type:application/json;\nhost:iam.amazonaws.com\n"
+#define HEADERS_WITH_X_AMZ_CONTENT_SHA256                     "Host: iam.amazonaws.com\r\nContent-Type: application/x-www-form-urlencoded; charset=utf-8\r\nx-amz-content-sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\r\nX-Amz-Date: "DATE "\r\n\r\n"
+#define HEADERS_WITHOUT_X_AMZ_CONTENT_SHA256                  "Host: iam.amazonaws.com\r\nContent-Type: application/x-www-form-urlencoded; charset=utf-8\r\nx-amz-content-sha512: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\r\nX-Amz-Date: "DATE "\r\n\r\n"
 
 /* Header data containing leading, trailing and sequential trimmable spaces. */
 #define HEADERS_WITH_TRIMMABLE_SPACES                         "  Header-1 :  Value \t - \t 1  \r\n"
@@ -121,9 +123,11 @@
 #define PATH_FIRST_ENCODE_AND_LF_OOM                                                    \
     "/path-to-victory-will-soon-come-to-a-close-and-then-we-can-finally-eat-our-errors" \
     "-even-though-this-is-not-a-good-practice-at-all-so-obviously-this-is-just-a-joke-" \
-    "so-why-are-you-still-reading-this-i-mean-im-crazy-enough-to-type-this-very-"       \
-    "long-string-instead-of-using-a-lorem-ipsum-website-maybe-i-should-be-a-comedian-"  \
-    "instead-be-a-programmer-reall"
+    "so-why-are-you-still-reading-this-i-mean-im-crazy-enough-to-type-this-very-xchjsd" \
+    "chjdsvchjdvhjcdhjsckhdsvchdks-sfdghfdfahgsdhfgjsgfjkgfsdgkdgfdjkgdggdjfsjkgjksgkj" \
+    "sdgfdfgdshfgsjdhfdhfkhdkfhjdgfgdfgdfg-sdvfdvfhdvfhvdhfvdsfdsgfgdsjfgjdsfqwertyuio" \
+    "pasdfghwsshasdfghjk"
+
 /* HTTP method + this URI-encoded variant of this string + double-encoded variant must be greater than SIGV4_PROCESSING_BUFFER_LENGTH. */
 #define PATH_SECOND_ENCODE_OOM    "/path-to-victory-will-soon-come-to-a-close-and-then-we-can-finally-eat-our-errors-even-though-this-is-not-a-good-practice-at-all-so-obviously-this-is-just-a-joke-so-why-are-you-still-reading-this-i-mean-im-crazy-enough-to-type-this-very-long-string-instead-of-using-a-lorem-ipsum-website-maybe-i-should-be-a-comedian-instead"
 
@@ -133,7 +137,8 @@
     "-even-though-this-is-not-a-good-practice-at-all-so-obviously-this-is-just-a-joke-" \
     "so-why-are-you-still-&m=reading-this-i-mean-im-crazy-enough-to-type-this-very-"    \
     "long-string-instead-of-using-a-lorem-ipsum-website-maybe-i-should-be-a-comedian-"  \
-    "instead-be-a-programmer-reall&y=3"
+    "instead-be-a-programmer-reall&ymxchykldfghiwbdcjhjdddkkgddsdhshdkshdhsskgfkjgfggc" \
+    "gjfhjxgxghsgfdwfdfdfdffhfdhdhfhdfhd=3"
 
 /* '=' before query string value in canonicalized query string causes OOM. */
 #define QUERY_EQUAL_BEFORE_VALUE_OOM                                                      \
@@ -658,6 +663,7 @@ void test_SigV4_GenerateHTTPAuthorization_Happy_Paths()
     /* Test case when the first step of the Signing Key generation HMAC operation encounters a key that is
      * less than hash block in length. */
     char secretKeyGeneratingBlockLenHMACKey[ SIGV4_HASH_MAX_BLOCK_LENGTH - strlen( SIGV4_HMAC_SIGNING_KEY_PREFIX ) ];
+
     memset( secretKeyGeneratingBlockLenHMACKey, ( int ) 'K', sizeof( secretKeyGeneratingBlockLenHMACKey ) );
     creds.pSecretAccessKey = secretKeyGeneratingBlockLenHMACKey;
     creds.secretAccessKeyLen = sizeof( secretKeyGeneratingBlockLenHMACKey );
@@ -893,6 +899,7 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
      * Method data in the processing buffer. This case is created by using a method string
      * longer than the processing buffer length. */
     char * pMethodData = malloc( SIGV4_PROCESSING_BUFFER_LENGTH );
+
     memset( pMethodData, ( int ) 'M', SIGV4_PROCESSING_BUFFER_LENGTH );
     params.pHttpParameters->pHttpMethod = pMethodData;
     params.pHttpParameters->httpMethodLen = SIGV4_PROCESSING_BUFFER_LENGTH;
@@ -969,6 +976,7 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
     /* Test case of insufficient memory when "String to Sign" cannot be stored in processing buffer.
      * This scenario is produced by using a long AWS Region string (which is one of the parameters of String To Sign). */
     char * longRegion = malloc( SIGV4_PROCESSING_BUFFER_LENGTH );
+
     /* Fill gibberish string data in the buffer for region. */
     memset( longRegion, 'x', SIGV4_PROCESSING_BUFFER_LENGTH );
     resetInputParams();
@@ -983,6 +991,7 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
      * hash in the processing buffer. */
     size_t headersLen = SIGV4_PROCESSING_BUFFER_LENGTH - ( SIGV4_HASH_MAX_DIGEST_LENGTH * 2 );
     char * longPrecanonHeader = malloc( headersLen );
+
     TEST_ASSERT_NOT_NULL( longPrecanonHeader );
     longPrecanonHeader[ 0 ] = 'H';
     longPrecanonHeader[ 1 ] = ':';
@@ -1006,6 +1015,7 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
      * character for which there doesn't exist space in the processing buffer. */
     size_t longPathLen = SIGV4_PROCESSING_BUFFER_LENGTH - httpParams.httpMethodLen - LINEFEED_CHAR_LEN;
     char specialCharAtEndOfLongPath[ longPathLen ];
+
     specialCharAtEndOfLongPath[ 0 ] = '/';
     memset( specialCharAtEndOfLongPath + 1, ( int ) '-', longPathLen );
     specialCharAtEndOfLongPath[ longPathLen - 1 ] = '*';
@@ -1021,6 +1031,7 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
     size_t longQueryLen = SIGV4_PROCESSING_BUFFER_LENGTH - httpParams.httpMethodLen -
                           LINEFEED_CHAR_LEN - HTTP_EMPTY_PATH_LEN - LINEFEED_CHAR_LEN;
     char * longQuery = malloc( longQueryLen );
+
     TEST_ASSERT_NOT_NULL( longQuery );
     longQuery[ 0 ] = 'P';
     longQuery[ 1 ] = '=';
@@ -1048,6 +1059,7 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
                   * empty value and newline character. */
                  4U;
     char * longHeader = malloc( headersLen );
+
     TEST_ASSERT_NOT_NULL( longHeader );
     /* Set gibberish header key data. */
     memset( longHeader, ( int ) 'H', headersLen - 4 );
@@ -1189,6 +1201,7 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
      * to crowd out space for the Signing Key. */
     size_t lenOfStringToSignWithoutRegion = ( STRING_TO_SIGN_LEN_WITH_DEFAULT_REGION ) -strlen( REGION );
     size_t longRegionLen = SIGV4_PROCESSING_BUFFER_LENGTH - lenOfStringToSignWithoutRegion;
+
     /*size_t longRegionLen = SIGV4_PROCESSING_BUFFER_LENGTH - 4 * SIGV4_HASH_MAX_DIGEST_LENGTH; */
     longRegion = malloc( longRegionLen );
     /* Fill gibberish in the long region name. */
@@ -1315,6 +1328,28 @@ void test_SigV4_GenerateAuthorization_Sorting_Algorithm_Coverage()
     params.pHttpParameters->queryLen = 0U;
     params.pHttpParameters->pHeaders = HEADERS_SORTED_COVERAGE_2;
     params.pHttpParameters->headersLen = strlen( HEADERS_SORTED_COVERAGE_2 );
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+}
+
+/* Test that the library does not calculate the HTTP hash of the request payload if it is already hashed by the application. */
+void test_SigV4_GenerateAuthorization_Headers_With_X_Amz_Content_Sha256_Header()
+{
+    params.pHttpParameters->pHeaders = HEADERS_WITH_X_AMZ_CONTENT_SHA256;
+    params.pHttpParameters->headersLen = strlen( HEADERS_WITH_X_AMZ_CONTENT_SHA256 );
+
+    params.pHttpParameters->flags = SIGV4_HTTP_PAYLOAD_IS_HASH;
+
+    TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
+                           &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+}
+
+/* Test that the library calculates the hash of the HTTP request payload if it is not already hashed by the application. */
+void test_SigV4_GenerateAuthorization_Headers_Without_X_Amz_Content_Sha256_Header()
+{
+    params.pHttpParameters->pHeaders = HEADERS_WITHOUT_X_AMZ_CONTENT_SHA256;
+    params.pHttpParameters->headersLen = strlen( HEADERS_WITHOUT_X_AMZ_CONTENT_SHA256 );
+
     TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
                            &params, authBuf, &authBufLen, &signature, &signatureLen ) );
 }
