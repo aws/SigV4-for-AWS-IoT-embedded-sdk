@@ -50,7 +50,7 @@ void harness()
     /* This property applies to all hash functions. */
     if( pCryptoInterface != NULL )
     {
-        __CPROVER_assume( sizeof( "AWS4" ) < pCryptoInterface->hashBlockLen && pCryptoInterface->hashBlockLen <= MAX_HASH_BLOCK_LEN );
+        __CPROVER_assume( sizeof( "AWS4" ) - 1U < pCryptoInterface->hashBlockLen && pCryptoInterface->hashBlockLen <= MAX_HASH_BLOCK_LEN );
         __CPROVER_assume( 0U < pCryptoInterface->hashDigestLen && pCryptoInterface->hashDigestLen <= MAX_HASH_DIGEST_LEN );
         __CPROVER_assume( pCryptoInterface->hashDigestLen <= pCryptoInterface->hashBlockLen );
         pCryptoInterface->hashInit = nondet_bool() ? NULL : HashInitStub;
