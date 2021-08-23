@@ -61,4 +61,4 @@ include ../Makefile-json.common
 
 # Substitution command to pass to sed for patching sigv4.c. The
 # characters " and # must be escaped with backslash.
-SIGV4_SED_EXPR = 1s/^/\#include \"sigv4_stubs.h\" /; s/^static //; s/SigV4Status_t (scanValue|encodeURI|generateCanonicalQuery|generateCanonicalAndSignedHeaders)\b/&_/
+SIGV4_SED_EXPR = 1s/^/\#include \"sigv4_stubs.h\" /; s/^static //; s/SigV4Status_t (scanValue|encodeURI|generateCanonicalQuery|generateCanonicalAndSignedHeaders|copyHeaderStringToCanonicalBuffer)\b/&_/
