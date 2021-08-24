@@ -170,6 +170,7 @@ pinputstr
 pkey
 pline
 pmac
+png
 posix
 poutput
 poutputexpected
