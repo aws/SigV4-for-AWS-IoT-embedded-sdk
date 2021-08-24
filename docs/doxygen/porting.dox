@@ -51,7 +51,7 @@ following functions pointers:
  @endcode    
  
 The above three functions take in a pointer to pHashContext which defines the context used
-by the above function in calculting the hash. The HashContext must also be
+by the above function in calculating the hash. The HashContext must also be
 defined by the user's implementation and ought to contain any information
 necessary to calculate the hash.
 @code
