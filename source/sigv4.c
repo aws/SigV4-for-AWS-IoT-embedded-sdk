@@ -30,7 +30,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
 
 #include "sigv4.h"
 #include "sigv4_internal.h"
@@ -363,6 +362,15 @@ static void setQueryParameterValue( size_t currentParameter,
                                     const char * pValue,
                                     size_t valueLen,
                                     CanonicalContext_t * pCanonicalRequest );
+
+/**
+ * @brief Convert the character to lowercase.
+ *
+ * @param[in] inputChar character to be lowercased.
+ *
+ * @return Input character converted to lowercase.
+ */
+static char lowercaseCharacter( char inputChar );
 
 /**
  * @brief Write the HTTP request payload hash to the canonical request.
@@ -1496,6 +1504,21 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
     }
 
 /*-----------------------------------------------------------*/
+    static char lowercaseCharacter( char inputChar )
+    {
+        char outputChar;
+
+        if( ( inputChar >= 'A' ) && ( inputChar <= 'Z' ) )
+        {
+            outputChar = 'a' + inputChar - 'A';
+        }
+        else
+        {
+            outputChar = inputChar;
+        }
+
+        return outputChar;
+    }
 
     static SigV4Status_t copyHeaderStringToCanonicalBuffer( const char * pData,
                                                             size_t dataLen,
@@ -1541,7 +1564,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                 }
                 else
                 {
-                    *pCurrBufLoc = ( char ) tolower( ( int32_t ) ( uint8_t ) pData[ index ] );
+                    *pCurrBufLoc = ( lowercaseCharacter( pData[ index ] ) );
                 }
 
                 pCurrBufLoc++;
