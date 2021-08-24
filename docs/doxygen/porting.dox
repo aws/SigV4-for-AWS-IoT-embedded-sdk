@@ -5,10 +5,10 @@ platform.
 
 To use the AWS SigV4 library, a platform must implement the following
 components:
-1. [Configuration Macros](@ref sigv4_config)
+1. [Configuration Macros](@ref sigv4_config_macros)
 2. [Crypto Interface](@ref sigv4_porting_cryptointerface)
 
-@section sigv4_config Configuration Macros
+@section sigv4_config_macros Configuration Macros
 @brief Configuration macros that can be set in the config header
 `sigv4_config.h`, or passed in as compiler options.
 
