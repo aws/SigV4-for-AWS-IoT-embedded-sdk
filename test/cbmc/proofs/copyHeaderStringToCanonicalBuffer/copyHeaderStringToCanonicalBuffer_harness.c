@@ -43,14 +43,12 @@ void harness()
 
     /* The data to be written is assumed to start at a location within the processing
      * buffer and should not end past the length of the processing buffer. */
-    size_t dataOffset, bytesConsumed;
+    size_t bytesConsumed;
 
     __CPROVER_assume( canonicalRequest->bufRemaining > 0 && canonicalRequest->bufRemaining < SIGV4_PROCESSING_BUFFER_LENGTH );
     bytesConsumed = SIGV4_PROCESSING_BUFFER_LENGTH - canonicalRequest->bufRemaining;
-    __CPROVER_assume( dataOffset < bytesConsumed );
-    __CPROVER_assume( bytesConsumed - dataOffset < CBMC_MAX_BUFSIZE );
-    __CPROVER_assume( dataLen > 0U && dataLen <= bytesConsumed - dataOffset );
-    canonicalRequest->pBufCur = ( char * ) canonicalRequest->pBufProcessing + dataOffset;
+    __CPROVER_assume( dataLen > 0U && dataLen < CBMC_MAX_BUFSIZE );
+    canonicalRequest->pBufCur = ( char * ) canonicalRequest->pBufProcessing + bytesConsumed;
 
     pData = malloc( dataLen );
 
