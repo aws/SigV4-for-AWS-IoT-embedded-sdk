@@ -33,6 +33,11 @@ proofs are written to cover every path of execution and achieve 100% branch
 coverage.
 </p>
 
+The diagram below demonstrates the happy path an application can take to use
+the SigV4 library to interact with the any AWS Service via HTTP requests.
+
+\image html sgv4_design.png "SigV4 Library Usage diagram" width=90%
+
 */
 
 /**
