@@ -89,6 +89,7 @@ ifdef
 ifndef
 inc
 ingroup
+inputchar
 inputlen
 iot
 ipad
