@@ -1564,7 +1564,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                 }
                 else
                 {
-                    *pCurrBufLoc = ( lowercaseCharacter( pData[ index ] ) );
+                    *pCurrBufLoc = lowercaseCharacter( pData[ index ] );
                 }
 
                 pCurrBufLoc++;

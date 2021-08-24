@@ -36,24 +36,25 @@ void harness()
     CanonicalContext_t * canonicalRequest;
     SigV4Status_t sigv4Status;
 
-    __CPROVER_assume( dataLen > 0 );
+    canonicalRequest = malloc( sizeof( CanonicalContext_t ) );
 
-    __CPROVER_assume( dataLen < CBMC_MAX_BUFSIZE );
+    __CPROVER_assume( canonicalRequest != NULL );
+
+
+    /* The data to be written is assumed to start at a location within the processing
+     * buffer and should not end past the length of the processing buffer. */
+    size_t dataOffset, bytesConsumed;
+
+    __CPROVER_assume( canonicalRequest->bufRemaining > 0 && canonicalRequest->bufRemaining < SIGV4_PROCESSING_BUFFER_LENGTH );
+    bytesConsumed = SIGV4_PROCESSING_BUFFER_LENGTH - canonicalRequest->bufRemaining;
+    __CPROVER_assume( dataOffset < bytesConsumed );
+    __CPROVER_assume( bytesConsumed - dataOffset < CBMC_MAX_BUFSIZE );
+    __CPROVER_assume( dataLen > 0U && dataLen <= bytesConsumed - dataOffset );
+    canonicalRequest->pBufCur = ( char * ) canonicalRequest->pBufProcessing + dataOffset;
 
     pData = malloc( dataLen );
 
     __CPROVER_assume( pData != NULL );
-
-    canonicalRequest = malloc( sizeof( CanonicalContext_t ) );
-
-    __CPROVER_assume( canonicalRequest != NULL );
-    __CPROVER_assume( canonicalRequest->bufRemaining > 0 );
-    __CPROVER_assume( canonicalRequest->bufRemaining < CBMC_MAX_BUFSIZE );
-
-    if( canonicalRequest != NULL )
-    {
-        canonicalRequest->pBufCur = canonicalRequest->pBufProcessing;
-    }
 
     sigv4Status = copyHeaderStringToCanonicalBuffer( pData, dataLen, flags, separator, canonicalRequest );
 
