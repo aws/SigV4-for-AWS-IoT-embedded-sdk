@@ -58,6 +58,7 @@ github
 gmt
 gr
 hashblocklen
+hashcontext
 hashdigestlen
 hashfinal
 hashinit
