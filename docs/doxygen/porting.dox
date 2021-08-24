@@ -37,7 +37,7 @@ following functions pointers:
  @code
  int32_t ( * hashInit )( void * pHashContext );
  @endcode
- - [Hash Update]: A function to calculate the ongoing hash update.
+ - [Hash Update]: A function to update the hash to be calculated with more input data.
  @code
  int32_t ( * hashUpdate )( void * pHashContext,
                               const uint8_t * pInput,
