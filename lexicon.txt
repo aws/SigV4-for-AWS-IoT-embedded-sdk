@@ -58,6 +58,7 @@ github
 gmt
 gr
 hashblocklen
+hashcontext
 hashdigestlen
 hashfinal
 hashinit
@@ -169,6 +170,7 @@ pinputstr
 pkey
 pline
 pmac
+png
 posix
 poutput
 poutputexpected
