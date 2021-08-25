@@ -1,5 +1,5 @@
 /*
- * SigV4 Utility Library v1.0.0
+ * SigV4 Library v1.0.0
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -22,7 +22,7 @@
 
 /**
  * @file sigv4_quicksort.c
- * @brief Implements an Iterative Quicksort Algorithm for the SigV4 Client Utility Library.
+ * @brief Implements an Iterative Quicksort Algorithm for the SigV4 Library.
  */
 
 #include "sigv4_quicksort.h"

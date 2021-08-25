@@ -1,5 +1,5 @@
 /*
- * SigV4 Utility Library v1.0.0
+ * SigV4 Library v1.0.0
  * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -22,12 +22,11 @@
 
 /**
  * @file sigv4_config.h
- * @brief The default values for configuration macros used by the SigV4 Utility
- * Library.
+ * @brief The default values for configuration macros used by the SigV4 Library.
  *
  * @note This file should NOT be modified. If custom values are needed for any
  * configuration macros, a sigv4_config.h file should be provided to the SigV4
- * Utility Library to override the default values defined in this file. To use
+ * Library to override the default values defined in this file. To use
  * the custom config file, the preprocessor macro SIGV4_DO_NOT_USE_CUSTOM_CONFIG
  * must NOT be set.
  */

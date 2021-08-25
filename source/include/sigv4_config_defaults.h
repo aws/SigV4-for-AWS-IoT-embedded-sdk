@@ -1,5 +1,5 @@
 /*
- * SigV4 Utility Library v1.0.0
+ * SigV4 Library v1.0.0
  * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -22,13 +22,12 @@
 
 /**
  * @file sigv4_config_defaults.h
- * @brief The default values for configuration macros used by the SigV4 Utility
- * Library.
+ * @brief The default values for configuration macros used by the SigV4 Library.
  *
  * @note This file should NOT be modified. If custom values are needed for any
  * configuration macros, a sigv4_config.h file should be provided to the SigV4
- * Utility Library to override the default values defined in this file. To use
- * the custom config file, the preprocessor macro SIGV4_DO_NOT_USE_CUSTOM_CONFIG
+ * Library to override the default values defined in this file. To use the custom
+ * config file, the preprocessor macro SIGV4_DO_NOT_USE_CUSTOM_CONFIG
  * must NOT be set.
  */
 
@@ -147,7 +146,7 @@
 
 /**
  * @brief Macro to statically enable support for canonicalizing the URI,
- * headers, and query in this utility.
+ * headers, and query in this library.
  *
  * Set this to one to enable the encoding functions used to create the canonical
  * request.
@@ -160,14 +159,14 @@
 #endif
 
 /**
- * @brief Macro called by the SigV4 Utility library for logging "Error" level
+ * @brief Macro called by the SigV4 library for logging "Error" level
  * messages.
  *
- * To enable error level logging in the SigV4 Utility library, this macro should
+ * To enable error level logging in the SigV4 library, this macro should
  * be mapped to the application-specific logging implementation that supports
  * error logging.
  *
- * @note This logging macro is called in the SigV4 Utility library with
+ * @note This logging macro is called in the SigV4 library with
  * parameters wrapped in double parentheses to be ISO C89/C90 standard
  * compliant. For a reference POSIX implementation of the logging macros, refer
  * to sigv4_config.h files, and the logging-stack in demos folder of the [AWS
@@ -175,21 +174,21 @@
  * repository](https://github.com/aws/aws-iot-device-sdk-embedded-C).
  *
  * <b>Default value</b>: Error logging is turned off, and no code is generated
- * for calls to the macro in the SigV4 Utility library on compilation.
+ * for calls to the macro in the SigV4 library on compilation.
  */
 #ifndef LogError
     #define LogError( message )
 #endif
 
 /**
- * @brief Macro called by the the SigV4 Utility library for logging "Warning"
+ * @brief Macro called by the the SigV4 library for logging "Warning"
  * level messages.
  *
- * To enable warning level logging in the SigV4 Utility library, this macro
+ * To enable warning level logging in the SigV4 library, this macro
  * should be mapped to the application-specific logging implementation that
  * supports warning logging.
  *
- * @note This logging macro is called in the SigV4 Utility library with
+ * @note This logging macro is called in the SigV4 library with
  * parameters wrapped in double parentheses to be ISO C89/C90 standard
  * compliant. For a reference POSIX implementation of the logging macros, refer
  * to sigv4_config.h files, and the logging-stack in demos folder of the [AWS
@@ -197,21 +196,21 @@
  * repository](https://github.com/aws/aws-iot-device-sdk-embedded-C).
  *
  * <b>Default value</b>: Warning logs are turned off, and no code is generated
- * for calls to the macro in the SigV4 Utility library on compilation.
+ * for calls to the macro in the SigV4 library on compilation.
  */
 #ifndef LogWarn
     #define LogWarn( message )
 #endif
 
 /**
- * @brief Macro called by the the SigV4 Utility library for logging "Info" level
+ * @brief Macro called by the the SigV4 library for logging "Info" level
  * messages.
  *
- * To enable info level logging in the SigV4 Utility library, this macro should
+ * To enable info level logging in the SigV4 library, this macro should
  * be mapped to the application-specific logging implementation that supports
  * info logging.
  *
- * @note This logging macro is called in the SigV4 Utility library with
+ * @note This logging macro is called in the SigV4 library with
  * parameters wrapped in double parentheses to be ISO C89/C90 standard
  * compliant. For a reference POSIX implementation of the logging macros, refer
  * to sigv4_config.h files, and the logging-stack in demos folder of the [AWS
@@ -219,21 +218,21 @@
  * repository](https://github.com/aws/aws-iot-device-sdk-embedded-C).
  *
  * <b>Default value</b>: Info logging is turned off, and no code is generated
- * for calls to the macro in the SigV4 Utility library on compilation.
+ * for calls to the macro in the SigV4 library on compilation.
  */
 #ifndef LogInfo
     #define LogInfo( message )
 #endif
 
 /**
- * @brief Macro called by the the SigV4 Utility library for logging "Debug"
+ * @brief Macro called by the the SigV4 library for logging "Debug"
  * level messages.
  *
- * To enable debug level logging from SigV4 Utility library, this macro should
+ * To enable debug level logging from SigV4 library, this macro should
  * be mapped to the application-specific logging implementation that supports
  * debug logging.
  *
- * @note This logging macro is called in the SigV4 Utility library with
+ * @note This logging macro is called in the SigV4 library with
  * parameters wrapped in double parentheses to be ISO C89/C90 standard
  * compliant. For a reference POSIX implementation of the logging macros, refer
  * to sigv4_config.h files, and the logging-stack in demos folder of the [AWS
@@ -241,7 +240,7 @@
  * repository](https://github.com/aws/aws-iot-device-sdk-embedded-C).
  *
  * <b>Default value</b>: Debug logging is turned off, and no code is generated
- * for calls to the macro in the SigV4 Utility library on compilation.
+ * for calls to the macro in the SigV4 library on compilation.
  */
 #ifndef LogDebug
     #define LogDebug( message )
