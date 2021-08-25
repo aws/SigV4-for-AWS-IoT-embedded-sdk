@@ -1090,8 +1090,9 @@ void test_SigV4_GenerateHTTPAuthorization_InsufficientMemory()
     longHeader = malloc( headersLen );
     TEST_ASSERT_NOT_NULL( longHeader );
     /* Set gibberish header key data. */
-    memset( longHeader, ( int ) 'H', headersLen - 3 );
-    longHeader[ headersLen - 3 ] = ':';
+    memset( longHeader, ( int ) 'H', headersLen - 4 );
+    longHeader[ headersLen - 4 ] = ':';
+    longHeader[ headersLen - 3 ] = 'V';
     longHeader[ headersLen - 2 ] = '\r';
     longHeader[ headersLen - 1 ] = LINEFEED_CHAR;
     resetInputParams();
@@ -1352,4 +1353,36 @@ void test_SigV4_GenerateAuthorization_Headers_Without_X_Amz_Content_Sha256_Heade
 
     TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
                            &params, authBuf, &authBufLen, &signature, &signatureLen ) );
+}
+
+/* Test that the library returns SigV4InvalidParameter if Header Key or value contains all white spaces. */
+void test_SigV4_GenerateAuthorization_Header_Key_Or_Value_With_All_White_Spaces()
+{
+    SigV4Status_t returnStatus;
+    size_t headersLen = SIGV4_PROCESSING_BUFFER_LENGTH - httpParams.httpMethodLen - LINEFEED_CHAR_LEN -
+                        HTTP_EMPTY_PATH_LEN - LINEFEED_CHAR_LEN -
+                        /* Empty Query*/
+                        LINEFEED_CHAR_LEN +
+                        /* The carriage return character that is trimmed in canonical form. */
+                        1U;
+    char * longHeader = malloc( headersLen );
+
+    TEST_ASSERT_NOT_NULL( longHeader );
+
+    memset( longHeader, ( int ) 'H', headersLen - 4 );
+    longHeader[ headersLen - 4 ] = ':';
+    /* Set Header value containing all white spaces. */
+    longHeader[ headersLen - 3 ] = ' ';
+    longHeader[ headersLen - 2 ] = '\r';
+    longHeader[ headersLen - 1 ] = LINEFEED_CHAR;
+    resetInputParams();
+    params.pHttpParameters->pPath = NULL;
+    params.pHttpParameters->pathLen = 0U;
+    params.pHttpParameters->pQuery = NULL;
+    params.pHttpParameters->queryLen = 0U;
+    params.pHttpParameters->pHeaders = longHeader;
+    params.pHttpParameters->headersLen = headersLen;
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
+    free( longHeader );
 }

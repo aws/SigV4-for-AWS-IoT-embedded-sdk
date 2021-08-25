@@ -1574,7 +1574,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         }
 
         /* Check that data to be copied does not contain all spaces only. */
-        if( numOfBytesCopied == 0 )
+        if( ( status == SigV4Success ) && ( numOfBytesCopied == 0 ) )
         {
             status = SigV4InvalidParameter;
         }
