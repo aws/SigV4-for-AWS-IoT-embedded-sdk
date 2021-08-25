@@ -66,4 +66,10 @@ SigV4Status_t generateCanonicalAndSignedHeaders( const char * pHeaders,
                                                  char ** pSignedHeaders,
                                                  size_t * pSignedHeadersLen );
 
+SigV4Status_t copyHeaderStringToCanonicalBuffer( const char * pData,
+                                                 size_t dataLen,
+                                                 uint32_t flags,
+                                                 char separator,
+                                                 CanonicalContext_t * canonicalRequest );
+
 #endif /* ifndef SIGV4_STUBS_H_ */

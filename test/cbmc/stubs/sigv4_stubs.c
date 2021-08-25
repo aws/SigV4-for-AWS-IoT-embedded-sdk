@@ -229,3 +229,30 @@ SigV4Status_t generateCanonicalAndSignedHeaders( const char * pHeaders,
 
     return returnStatus;
 }
+
+SigV4Status_t copyHeaderStringToCanonicalBuffer( const char * pData,
+                                                 size_t dataLen,
+                                                 uint32_t flags,
+                                                 char separator,
+                                                 CanonicalContext_t * canonicalRequest )
+{
+    SigV4Status_t returnStatus = SigV4Success;
+    size_t buffRemaining;
+
+    __CPROVER_assume( pData != NULL );
+    __CPROVER_assume( dataLen > 0 );
+    __CPROVER_assume( dataLen < CBMC_MAX_OBJECT_SIZE );
+
+    assert( ( pData != NULL ) && ( dataLen > 0 ) );
+    assert( canonicalRequest != NULL );
+    assert( canonicalRequest->pBufCur != NULL );
+
+    buffRemaining = canonicalRequest->bufRemaining;
+
+    if( buffRemaining < dataLen )
+    {
+        returnStatus = SigV4InsufficientMemory;
+    }
+
+    return returnStatus;
+}

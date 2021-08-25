@@ -28,6 +28,7 @@
 /* Include paths for public enums, structures, and macros. */
 #include "stdlib.h"
 #include "sigv4.h"
+#include "sigv4_internal.h"
 #include "hash_stubs.h"
 
 void harness()
@@ -50,7 +51,7 @@ void harness()
     /* This property applies to all hash functions. */
     if( pCryptoInterface != NULL )
     {
-        __CPROVER_assume( 0U < pCryptoInterface->hashBlockLen && pCryptoInterface->hashBlockLen <= MAX_HASH_BLOCK_LEN );
+        __CPROVER_assume( SIGV4_HMAC_SIGNING_KEY_PREFIX_LEN < pCryptoInterface->hashBlockLen && pCryptoInterface->hashBlockLen <= MAX_HASH_BLOCK_LEN );
         __CPROVER_assume( 0U < pCryptoInterface->hashDigestLen && pCryptoInterface->hashDigestLen <= MAX_HASH_DIGEST_LEN );
         __CPROVER_assume( pCryptoInterface->hashDigestLen <= pCryptoInterface->hashBlockLen );
         pCryptoInterface->hashInit = nondet_bool() ? NULL : HashInitStub;

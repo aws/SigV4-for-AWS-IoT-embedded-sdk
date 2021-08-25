@@ -28,6 +28,7 @@ configpagestyle
 const
 constness
 copydoc
+copyheaderstringtocanonicalbuffer
 crypto
 cryptointerface
 css
@@ -89,6 +90,7 @@ ifdef
 ifndef
 inc
 ingroup
+inputchar
 inputlen
 iot
 ipad
