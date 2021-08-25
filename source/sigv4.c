@@ -1573,6 +1573,12 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             }
         }
 
+        /* Check that data to be copied does not contain all spaces only. */
+        if( numOfBytesCopied == 0 )
+        {
+            status = SigV4InvalidParameter;
+        }
+
         /* Add the ending separating character passed to the function.
          * Note: Space for the separator character is accounted for while copying
          * header field data to canonical request buffer. */

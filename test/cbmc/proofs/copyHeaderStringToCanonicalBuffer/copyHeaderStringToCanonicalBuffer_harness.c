@@ -45,7 +45,7 @@ void harness()
      * buffer and should not end past the length of the processing buffer. */
     size_t bytesConsumed;
 
-    __CPROVER_assume( canonicalRequest->bufRemaining > 0 && canonicalRequest->bufRemaining < SIGV4_PROCESSING_BUFFER_LENGTH );
+    __CPROVER_assume( canonicalRequest->bufRemaining < SIGV4_PROCESSING_BUFFER_LENGTH );
     bytesConsumed = SIGV4_PROCESSING_BUFFER_LENGTH - canonicalRequest->bufRemaining;
     __CPROVER_assume( dataLen > 0U && dataLen < CBMC_MAX_BUFSIZE );
     canonicalRequest->pBufCur = ( char * ) canonicalRequest->pBufProcessing + bytesConsumed;
@@ -56,5 +56,5 @@ void harness()
 
     sigv4Status = copyHeaderStringToCanonicalBuffer( pData, dataLen, flags, separator, canonicalRequest );
 
-    __CPROVER_assert( ( sigv4Status == SigV4Success || sigv4Status == SigV4InsufficientMemory ), "This is not a valid SIGV4 Status." );
+    __CPROVER_assert( ( sigv4Status == SigV4InvalidParameter || sigv4Status == SigV4Success || sigv4Status == SigV4InsufficientMemory ), "This is not a valid SIGV4 Status." );
 }
