@@ -34,7 +34,7 @@ coverage.
 </p>
 
 The diagram below demonstrates the happy path an application can take to use
-the SigV4 library to interact with the any AWS Service via HTTP requests.
+the SigV4 library to interact with AWS Services that support SigV4 authentication via HTTP requests.
 
 @image html sigv4_design.png "SigV4 Library Usage diagram" width=90%
 
