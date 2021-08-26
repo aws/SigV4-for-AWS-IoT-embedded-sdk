@@ -1,5 +1,5 @@
 /*
- * SigV4 Utility Library v1.0.0
+ * SigV4 Library v1.0.0
  * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -22,7 +22,7 @@
 
 /**
  * @file sigv4.h
- * @brief Interface for the SigV4 Client Utility Library.
+ * @brief Interface for the SigV4 Library.
  */
 
 #ifndef SIGV4_H_
@@ -131,12 +131,12 @@
 
 /**
  * @ingroup sigv4_enum_types
- * @brief Return status of the SigV4 Utility Library.
+ * @brief Return status of the SigV4 Library.
  */
 typedef enum SigV4Status
 {
     /**
-     * @brief The SigV4 Utility library function completed successfully.
+     * @brief The SigV4 library function completed successfully.
      *
      * Functions that may return this value:
      * - #SigV4_GenerateHTTPAuthorization
@@ -145,7 +145,7 @@ typedef enum SigV4Status
     SigV4Success,
 
     /**
-     * @brief The SigV4 Utility library function received an invalid input
+     * @brief The SigV4 library function received an invalid input
      * parameter.
      *
      * Functions that may return this value:
