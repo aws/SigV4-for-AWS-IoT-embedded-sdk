@@ -2716,7 +2716,7 @@ static SigV4Status_t writeStringToSign( const SigV4Parameters_t * pParams,
     SigV4Status_t returnStatus = SigV4Success;
     char * pBufStart = ( char * ) pCanonicalContext->pBufProcessing;
     ptrdiff_t bufferLen = pCanonicalContext->pBufCur - pBufStart;
-    /* An overestimate but sufficient memory is checked before executing this block. */
+    /* An overestimate but sufficient memory is checked before proceeding. */
     size_t encodedLen = SIGV4_PROCESSING_BUFFER_LENGTH;
     size_t sizeNeededBeforeHash = algorithmLen + 1U + \
                                   SIGV4_ISO_STRING_LEN + 1U;
