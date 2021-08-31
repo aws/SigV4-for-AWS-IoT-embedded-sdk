@@ -2416,6 +2416,7 @@ static SigV4Status_t completeHashAndHexEncode( const char * pInput,
 
     if( returnStatus == SigV4Success )
     {
+        assert( hexEncodedHash.dataLen == pCryptoInterface->hashDigestLen * 2U );
         *pOutputLen = hexEncodedHash.dataLen;
     }
 
@@ -2713,50 +2714,45 @@ static SigV4Status_t writeStringToSign( const SigV4Parameters_t * pParams,
                                         CanonicalContext_t * pCanonicalContext )
 {
     SigV4Status_t returnStatus = SigV4Success;
-    size_t encodedLen = pCanonicalContext->bufRemaining;
     char * pBufStart = ( char * ) pCanonicalContext->pBufProcessing;
     ptrdiff_t bufferLen = pCanonicalContext->pBufCur - pBufStart;
+    /* An overestimate but sufficient memory is checked before executing this block. */
+    size_t encodedLen = SIGV4_PROCESSING_BUFFER_LENGTH;
+    size_t sizeNeededBeforeHash = algorithmLen + 1U + \
+                                  SIGV4_ISO_STRING_LEN + 1U;
 
     assert( pParams != NULL );
     assert( ( pAlgorithm != NULL ) && ( algorithmLen > 0 ) );
     assert( pCanonicalContext != NULL );
 
-    returnStatus = completeHashAndHexEncode( pBufStart,
-                                             ( size_t ) bufferLen,
-                                             pCanonicalContext->pBufCur + 1,
-                                             &encodedLen,
-                                             pParams->pCryptoInterface );
+    sizeNeededBeforeHash += sizeNeededForCredentialScope( pParams ) + 1U;
 
-    if( returnStatus == SigV4Success )
+    /* Check if there is enough space for the string to sign. */
+    if( ( sizeNeededBeforeHash + ( pParams->pCryptoInterface->hashDigestLen * 2U ) ) >
+        SIGV4_PROCESSING_BUFFER_LENGTH )
     {
-        size_t sizeNeededBeforeHash = algorithmLen + 1U +         \
-                                      SIGV4_ISO_STRING_LEN + 1U + \
-                                      sizeNeededForCredentialScope( pParams ) + 1U;
-
-        /* Check if there is enough space for the string to sign. */
-        if( ( sizeNeededBeforeHash + ( pParams->pCryptoInterface->hashDigestLen * 2U ) ) >
-            SIGV4_PROCESSING_BUFFER_LENGTH )
-        {
-            returnStatus = SigV4InsufficientMemory;
-            LOG_INSUFFICIENT_MEMORY_ERROR( "for string to sign",
-                                           sizeNeededBeforeHash + ( pParams->pCryptoInterface->hashDigestLen * 2U ) - SIGV4_PROCESSING_BUFFER_LENGTH );
-        }
-        else
-        {
-            /* Copy the hash of the canonical request beforehand to its precalculated location
-             * in the string to sign. */
-            ( void ) memmove( pBufStart + sizeNeededBeforeHash,
-                              pCanonicalContext->pBufCur + 1,
-                              encodedLen );
-            pCanonicalContext->pBufCur = pBufStart + sizeNeededBeforeHash + encodedLen;
-            pCanonicalContext->bufRemaining = SIGV4_PROCESSING_BUFFER_LENGTH - encodedLen - sizeNeededBeforeHash;
-        }
+        returnStatus = SigV4InsufficientMemory;
+        LOG_INSUFFICIENT_MEMORY_ERROR( "for string to sign",
+                                       sizeNeededBeforeHash + ( pParams->pCryptoInterface->hashDigestLen * 2U ) - SIGV4_PROCESSING_BUFFER_LENGTH );
+    }
+    else
+    {
+        /* Hash the canonical request to its precalculated location in the string to sign. */
+        returnStatus = completeHashAndHexEncode( pBufStart,
+                                                 ( size_t ) bufferLen,
+                                                 pBufStart + sizeNeededBeforeHash,
+                                                 &encodedLen,
+                                                 pParams->pCryptoInterface );
     }
 
     if( returnStatus == SigV4Success )
     {
         size_t bytesWritten = 0U;
         SigV4String_t credentialScope;
+
+        pCanonicalContext->pBufCur = pBufStart + sizeNeededBeforeHash + encodedLen;
+        pCanonicalContext->bufRemaining = SIGV4_PROCESSING_BUFFER_LENGTH - encodedLen - sizeNeededBeforeHash;
+
         bytesWritten = writeStringToSignPrefix( pBufStart,
                                                 pAlgorithm,
                                                 algorithmLen,
