@@ -2718,6 +2718,14 @@ static SigV4Status_t writeStringToSign( const SigV4Parameters_t * pParams,
     ptrdiff_t bufferLen = pCanonicalContext->pBufCur - pBufStart;
     /* An overestimate but sufficient memory is checked before proceeding. */
     size_t encodedLen = SIGV4_PROCESSING_BUFFER_LENGTH;
+    /* The string to sign is composed of (+ means string concatenation):
+     * Algorithm + \n +
+     * RequestDateTime + \n +
+     * CredentialScope + \n +
+     * HashedCanonicalRequest
+     *
+     * The processing buffer is verified beforehand that it has enough
+     * space to hold this string. */
     size_t sizeNeededBeforeHash = algorithmLen + 1U + \
                                   SIGV4_ISO_STRING_LEN + 1U;
 
