@@ -20,7 +20,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
- /**
+/**
  * @file sigv4_config.h
  * @brief Config values for testing the SigV4 for AWS IoT Library.
  */
@@ -39,4 +39,3 @@
 #define LogDebug( message )    printf( "Debug: " ); printf message; printf( "\n" )
 
 #endif /* FLEET_PROVISIONING_CONFIG_H_ */
-	
