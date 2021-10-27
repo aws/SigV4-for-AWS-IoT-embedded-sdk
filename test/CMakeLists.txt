@@ -41,8 +41,11 @@ target_compile_definitions( coverity_analysis PUBLIC SIGV4_DO_NOT_USE_CUSTOM_CON
 # Verify ISO C90 compliance of libray.
 target_compile_options( coverity_analysis PUBLIC -std=c90 )
 
-# SigV4 public include path.
-target_include_directories( coverity_analysis PUBLIC ${SIGV4_INCLUDE_PUBLIC_DIRS} )
+# SigV4 public include path and test config file
+target_include_directories( coverity_analysis 
+                            PUBLIC 
+                            ${SIGV4_INCLUDE_PUBLIC_DIRS}
+                            "${CMAKE_CURRENT_LIST_DIR}/include" )
 
 #  ============================  Test Configuration ============================
 if(${BUILD_UNIT_TESTS})
