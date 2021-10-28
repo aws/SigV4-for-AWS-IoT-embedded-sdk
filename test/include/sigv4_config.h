@@ -26,7 +26,7 @@
  */
 
 #ifndef SIGV4_CONFIG_H_
-#define FLEET_PROVISIONING_CONFIG_H_
+#define SIGV4_CONFIG_H_
 
 #include <stdio.h>
 
@@ -38,4 +38,4 @@
 
 #define LogDebug( message )    printf( "Debug: " ); printf message; printf( "\n" )
 
-#endif /* FLEET_PROVISIONING_CONFIG_H_ */
+#endif /* SIGV4_CONFIG_H_ */
