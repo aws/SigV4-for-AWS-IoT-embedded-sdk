@@ -1300,7 +1300,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         {
             ret = true;
         }
-        else if( ( c == '/' ) )
+        else if( c == '/' )
         {
             ret = !encodeSlash;
         }
