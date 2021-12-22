@@ -1,6 +1,9 @@
 {
-  "name": "SigV4-for-AWS-IoT-embedded-sdk",
-  "releases": [],
+  "name": "AWS SigV4 Library",
+  "releases": [
+    "v1.1.0",
+    "v1.0.0"
+  ],
   "branches": [
     "main"
   ]
