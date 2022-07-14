@@ -65,6 +65,14 @@ To use CMake, please refer to the [sigV4FilePaths.cmake](https://github.com/aws/
 
 1. Run `cd build && ctest` to execute all tests and view the test run summary.
 
+## CBMC
+
+To learn more about CBMC and proofs specifically, review the training material [here](https://model-checking.github.io/cbmc-training).
+
+The `test/cbmc/proofs` directory contains CBMC proofs.
+
+In order to run these proofs you will need to install CBMC and other tools by following the instructions [here](https://model-checking.github.io/cbmc-training/installation.html).
+
 ## Reference examples
 
 The AWS IoT Embedded C-SDK repository contains [HTTP demos](https://github.com/aws/aws-iot-device-sdk-embedded-C/tree/main/demos/http) showing the use of the AWS SigV4 Library on a POSIX platform to authenticate HTTP requests to AWS S3 service.
