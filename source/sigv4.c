@@ -1508,10 +1508,9 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
     {
         char outputChar;
 
-
         if( ( inputChar >= 'A' ) && ( inputChar <= 'Z' ) )
         {
-            outputChar = ( ( int8_t ) 'a' ) + inputChar - ( ( int8_t ) 'A' );
+            outputChar = inputChar + 32;
         }
         else
         {
