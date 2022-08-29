@@ -1508,9 +1508,12 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
     {
         char outputChar;
 
+        /* Get the offset from a capital to lowercase character */
+        int8_t offset = 'a' - 'A';
+
         if( ( inputChar >= 'A' ) && ( inputChar <= 'Z' ) )
         {
-            outputChar = inputChar + 32;
+            outputChar = inputChar + offset;
         }
         else
         {
