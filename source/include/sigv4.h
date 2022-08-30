@@ -55,12 +55,15 @@
 /** @addtogroup sigv4_constants
  *  @{
  */
-#define SIGV4_AWS4_HMAC_SHA256                           "AWS4-HMAC-SHA256"                                         /**< AWS identifier for SHA256 signing algorithm. */
-#define SIGV4_AWS4_HMAC_SHA256_LENGTH                    ( sizeof( SIGV4_AWS4_HMAC_SHA256 ) - 1U )                  /**< Length of AWS identifier for SHA256 signing algorithm. */
-#define SIGV4_HTTP_X_AMZ_DATE_HEADER                     "x-amz-date"                                               /**< AWS identifier for HTTP date header. */
-#define SIGV4_HTTP_X_AMZ_SECURITY_TOKEN_HEADER           "x-amz-security-token"                                     /**< AWS identifier for security token. */
+#define SIGV4_AWS4_HMAC_SHA256                      "AWS4-HMAC-SHA256"                                              /**< AWS identifier for SHA256 signing algorithm. */
+#define SIGV4_AWS4_HMAC_SHA256_LENGTH               ( sizeof( SIGV4_AWS4_HMAC_SHA256 ) - 1U )                       /**< Length of AWS identifier for SHA256 signing algorithm. */
+#define SIGV4_HTTP_X_AMZ_DATE_HEADER                "x-amz-date"                                                    /**< AWS identifier for HTTP date header. */
+#define SIGV4_HTTP_X_AMZ_SECURITY_TOKEN_HEADER      "x-amz-security-token"                                          /**< AWS identifier for security token. */
 
-#define SIGV4_STREAMING_AWS4_HMAC_SHA256_PAYLOAD         "STREAMING-AWS4-HMAC-SHA256-PAYLOAD"                       /**< S3 identifier for chunked payloads. */
+#define SIGV4_STREAMING_AWS4_HMAC_SHA256_PAYLOAD    "STREAMING-AWS4-HMAC-SHA256-PAYLOAD"                            /**< S3 identifier for chunked payloads. */
+/* MISRA Ref 5.4.1 [Macro identifiers] */
+/* More details at: https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/blob/main/MISRA.md#rule-54 */
+/* coverity[other_declaration] */
 #define SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER           "x-amz-content-sha256"                                     /**< S3 identifier for streaming requests. */
 #define SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER_LENGTH    ( sizeof( SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER ) - 1U )  /**< Length of S3 identifier for streaming requests. */
 #define SIGV4_HTTP_X_AMZ_STORAGE_CLASS_HEADER            "x-amz-storage-class"                                      /**< S3 identifier for reduced streaming redundancy. */

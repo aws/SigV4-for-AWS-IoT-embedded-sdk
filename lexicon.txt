@@ -29,6 +29,7 @@ const
 constness
 copydoc
 copyheaderstringtocanonicalbuffer
+coverity
 credentialscope
 crypto
 cryptointerface

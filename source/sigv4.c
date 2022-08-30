@@ -196,13 +196,13 @@ static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
  *
  * @param[in] headerIndex Index of request Header in the list of parsed headers.
  * @param[in] pAmzSHA256Header Literal for x-amz-content-sha256 header in HTTP request.
- * @param[in] amzSHA256Header Length of @p pAmzSHA256Header.
+ * @param[in] amzSHA256HeaderLen Length of @p pAmzSHA256Header.
  * @param[in,out] pCanonicalRequest Struct to maintain intermediary buffer
  * and state of canonicalization.
  */
 static void storeHashedPayloadLocation( size_t headerIndex,
                                         const char * pAmzSHA256Header,
-                                        size_t amzSHA256Header,
+                                        size_t amzSHA256HeaderLen,
                                         CanonicalContext_t * pCanonicalRequest );
 
 /**
@@ -1508,9 +1508,12 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
     {
         char outputChar;
 
+        /* Get the offset from a capital to lowercase character */
+        int8_t offset = 'a' - 'A';
+
         if( ( inputChar >= 'A' ) && ( inputChar <= 'Z' ) )
         {
-            outputChar = 'a' + inputChar - 'A';
+            outputChar = inputChar + offset;
         }
         else
         {
@@ -1574,7 +1577,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         }
 
         /* Check that data to be copied does not contain all spaces only. */
-        if( ( status == SigV4Success ) && ( numOfBytesCopied == 0 ) )
+        if( ( status == SigV4Success ) && ( numOfBytesCopied == 0U ) )
         {
             status = SigV4InvalidParameter;
         }
