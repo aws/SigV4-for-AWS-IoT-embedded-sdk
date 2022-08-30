@@ -17,6 +17,7 @@ grep 'MISRA Ref 5.4.1' . -rI
 _Ref 5.4.1_
 
 - MISRA Rule 5.4 flags the following macro's name as ambiguous from the
-        one postfixed with _LENGTH. While it would be possible to change this name to
-        satisfy this rule. We have chosen to suppress this singular occurrence for
-        backwards compatibility.
+        one postfixed with _LENGTH. The macro highlighted by the deviation is already
+        in use and changing the name will break existing user projects. Thus, for
+        backwards compatibility, the macro is not modified and kept as is and the
+        deviation is suppressed.
