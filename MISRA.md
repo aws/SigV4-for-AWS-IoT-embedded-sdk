@@ -7,16 +7,16 @@ The specific deviations, suppressed inline, are listed below.
 Additionally, [MISRA configuration file](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/blob/main/tools/coverity/misra.config) contains the project wide deviations.
 
 ### Suppressed with Coverity Comments
-To find the violation references in the source files run grep on the source code
-with ( Assuming rule 11.4 violation; with justification in point 2 ):
+To find the deviation references in the source files run grep on the source code
+with ( Assuming rule 5.4 violation; with justification in point 1 ):
 ```
-grep 'MISRA Ref 11.4.2' . -rI
+grep 'MISRA Ref 5.4.1' . -rI
 ```
 
 #### Rule 5.4
-_Ref 5.4-1_
+_Ref 5.4.1_
 
 - MISRA Rule 5.4 flags the following macro's name as ambiguous from the
-        one postfixed with _LEN. While it would be possible to change this name to
-        satisify this rule. We have chosen to suppress this singular occurence for
+        one postfixed with _LENGTH. While it would be possible to change this name to
+        satisfy this rule. We have chosen to suppress this singular occurrence for
         backwards compatibility.
