@@ -1,5 +1,10 @@
 # Changelog for AWS SigV4 Library
 
+## v1.1.1 (August 2022)
+
+- [#71](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/pull/71) MISRA C:2012 Compliance Update
+- [#70](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/pull/70) Update CBMC starter kit
+
 ## v1.1.0 (December 2021)
 
 - [#63](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/pull/63) Remove extraneous parentheses in isAllowedChar()
