@@ -1,6 +1,6 @@
 # Changelog for AWS SigV4 Library
 
-## v1.2.0 (September 2022)
+## v1.2.0 (October 2022)
 
 - [#71](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/pull/71) MISRA C:2012 Compliance Update
 - [#70](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/pull/70) Update CBMC starter kit
