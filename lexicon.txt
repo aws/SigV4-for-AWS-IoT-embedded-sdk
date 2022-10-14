@@ -123,6 +123,7 @@ memcpy
 memmove
 min
 misra
+mit
 mmm
 mon
 monthsperday
@@ -228,6 +229,7 @@ signingkey
 sizeneededforcredentialscope
 sizeof
 snprintf
+spdx
 ss
 sscanf
 standalone
