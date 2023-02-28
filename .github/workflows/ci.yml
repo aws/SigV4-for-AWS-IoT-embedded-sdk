@@ -144,3 +144,12 @@ jobs:
           exclude-dirs: cmock,unity,cbmc
           include-file-types: .c,.h,.dox
           allowlist-file: ./.github/links_allowlist.txt
+  proof_ci:
+    runs-on: cbmc_ubuntu-latest_32-core
+    steps:
+      - name: Set up CBMC runner
+        uses: FreeRTOS/CI-CD-Github-Actions/set_up_cbmc_runner@main
+      - name: Run CBMC
+        uses: FreeRTOS/CI-CD-Github-Actions/run_cbmc@main
+        with:
+          proofs_dir: test/cbmc/proofs
