@@ -1378,7 +1378,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                 }
                 else
                 {
-                    bytesConsumed += writeHexCodeOfChar( pCanonicalURI + bytesConsumed, bufferLen - bytesConsumed, pUri[ uriIndex - 1U ] );
+                    bytesConsumed += writeHexCodeOfChar( pCanonicalURI + bytesConsumed, bufferLen - bytesConsumed, pUri[ uriIndex ] );
                 }
             }
 
