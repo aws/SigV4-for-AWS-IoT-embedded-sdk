@@ -33,8 +33,8 @@ a compile time preprocessor macro.
 **OR**
 
 * Defining the `SIGV4_DO_NOT_USE_CUSTOM_CONFIG` preprocessor macro
-  for the library build.
-  
+ for the library build.
+
 ## Building the SigV4 Library
 
 The [sigv4FilePaths.cmake](sigv4FilePaths.cmake) file contains information of all the source files and header include paths required to build the SigV4 library.
