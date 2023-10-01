@@ -2083,7 +2083,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                                           pBufCur + 1U,
                                           &valueBytesWritten,
                                           true,
-                                          true );
+                                          false );
 
                 if( returnStatus == SigV4Success )
                 {
@@ -3087,6 +3087,13 @@ static SigV4Status_t writePayloadHashToCanonicalRequest( const SigV4Parameters_t
     {
         /* Copy the hashed payload data supplied by the user in the headers data list. */
         returnStatus = copyHeaderStringToCanonicalBuffer( pCanonicalContext->pHashPayloadLoc, pCanonicalContext->hashPayloadLen, pParams->pHttpParameters->flags, '\n', pCanonicalContext );
+        /* Remove new line at the end of the payload. */
+        pCanonicalContext->pBufCur--;
+    }
+    else if( FLAG_IS_SET( pParams->pHttpParameters->flags, SIGV4_HTTP_PAYLOAD_IS_UNSIGNED ) )
+    {
+        /* Copy the UNSIGNED-PAYLOAD data in the headers data list. */
+        returnStatus = copyHeaderStringToCanonicalBuffer( "UNSIGNED-PAYLOAD", strlen("UNSIGNED-PAYLOAD"), pParams->pHttpParameters->flags, '\n', pCanonicalContext );
         /* Remove new line at the end of the payload. */
         pCanonicalContext->pBufCur--;
     }
