@@ -574,6 +574,31 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
                                          size_t dateISO8601Len );
 /* @[declare_sigV4_awsIotDateToIso8601_function] */
 
+#if ( SIGV4_USE_CANONICAL_SUPPORT == 1 )
+
+/**
+ * @brief Normalize a URI string according to RFC 3986 and fill destination
+ * buffer with the formatted string.
+ *
+ * @param[in] pUri The URI string to encode.
+ * @param[in] uriLen Length of pUri.
+ * @param[out] pCanonicalURI The resulting canonicalized URI.
+ * @param[in, out] canonicalURILen input: the length of pCanonicalURI,
+ * output: the length of the generated canonical URI.
+ * @param[in] encodeSlash Option to indicate if slashes should be encoded.
+ * @param[in] doubleEncodeEquals Option to indicate if equals should be double-encoded.
+ */
+/* @[declare_sigV4_EncodeURI_function] */
+SigV4Status_t SigV4_EncodeURI( const char * pUri,
+                               size_t uriLen,
+                               char * pCanonicalURI,
+                               size_t * canonicalURILen,
+                               bool encodeSlash,
+                               bool doubleEncodeEquals );
+/* @[declare_sigV4_encodeURI_function] */
+
+#endif /* #if (SIGV4_USE_CANONICAL_SUPPORT == 1) */
+
 /* *INDENT-OFF* */
 #ifdef __cplusplus
     }
