@@ -3074,7 +3074,7 @@ static SigV4Status_t writePayloadHashToCanonicalRequest( const SigV4Parameters_t
     else if( FLAG_IS_SET( pParams->pHttpParameters->flags, SIGV4_HTTP_PAYLOAD_IS_UNSIGNED ) )
     {
         /* Copy the UNSIGNED-PAYLOAD data in the headers data list. */
-        returnStatus = copyHeaderStringToCanonicalBuffer( "UNSIGNED-PAYLOAD", strlen("UNSIGNED-PAYLOAD"), pParams->pHttpParameters->flags, '\n', pCanonicalContext );
+        returnStatus = copyHeaderStringToCanonicalBuffer( "UNSIGNED-PAYLOAD", strlen( "UNSIGNED-PAYLOAD" ), pParams->pHttpParameters->flags, '\n', pCanonicalContext );
         /* Remove new line at the end of the payload. */
         pCanonicalContext->pBufCur--;
     }
