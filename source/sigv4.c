@@ -65,11 +65,13 @@
  *
  * @param[in] pQuery HTTP request query.
  * @param[in] queryLen Length of pQuery.
+ * @param[in] doubleEncodeEqualsInParmsValues whether to double-encode any equals ( = ) characters in parameter values.
  * @param[in, out] pCanonicalContext Struct to maintain intermediary buffer
  * and state of canonicalization.
  */
     static SigV4Status_t generateCanonicalQuery( const char * pQuery,
                                                  size_t queryLen,
+                                                 const bool doubleEncodeEqualsInParmsValues,
                                                  CanonicalContext_t * pCanonicalContext );
 
 /**
@@ -2034,7 +2036,8 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                                                                size_t bufferLen,
                                                                const char * pValue,
                                                                size_t valueLen,
-                                                               size_t * pEncodedLen )
+                                                               size_t * pEncodedLen,
+                                                               const bool doubleEncodeEqualsInParmsValues )
     {
         SigV4Status_t returnStatus = SigV4Success;
         size_t valueBytesWritten = 0U;
@@ -2062,8 +2065,8 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                                                 valueLen,
                                                 pBufCur + 1U,
                                                 &valueBytesWritten,
-                                                true,
-                                                false );
+                                                true /* Encode slash (/) */,
+                                                doubleEncodeEqualsInParmsValues );
 
                 if( returnStatus == SigV4Success )
                 {
@@ -2078,7 +2081,8 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 /*-----------------------------------------------------------*/
 
     static SigV4Status_t writeCanonicalQueryParameters( CanonicalContext_t * pCanonicalRequest,
-                                                        size_t numberOfParameters )
+                                                        size_t numberOfParameters,
+                                                        const bool doubleEncodeEqualsInParmsValues )
     {
         SigV4Status_t returnStatus = SigV4Success;
         char * pBufLoc = NULL;
@@ -2114,7 +2118,8 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                                                                      remainingLen,
                                                                      pCanonicalRequest->pQueryLoc[ paramsIndex ].value.pData,
                                                                      pCanonicalRequest->pQueryLoc[ paramsIndex ].value.dataLen,
-                                                                     &encodedLen );
+                                                                     &encodedLen,
+                                                                     doubleEncodeEqualsInParmsValues );
                 pBufLoc += encodedLen;
                 remainingLen -= encodedLen;
             }
@@ -2156,6 +2161,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 
     static SigV4Status_t generateCanonicalQuery( const char * pQuery,
                                                  size_t queryLen,
+                                                 const bool doubleEncodeEqualsInParmsValues,
                                                  CanonicalContext_t * pCanonicalContext )
     {
         SigV4Status_t returnStatus = SigV4Success;
@@ -2179,9 +2185,8 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
              *  - Do not URI-encode any of the unreserved characters that RFC 3986 defines:
              *      A-Z, a-z, 0-9, hyphen ( - ), underscore ( _ ), period ( . ), and tilde ( ~ ).
              *  - Percent-encode all other characters with %XY, where X and Y are hexadecimal characters (0-9 and uppercase A-F).
-             *  - Double-encode any equals ( = ) characters in parameter values.
              */
-            returnStatus = writeCanonicalQueryParameters( pCanonicalContext, numberOfParameters );
+            returnStatus = writeCanonicalQueryParameters( pCanonicalContext, numberOfParameters, doubleEncodeEqualsInParmsValues );
         }
 
         if( returnStatus == SigV4Success )
@@ -2779,6 +2784,13 @@ static SigV4Status_t generateCanonicalRequestUntilHeaders( const SigV4Parameters
     SigV4Status_t returnStatus = SigV4Success;
     const char * pPath = NULL;
     size_t pathLen = 0U;
+    bool doubleEncodeEqualsInParmsValues = true;
+
+    /* In presigned URL we do not want to double-encode any equals ( = ) characters in parameter values */
+    if( FLAG_IS_SET( pParams->pHttpParameters->flags, SIGV4_HTTP_IS_PRESIGNED_URL ) )
+    {
+        doubleEncodeEqualsInParmsValues = false;
+    }
 
     /* Set defaults for path and algorithm. */
     if( ( pParams->pHttpParameters->pPath == NULL ) ||
@@ -2843,6 +2855,7 @@ static SigV4Status_t generateCanonicalRequestUntilHeaders( const SigV4Parameters
         {
             returnStatus = generateCanonicalQuery( pParams->pHttpParameters->pQuery,
                                                    pParams->pHttpParameters->queryLen,
+                                                   doubleEncodeEqualsInParmsValues,
                                                    pCanonicalContext );
         }
     }
@@ -3070,7 +3083,7 @@ static SigV4Status_t writePayloadHashToCanonicalRequest( const SigV4Parameters_t
         /* Remove new line at the end of the payload. */
         pCanonicalContext->pBufCur--;
     }
-    else if( FLAG_IS_SET( pParams->pHttpParameters->flags, SIGV4_HTTP_PAYLOAD_IS_UNSIGNED ) )
+    else if( FLAG_IS_SET( pParams->pHttpParameters->flags, SIGV4_HTTP_IS_PRESIGNED_URL ) )
     {
         /* Copy the UNSIGNED-PAYLOAD data in the headers data list. */
         returnStatus = copyHeaderStringToCanonicalBuffer( "UNSIGNED-PAYLOAD", strlen( "UNSIGNED-PAYLOAD" ), pParams->pHttpParameters->flags, '\n', pCanonicalContext );

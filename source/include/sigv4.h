@@ -128,12 +128,12 @@
 
 /**
  * @ingroup sigv4_canonical_flags
- * @brief Set this flag to indicate that the HTTP request payload is
- * already hashed.
+ * @brief Set this flag to indicate that the HTTP request is
+ * a presigned URL.
  *
  * This flag is valid only for #SigV4HttpParameters_t.flags.
  */
-#define SIGV4_HTTP_PAYLOAD_IS_UNSIGNED           0x10U
+#define SIGV4_HTTP_IS_PRESIGNED_URL              0x10U
 
 /**
  * @ingroup sigv4_canonical_flags
