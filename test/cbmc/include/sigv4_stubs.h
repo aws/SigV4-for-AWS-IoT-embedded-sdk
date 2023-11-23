@@ -50,15 +50,9 @@ SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
                                            size_t lineLen,
                                            CanonicalContext_t * pCanonicalContext );
 
-SigV4Status_t encodeURI( const char * pUri,
-                         size_t uriLen,
-                         char * pCanonicalURI,
-                         size_t * canonicalURILen,
-                         bool encodeSlash,
-                         bool doubleEncodeEquals );
-
 SigV4Status_t generateCanonicalQuery( const char * pQuery,
                                       size_t queryLen,
+                                      const bool doubleEncodeEqualsInParmsValues,
                                       CanonicalContext_t * pCanonicalContext );
 
 SigV4Status_t generateCanonicalAndSignedHeaders( const char * pHeaders,
