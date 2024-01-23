@@ -3222,7 +3222,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
         returnStatus = writePayloadHashToCanonicalRequest( pParams, &canonicalContext );
     }
 
-    /* Write the prefix of the Authorizaton header value. */
+    /* Write the prefix of the Authorization header value. */
     if( returnStatus == SigV4Success )
     {
         LogDebug( ( "Generated Canonical Request: %.*s",
@@ -3272,7 +3272,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
     }
 
     /* Hex-encode the final signature beforehand to its precalculated
-     * location in the buffer provided for the Authorizaton header value. */
+     * location in the buffer provided for the Authorization header value. */
     if( returnStatus == SigV4Success )
     {
         SigV4String_t originalHmac;
