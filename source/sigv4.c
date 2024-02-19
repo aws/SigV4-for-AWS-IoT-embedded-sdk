@@ -1317,6 +1317,18 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 
 /*-----------------------------------------------------------*/
 
+    SigV4Status_t SigV4_EncodeURI( const char * pUri,
+                                   size_t uriLen,
+                                   char * pCanonicalURI,
+                                   size_t * canonicalURILen,
+                                   bool encodeSlash,
+                                   bool doubleEncodeEquals )
+    {
+        return encodeURI( pUri, uriLen, pCanonicalURI, canonicalURILen, encodeSlash, doubleEncodeEquals );
+    }
+
+/*-----------------------------------------------------------*/
+
     static SigV4Status_t encodeURI( const char * pUri,
                                     size_t uriLen,
                                     char * pCanonicalURI,
@@ -3309,14 +3321,4 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
     }
 
     return returnStatus;
-}
-
-SigV4Status_t SigV4_EncodeURI( const char * pUri,
-                               size_t uriLen,
-                               char * pCanonicalURI,
-                               size_t * canonicalURILen,
-                               bool encodeSlash,
-                               bool doubleEncodeEquals )
-{
-    return encodeURI( pUri, uriLen, pCanonicalURI, canonicalURILen, encodeSlash, doubleEncodeEquals );
 }
