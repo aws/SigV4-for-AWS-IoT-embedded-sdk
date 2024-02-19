@@ -41,6 +41,25 @@
 #if ( SIGV4_USE_CANONICAL_SUPPORT == 1 )
 
 /**
+ * @brief Normalize a URI string according to RFC 3986 and fill destination
+ * buffer with the formatted string.
+ *
+ * @param[in] pUri The URI string to encode.
+ * @param[in] uriLen Length of pUri.
+ * @param[out] pCanonicalURI The resulting canonicalized URI.
+ * @param[in, out] canonicalURILen input: the length of pCanonicalURI,
+ * output: the length of the generated canonical URI.
+ * @param[in] encodeSlash Option to indicate if slashes should be encoded.
+ * @param[in] doubleEncodeEquals Option to indicate if equals should be double-encoded.
+ */
+    static SigV4Status_t encodeURI( const char * pUri,
+                                    size_t uriLen,
+                                    char * pCanonicalURI,
+                                    size_t * canonicalURILen,
+                                    bool encodeSlash,
+                                    bool doubleEncodeEquals );
+
+/**
  * @brief Canonicalize the full URI path. The input URI starts after the
  * HTTP host and ends at the question mark character ("?") that begins the
  * query string parameters (if any). Example: folder/subfolder/item.txt"
@@ -1298,12 +1317,12 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 
 /*-----------------------------------------------------------*/
 
-    SigV4Status_t SigV4_EncodeURI( const char * pUri,
-                                   size_t uriLen,
-                                   char * pCanonicalURI,
-                                   size_t * canonicalURILen,
-                                   bool encodeSlash,
-                                   bool doubleEncodeEquals )
+    static SigV4Status_t encodeURI( const char * pUri,
+                                    size_t uriLen,
+                                    char * pCanonicalURI,
+                                    size_t * canonicalURILen,
+                                    bool encodeSlash,
+                                    bool doubleEncodeEquals )
     {
         size_t uriIndex = 0U, bytesConsumed = 0U;
         size_t bufferLen = 0U;
@@ -1398,7 +1417,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         /* If the canonical URI needs to be encoded twice, then we encode once here,
          * and again at the end of the buffer. Afterwards, the second encode is copied
          * to overwrite the first one. */
-        returnStatus = SigV4_EncodeURI( pUri, uriLen, pBufLoc, &encodedLen, false, false );
+        returnStatus = encodeURI( pUri, uriLen, pBufLoc, &encodedLen, false, false );
 
         if( returnStatus == SigV4Success )
         {
@@ -1410,12 +1429,12 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                  * written to a different position in the buffer. It should not be done
                  * at an overlapping position of the single-encoded URI. Once written,
                  * the double-encoded URI is moved to the starting location of the single-encoded URI. */
-                returnStatus = SigV4_EncodeURI( pBufLoc,
-                                                encodedLen,
-                                                pBufLoc + encodedLen,
-                                                &doubleEncodedLen,
-                                                false,
-                                                false );
+                returnStatus = encodeURI( pBufLoc,
+                                          encodedLen,
+                                          pBufLoc + encodedLen,
+                                          &doubleEncodedLen,
+                                          false,
+                                          false );
 
                 if( returnStatus == SigV4Success )
                 {
@@ -2061,12 +2080,12 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             /* Encode parameter value if non-empty. Query parameters can have empty values. */
             if( valueLen > 0U )
             {
-                returnStatus = SigV4_EncodeURI( pValue,
-                                                valueLen,
-                                                pBufCur + 1U,
-                                                &valueBytesWritten,
-                                                true /* Encode slash (/) */,
-                                                doubleEncodeEqualsInParmsValues );
+                returnStatus = encodeURI( pValue,
+                                          valueLen,
+                                          pBufCur + 1U,
+                                          &valueBytesWritten,
+                                          true /* Encode slash (/) */,
+                                          doubleEncodeEqualsInParmsValues );
 
                 if( returnStatus == SigV4Success )
                 {
@@ -2101,12 +2120,12 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             assert( pCanonicalRequest->pQueryLoc[ paramsIndex ].key.dataLen > 0U );
 
             encodedLen = remainingLen;
-            returnStatus = SigV4_EncodeURI( pCanonicalRequest->pQueryLoc[ paramsIndex ].key.pData,
-                                            pCanonicalRequest->pQueryLoc[ paramsIndex ].key.dataLen,
-                                            pBufLoc,
-                                            &encodedLen,
-                                            true /* Encode slash (/) */,
-                                            false /* Do not double encode '='. */ );
+            returnStatus = encodeURI( pCanonicalRequest->pQueryLoc[ paramsIndex ].key.pData,
+                                      pCanonicalRequest->pQueryLoc[ paramsIndex ].key.dataLen,
+                                      pBufLoc,
+                                      &encodedLen,
+                                      true /* Encode slash (/) */,
+                                      false /* Do not double encode '='. */ );
 
             if( returnStatus == SigV4Success )
             {
@@ -3290,4 +3309,14 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
     }
 
     return returnStatus;
+}
+
+SigV4Status_t SigV4_EncodeURI( const char * pUri,
+                               size_t uriLen,
+                               char * pCanonicalURI,
+                               size_t * canonicalURILen,
+                               bool encodeSlash,
+                               bool doubleEncodeEquals )
+{
+    return encodeURI( pUri, uriLen, pCanonicalURI, canonicalURILen, encodeSlash, doubleEncodeEquals );
 }
