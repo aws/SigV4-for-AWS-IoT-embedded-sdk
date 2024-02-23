@@ -9,7 +9,7 @@
     </tr>
     <tr>
         <td>sigv4.c</td>
-        <td><center>5.2K</center></td>
+        <td><center>5.3K</center></td>
         <td><center>4.4K</center></td>
     </tr>
     <tr>
@@ -19,7 +19,7 @@
     </tr>
     <tr>
         <td><b>Total estimates</b></td>
-        <td><b><center>5.6K</center></b></td>
+        <td><b><center>5.7K</center></b></td>
         <td><b><center>4.7K</center></b></td>
     </tr>
 </table>
