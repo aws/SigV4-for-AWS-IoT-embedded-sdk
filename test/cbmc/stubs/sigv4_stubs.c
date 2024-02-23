@@ -174,6 +174,7 @@ SigV4Status_t encodeURI( const char * pUri,
 
 SigV4Status_t generateCanonicalQuery( const char * pQuery,
                                       size_t queryLen,
+                                      const bool doubleEncodeEqualsInParmsValues,
                                       CanonicalContext_t * pCanonicalContext )
 {
     SigV4Status_t returnStatus = SigV4InsufficientMemory;

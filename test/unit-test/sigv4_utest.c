@@ -710,6 +710,17 @@ void test_SigV4_GenerateHTTPAuthorization_Happy_Paths()
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
     TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
     TEST_ASSERT_EQUAL_MEMORY( pExpectedSignature, signature, signatureLen );
+
+    /* Coverage for NON double-encoded equals in query string value for presigned URL. */
+    resetInputParams();
+    params.pHttpParameters->pQuery = QUERY_VALUE_HAS_EQUALS;
+    params.pHttpParameters->queryLen = STR_LIT_LEN( QUERY_VALUE_HAS_EQUALS );
+    params.pHttpParameters->flags = SIGV4_HTTP_IS_PRESIGNED_URL;
+    pExpectedSignature = "6759e09cf532c4f9b5190873cb4c43305180f5d4d3418d65b6c0affce827dbc4";
+    returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
+    TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
+    TEST_ASSERT_EQUAL_MEMORY( pExpectedSignature, signature, signatureLen );
 }
 
 /* Test the API for handling corner cases of sorting the Query Parameters (when generating Canonical Query) */
