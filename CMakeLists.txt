@@ -32,7 +32,11 @@ target_include_directories(${PROJECT_NAME} PUBLIC
    $<BUILD_INTERFACE:${SIGV4_INCLUDE_PUBLIC_DIRS}>
    $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
 )
-target_compile_definitions(${PROJECT_NAME} PRIVATE -DSIGV4_DO_NOT_USE_CUSTOM_CONFIG )
+
+# `sigv4_config` target defines the path to sigv4_config.h and optionally other based config files
+if(NOT TARGET sigv4_config )
+	target_compile_definitions(${PROJECT_NAME} PRIVATE -DSIGV4_DO_NOT_USE_CUSTOM_CONFIG )
+endif()
 
 include( GNUInstallDirs )
 
