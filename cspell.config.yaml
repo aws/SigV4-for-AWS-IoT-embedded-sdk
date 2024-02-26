@@ -29,4 +29,3 @@ ignorePaths:
   - 'docs'
   - 'ThirdParty'
   - 'History.txt'
-  - 'CMakeLists.txt'
