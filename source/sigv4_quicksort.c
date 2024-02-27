@@ -211,7 +211,7 @@ static size_t partition( void * pArray,
     assert( comparator != NULL );
 
     /* Choose pivot as the highest indexed item in the current partition. */
-    pivot = pArrayLocal + ( high * itemSize );
+    pivot = &pArrayLocal[ high * itemSize ];
 
     /* Iterate over all elements of the current array to partition it
      * in comparison to the chosen pivot with smaller items on the left
@@ -222,13 +222,13 @@ static size_t partition( void * pArray,
         if( comparator( pArrayLocal + ( j * itemSize ), pivot ) < 0 )
         {
             ++i;
-            swap( pArrayLocal + ( i * itemSize ), pArrayLocal + ( j * itemSize ), itemSize );
+            swap( &pArrayLocal[ i * itemSize ], &pArrayLocal[ j * itemSize ], itemSize );
         }
     }
 
     /* Place the pivot between the smaller and larger item chunks of
      * the array. This represents the 2 partitions of the array. */
-    swap( pArrayLocal + ( ( i + 1U ) * itemSize ), pivot, itemSize );
+    swap( &pArrayLocal[ ( i + 1U ) * itemSize ], pivot, itemSize );
 
     /* Return the pivot item's index. */
     return i + 1U;
