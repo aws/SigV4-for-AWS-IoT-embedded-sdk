@@ -219,7 +219,7 @@ static size_t partition( void * pArray,
     for( ; j < high; j++ )
     {
         /* Use comparator function to check current element is smaller than the pivot */
-        if( comparator( pArrayLocal + ( j * itemSize ), pivot ) < 0 )
+        if( comparator( &pArrayLocal[ j * itemSize ], pivot ) < 0 )
         {
             ++i;
             swap( &pArrayLocal[ i * itemSize ], &pArrayLocal[ j * itemSize ], itemSize );
