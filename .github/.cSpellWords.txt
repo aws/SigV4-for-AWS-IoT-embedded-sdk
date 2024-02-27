@@ -26,6 +26,7 @@ Decihours
 DECIHOURS
 DNDEBUG
 DUNITY
+DUNITTEST
 Ecjuve
 EKHX
 getpacketid
