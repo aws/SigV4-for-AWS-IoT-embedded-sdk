@@ -34,7 +34,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 
 # `sigv4_config` target defines the path to sigv4_config.h and optionally other based config files
-if(NOT TARGET sigv4_config )
+if( NOT TARGET sigv4_config )
 	target_compile_definitions(${PROJECT_NAME} PRIVATE -DSIGV4_DO_NOT_USE_CUSTOM_CONFIG )
 endif()
 
