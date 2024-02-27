@@ -85,7 +85,7 @@ include paths required to build this library.
 
 1. Go to the root directory of this repository.
 
-1. Run the _cmake_ command: `cmake -S test -B build -DBUILD_UNIT_TESTS=ON`.
+1. Run the _cmake_ command: `cmake -S test -B build -DUNITTEST=ON`.
 
 1. Run this command to build the library and unit tests: `make -C build all`.
 
