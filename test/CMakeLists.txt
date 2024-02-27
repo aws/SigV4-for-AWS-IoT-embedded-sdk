@@ -1,6 +1,7 @@
 # Project information.
 cmake_minimum_required( VERSION 3.13.0 )
-project( "SigV4 unit test"
+project( "SigV4 tests"
+          VERSION 1.2.0
           LANGUAGES C )
 
 # Allow the project to be organized into folders.
@@ -18,9 +19,11 @@ get_filename_component( __MODULE_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUT
 set( MODULE_ROOT_DIR ${__MODULE_ROOT_DIR} CACHE INTERNAL "SigV4 repository root." )
 
 # Configure options to always show in CMake GUI.
-option( BUILD_UNIT_TESTS
-        "Set this to ON to enable unit tests. If the submodule for CMock testing framework is not cloned, it will be auto-cloned."
-        OFF )
+# If no configuration is defined, turn everything on.
+if( NOT DEFINED COV_ANALYSIS AND NOT DEFINED UNITTEST )
+    set( COV_ANALYSIS ON )
+    set( UNITTEST OFF )    # Backward compatibility
+endif()
 
 # Set output directories.
 set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin )
@@ -31,24 +34,26 @@ set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib )
 # Include filepaths for source and include.
 include( ${MODULE_ROOT_DIR}/sigv4FilePaths.cmake )
 
-# Target for Coverity analysis that builds the library.
-add_library( coverity_analysis
-            ${SIGV4_SOURCES} )
+if( COV_ANALYSIS )
+    # Target for Coverity analysis that builds the library.
+    add_library( coverity_analysis
+                ${SIGV4_SOURCES} )
 
-# Verify ISO C90 compliance of libray.
-target_compile_options( coverity_analysis PUBLIC -std=c90 )
+    # Verify ISO C90 compliance of libray.
+    target_compile_options( coverity_analysis PUBLIC -std=c90 )
 
-# SigV4 public include path and test config file
-target_include_directories( coverity_analysis
-                            PUBLIC
-                            ${SIGV4_INCLUDE_PUBLIC_DIRS}
-                            "${CMAKE_CURRENT_LIST_DIR}/include" )
+    # SigV4 public include path and test config file
+    target_include_directories( coverity_analysis
+                                PUBLIC
+                                ${SIGV4_INCLUDE_PUBLIC_DIRS}
+                                "${CMAKE_CURRENT_LIST_DIR}/include" )
 
-# Build without debug enabled when performing static analysis
-target_compile_options(coverity_analysis PUBLIC -DNDEBUG -DDISABLE_LOGGING)
+    # Build without debug enabled when performing static analysis
+    target_compile_options(coverity_analysis PUBLIC -DNDEBUG -DDISABLE_LOGGING)
+endif()
 
 #  ============================  Test Configuration ============================
-if(${BUILD_UNIT_TESTS})
+if( UNITTEST )
     # Define a CMock resource path.
     set( CMOCK_DIR ${MODULE_ROOT_DIR}/test/unit-test/CMock CACHE INTERNAL "CMock library source directory." )
 
