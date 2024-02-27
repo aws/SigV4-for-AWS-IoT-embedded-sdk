@@ -1657,7 +1657,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         if( sigV4Status == SigV4Success )
         {
             /* Replacing the last ';' with '\n' as last header should not have ';'. */
-            pBufPtr = ( char *)( &canonicalRequest->pBufProcessing[ canonicalRequest->pBufCur - ( char* )( &canonicalRequest->pBufProcessing ) - 1 ] );
+            pBufPtr = ( char * ) ( &canonicalRequest->pBufProcessing[ canonicalRequest->pBufCur - ( char * ) ( &canonicalRequest->pBufProcessing ) - 1 ] );
             *pBufPtr = '\n';
         }
 
