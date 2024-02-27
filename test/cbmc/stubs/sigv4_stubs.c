@@ -99,27 +99,27 @@ void addToDate( const char formatChar,
     switch( formatChar )
     {
         case 'Y':
-            pDateElements->datetimeYear = result;
+            pDateElements->year = result;
             break;
 
         case 'M':
-            pDateElements->datetimeMon = result;
+            pDateElements->mon = result;
             break;
 
         case 'D':
-            pDateElements->datetimeMday = result;
+            pDateElements->mday = result;
             break;
 
         case 'h':
-            pDateElements->datetimeHour = result;
+            pDateElements->hour = result;
             break;
 
         case 'm':
-            pDateElements->datetimeMin = result;
+            pDateElements->min = result;
             break;
 
         case 's':
-            pDateElements->datetimeSec = result;
+            pDateElements->sec = result;
             break;
 
         default:

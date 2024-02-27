@@ -751,14 +751,14 @@ static SigV4Status_t checkLeap( const SigV4DateTime_t * pDateElements )
     assert( pDateElements != NULL );
 
     /* If the date represents a leap day, verify that the leap year is valid. */
-    if( ( pDateElements->datetimeMon == 2 ) && ( pDateElements->datetimeMday == 29 ) )
+    if( ( pDateElements->mon == 2 ) && ( pDateElements->mday == 29 ) )
     {
-        if( ( ( pDateElements->datetimeYear % 400 ) != 0 ) &&
-            ( ( ( pDateElements->datetimeYear % 4 ) != 0 ) ||
-              ( ( pDateElements->datetimeYear % 100 ) == 0 ) ) )
+        if( ( ( pDateElements->year % 400 ) != 0 ) &&
+            ( ( ( pDateElements->year % 4 ) != 0 ) ||
+              ( ( pDateElements->year % 100 ) == 0 ) ) )
         {
             LogError( ( "%ld is not a valid leap year.",
-                        ( long int ) pDateElements->datetimeYear ) );
+                        ( long int ) pDateElements->year ) );
         }
         else
         {
@@ -778,27 +778,27 @@ static SigV4Status_t validateDateTime( const SigV4DateTime_t * pDateElements )
 
     assert( pDateElements != NULL );
 
-    if( pDateElements->datetimeYear < YEAR_MIN )
+    if( pDateElements->year < YEAR_MIN )
     {
         LogError( ( "Invalid 'year' value parsed from date string. "
                     "Expected an integer %ld or greater, received: %ld",
                     ( long int ) YEAR_MIN,
-                    ( long int ) pDateElements->datetimeYear ) );
+                    ( long int ) pDateElements->year ) );
         returnStatus = SigV4ISOFormattingError;
     }
 
-    if( ( pDateElements->datetimeMon < 1 ) || ( pDateElements->datetimeMon > 12 ) )
+    if( ( pDateElements->mon < 1 ) || ( pDateElements->mon > 12 ) )
     {
         LogError( ( "Invalid 'month' value parsed from date string. "
                     "Expected an integer between 1 and 12, received: %ld",
-                    ( long int ) pDateElements->datetimeMon ) );
+                    ( long int ) pDateElements->mon ) );
         returnStatus = SigV4ISOFormattingError;
     }
 
     /* Ensure that the day of the month is valid for the relevant month. */
     if( ( returnStatus != SigV4ISOFormattingError ) &&
-        ( ( pDateElements->datetimeMday < 1 ) ||
-          ( pDateElements->datetimeMday > daysPerMonth[ pDateElements->datetimeMon - 1 ] ) ) )
+        ( ( pDateElements->mday < 1 ) ||
+          ( pDateElements->mday > daysPerMonth[ pDateElements->mon - 1 ] ) ) )
     {
         /* Check if the date is a valid leap year day. */
         returnStatus = checkLeap( pDateElements );
@@ -807,37 +807,37 @@ static SigV4Status_t validateDateTime( const SigV4DateTime_t * pDateElements )
         {
             LogError( ( "Invalid 'day' value parsed from date string. "
                         "Expected an integer between 1 and %ld, received: %ld",
-                        ( long int ) daysPerMonth[ pDateElements->datetimeMon - 1 ],
-                        ( long int ) pDateElements->datetimeMday ) );
+                        ( long int ) daysPerMonth[ pDateElements->mon - 1 ],
+                        ( long int ) pDateElements->mday ) );
         }
     }
 
     /* SigV4DateTime_t values are asserted to be non-negative before they are
      * assigned in function addToDate(). Therefore, we only verify logical upper
      * bounds for the following values. */
-    if( pDateElements->datetimeHour > 23 )
+    if( pDateElements->hour > 23 )
     {
         LogError( ( "Invalid 'hour' value parsed from date string. "
                     "Expected an integer between 0 and 23, received: %ld",
-                    ( long int ) pDateElements->datetimeHour ) );
+                    ( long int ) pDateElements->hour ) );
         returnStatus = SigV4ISOFormattingError;
     }
 
-    if( pDateElements->datetimeMin > 59 )
+    if( pDateElements->min > 59 )
     {
         LogError( ( "Invalid 'minute' value parsed from date string. "
                     "Expected an integer between 0 and 59, received: %ld",
-                    ( long int ) pDateElements->datetimeMin ) );
+                    ( long int ) pDateElements->min ) );
         returnStatus = SigV4ISOFormattingError;
     }
 
     /* An upper limit of 60 accounts for the occasional leap second UTC
      * adjustment. */
-    if( pDateElements->datetimeSec > 60 )
+    if( pDateElements->sec > 60 )
     {
         LogError( ( "Invalid 'second' value parsed from date string. "
                     "Expected an integer between 0 and 60, received: %ld",
-                    ( long int ) pDateElements->datetimeSec ) );
+                    ( long int ) pDateElements->sec ) );
         returnStatus = SigV4ISOFormattingError;
     }
 
@@ -856,27 +856,27 @@ static void addToDate( const char formatChar,
     switch( formatChar )
     {
         case 'Y':
-            pDateElements->datetimeYear = result;
+            pDateElements->year = result;
             break;
 
         case 'M':
-            pDateElements->datetimeMon = result;
+            pDateElements->mon = result;
             break;
 
         case 'D':
-            pDateElements->datetimeMday = result;
+            pDateElements->mday = result;
             break;
 
         case 'h':
-            pDateElements->datetimeHour = result;
+            pDateElements->hour = result;
             break;
 
         case 'm':
-            pDateElements->datetimeMin = result;
+            pDateElements->min = result;
             break;
 
         case 's':
-            pDateElements->datetimeSec = result;
+            pDateElements->sec = result;
             break;
 
         default:
@@ -3196,14 +3196,14 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
     {
         /* Combine date elements into complete ASCII representation, and fill
          * buffer with result. */
-        intToAscii( date.datetimeYear, &pWriteLoc, ISO_YEAR_LEN );
-        intToAscii( date.datetimeMon, &pWriteLoc, ISO_NON_YEAR_LEN );
-        intToAscii( date.datetimeMday, &pWriteLoc, ISO_NON_YEAR_LEN );
+        intToAscii( date.year, &pWriteLoc, ISO_YEAR_LEN );
+        intToAscii( date.mon, &pWriteLoc, ISO_NON_YEAR_LEN );
+        intToAscii( date.mday, &pWriteLoc, ISO_NON_YEAR_LEN );
         *pWriteLoc = 'T';
         pWriteLoc++;
-        intToAscii( date.datetimeHour, &pWriteLoc, ISO_NON_YEAR_LEN );
-        intToAscii( date.datetimeMin, &pWriteLoc, ISO_NON_YEAR_LEN );
-        intToAscii( date.datetimeSec, &pWriteLoc, ISO_NON_YEAR_LEN );
+        intToAscii( date.hour, &pWriteLoc, ISO_NON_YEAR_LEN );
+        intToAscii( date.min, &pWriteLoc, ISO_NON_YEAR_LEN );
+        intToAscii( date.sec, &pWriteLoc, ISO_NON_YEAR_LEN );
         *pWriteLoc = 'Z';
 
         LogDebug( ( "Successfully formatted ISO 8601 date: \"%.*s\"",
