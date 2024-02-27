@@ -155,12 +155,12 @@
  */
 typedef struct SigV4DateTime
 {
-    int32_t tm_year; /**< Year (1900 or later) */
-    int32_t tm_mon;  /**< Month (1 to 12) */
-    int32_t tm_mday; /**< Day of Month (1 to 28/29/30/31) */
-    int32_t tm_hour; /**< Hour (0 to 23) */
-    int32_t tm_min;  /**< Minutes (0 to 59) */
-    int32_t tm_sec;  /**< Seconds (0 to 60) */
+    int32_t datetimeYear; /**< Year (1900 or later) */
+    int32_t datetimeMon;  /**< Month (1 to 12) */
+    int32_t datetimeMday; /**< Day of Month (1 to 28/29/30/31) */
+    int32_t datetimeHour; /**< Hour (0 to 23) */
+    int32_t datetimeMin;  /**< Minutes (0 to 59) */
+    int32_t datetimeSec;  /**< Seconds (0 to 60) */
 } SigV4DateTime_t;
 
 /**
