@@ -2719,7 +2719,7 @@ static size_t writeStringToSignPrefix( char * pBufStart,
 
     /* Write HMAC and hashing algorithm used for SigV4 authentication. */
     ( void ) memcpy( pBuffer, pAlgorithm, algorithmLen );
-    pBuffer = &( pBuffer[ algorithmLen ] _;
+    pBuffer = &( pBuffer[ algorithmLen ] );
 
     *pBuffer = LINEFEED_CHAR;
     pBuffer = &( pBuffer[ 1 ] );
@@ -2969,7 +2969,7 @@ static SigV4Status_t generateAuthorizationValuePrefix( const SigV4Parameters_t *
 
         pAuthBuf[ numOfBytesWritten ] = CREDENTIAL_SCOPE_SEPARATOR;
         numOfBytesWritten += CREDENTIAL_SCOPE_SEPARATOR_LEN;
-        credentialScope.pData = &( pAuthBuf[ numOfBytesWritten ] _;
+        credentialScope.pData = &( pAuthBuf[ numOfBytesWritten ] );
         /* #authBufLen is an overestimate but the validation was already done earlier. */
         credentialScope.dataLen = *pAuthPrefixLen;
         ( void ) generateCredentialScope( pParams, &credentialScope );
