@@ -22,7 +22,7 @@ set( MODULE_ROOT_DIR ${__MODULE_ROOT_DIR} CACHE INTERNAL "SigV4 repository root.
 # If no configuration is defined, turn everything on.
 if( NOT DEFINED COV_ANALYSIS AND NOT DEFINED UNITTEST )
     set( COV_ANALYSIS ON )
-    set( UNITTEST OFF )    # Backward compatibility
+    set( UNITTEST OFF )    # Default set to OFF for backward compatibility
 endif()
 
 # Set output directories.
