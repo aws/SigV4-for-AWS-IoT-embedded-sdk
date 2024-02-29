@@ -1101,6 +1101,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 {
     char * pBufWrite = NULL;
     size_t credScopeLen = sizeNeededForCredentialScope( pSigV4Params );
+    size_t copyStringResult;
 
     assert( pSigV4Params != NULL );
     assert( pSigV4Params->pCredentials != NULL );
@@ -1135,7 +1136,8 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
     pBufWrite = &pBufWrite[ CREDENTIAL_SCOPE_SEPARATOR_LEN ];
 
     /* Concatenate terminator. */
-    pBufWrite = &pBufWrite[ copyString( pBufWrite, CREDENTIAL_SCOPE_TERMINATOR, CREDENTIAL_SCOPE_TERMINATOR_LEN ) ];
+    copyStringResult = copyString( pBufWrite, CREDENTIAL_SCOPE_TERMINATOR, CREDENTIAL_SCOPE_TERMINATOR_LEN );
+    pBufWrite = &pBufWrite[ copyStringResult ];
 
     /* Verify that the number of bytes written match the sizeNeededForCredentialScope()
      * utility function for calculating size of credential scope. */
@@ -3293,6 +3295,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
      * Note that the StringToSign starts from the beginning of the processing buffer. */
     if( returnStatus == SigV4Success )
     {
+        /* MISRA Ref 18.2.1 [Pointer subtraction within array] */
         /* More details at: https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/blob/main/MISRA.md#rule-182 */
         /* coverity[misra_c_2012_rule_18_2_violation] */
         bufferLen = canonicalContext.pBufCur - ( char * ) canonicalContext.pBufProcessing;
