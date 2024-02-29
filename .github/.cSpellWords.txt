@@ -25,6 +25,7 @@ decihours
 Decihours
 DECIHOURS
 DNDEBUG
+DSIGV
 DUNITY
 DUNITTEST
 Ecjuve
