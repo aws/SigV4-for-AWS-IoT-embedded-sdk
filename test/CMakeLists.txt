@@ -7,6 +7,7 @@ project( "SigV4 tests"
 # Allow the project to be organized into folders.
 set_property( GLOBAL PROPERTY USE_FOLDERS ON )
 
+set( CMAKE_C_STANDARD 99 )
 set( CMAKE_C_STANDARD_REQUIRED ON )
 
 # Do not allow in-source build.
