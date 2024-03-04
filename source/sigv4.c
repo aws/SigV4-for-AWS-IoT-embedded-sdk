@@ -3293,6 +3293,8 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
      * Note that the StringToSign starts from the beginning of the processing buffer. */
     if( returnStatus == SigV4Success )
     {
+        assert( canonicalContext.pBufCur >= ( char * ) ( canonicalContext.pBufProcessing ) );
+        assert( canonicalContext.pBufCur <= ( char * ) ( &( canonicalContext.pBufProcessing[ SIGV4_PROCESSING_BUFFER_LENGTH - 1 ] ) ) );
         /* MISRA Ref 18.2.1 [Pointer subtraction within array] */
         /* More details at: https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/blob/main/MISRA.md#rule-182 */
         /* coverity[misra_c_2012_rule_18_2_violation] */
