@@ -21,3 +21,13 @@ _Ref 5.4.1_
         in use and changing the name will break existing user projects. Thus, for
         backwards compatibility, the macro is not modified and kept as is and the
         deviation is suppressed.
+
+_Ref 18.2.1_
+
+- MISRA Rule 18.2 states that two pointers may only be subtracted if they point
+        to elements of the same array. In this library, array of bytes are used to process
+        data. Functions which fill the arrays with data update an index to an offset.
+        To know the amount of data added to the array, the beginning address of the array has
+        to be subtracted from the index. It is manually verified that the index will always be
+        within bounds of the array. However, Coverity is flagging this as a deviation. Thus, we
+        are suppressing it.
