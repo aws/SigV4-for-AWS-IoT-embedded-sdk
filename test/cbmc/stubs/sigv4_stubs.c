@@ -136,11 +136,11 @@ SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
 {
     SigV4Status_t ret = SigV4InsufficientMemory;
 
-    assert( ( pCanonicalContext != NULL ) && ( pCanonicalContext->pBufCur != NULL ) );
+    assert( pCanonicalContext != NULL );
 
     if( pCanonicalContext->bufRemaining >= ( lineLen + 1U ) )
     {
-        assert( __CPROVER_w_ok( pCanonicalContext->pBufCur, ( lineLen + 1U ) ) );
+        assert( __CPROVER_w_ok( &( pCanonicalRequest->pBufProcessing[ pCanonicalContext->uxIndexCursor ] ), ( lineLen + 1U ) ) );
         ret = SigV4Success;
     }
 
@@ -179,7 +179,7 @@ SigV4Status_t generateCanonicalQuery( const char * pQuery,
 {
     SigV4Status_t returnStatus = SigV4InsufficientMemory;
 
-    assert( ( pCanonicalContext != NULL ) && ( pCanonicalContext->pBufCur != NULL ) );
+    assert( pCanonicalContext != NULL );
 
     if( nondet_bool() )
     {
@@ -205,7 +205,6 @@ SigV4Status_t generateCanonicalAndSignedHeaders( const char * pHeaders,
 
     assert( pHeaders != NULL );
     assert( pCanonicalContext != NULL );
-    assert( pCanonicalContext->pBufCur != NULL );
     assert( pSignedHeaders != NULL );
     assert( pSignedHeadersLen != NULL );
 
@@ -248,7 +247,6 @@ SigV4Status_t copyHeaderStringToCanonicalBuffer( const char * pData,
 
     assert( ( pData != NULL ) && ( dataLen > 0 ) );
     assert( canonicalRequest != NULL );
-    assert( canonicalRequest->pBufCur != NULL );
 
     buffRemaining = canonicalRequest->bufRemaining;
 
