@@ -50,7 +50,7 @@ void harness()
     __CPROVER_assume( canonicalRequest->bufRemaining < SIGV4_PROCESSING_BUFFER_LENGTH );
     bytesConsumed = SIGV4_PROCESSING_BUFFER_LENGTH - canonicalRequest->bufRemaining;
     __CPROVER_assume( dataLen > 0U && dataLen < CBMC_MAX_BUFSIZE );
-    canonicalRequest->pBufCur = ( char * ) canonicalRequest->pBufProcessing + bytesConsumed;
+    canonicalRequest->uxCursorIndex = bytesConsumed;
 
     pData = malloc( dataLen );
 
