@@ -183,7 +183,7 @@ static SigV4Status_t appendSignedHeaders( size_t headerCount,
  * @param[in] headerCount Number of headers which needs to be appended.
  * @param[in] flags Flag to indicate if headers are already
  * in the canonical form.
- * @param[in,out] canonicalRequest Struct to maintain intermediary buffer
+ * @param[in,out] pCanonicalRequest Struct to maintain intermediary buffer
  * and state of canonicalization.
  *
  * @return Following statuses will be returned by the function:
@@ -192,7 +192,7 @@ static SigV4Status_t appendSignedHeaders( size_t headerCount,
  */
 static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
                                                  uint32_t flags,
-                                                 CanonicalContext_t * canonicalRequest );
+                                                 CanonicalContext_t * pCanonicalRequest );
 
 /**
  * @brief Store the location of HTTP request hashed payload in the HTTP request.
@@ -216,7 +216,7 @@ static void storeHashedPayloadLocation( size_t headerIndex,
  * @param[in] flags Flag to indicate if headers are already
  * in the canonical form.
  * @param[out] headerCount Count of key-value pairs parsed from pData.
- * @param[out] canonicalRequest Struct to maintain intermediary buffer
+ * @param[out] pCanonicalRequest Struct to maintain intermediary buffer
  * and state of canonicalization.
  *
  * @return Following statuses will be returned by the function:
@@ -229,7 +229,7 @@ static SigV4Status_t parseHeaderKeyValueEntries( const char * pHeaders,
                                                  size_t headersDataLen,
                                                  uint32_t flags,
                                                  size_t * headerCount,
-                                                 CanonicalContext_t * canonicalRequest );
+                                                 CanonicalContext_t * pCanonicalRequest );
 
 /**
  * @brief Copy header key or header value to the Canonical Request buffer.
@@ -239,7 +239,7 @@ static SigV4Status_t parseHeaderKeyValueEntries( const char * pHeaders,
  * @param[in] flags Flag to indicate if headers are already
  * in the canonical form.
  * @param[in] separator Character separating the multiple key-value pairs or key and values.
- * @param[in,out] canonicalRequest Struct to maintain intermediary buffer
+ * @param[in,out] pCanonicalRequest Struct to maintain intermediary buffer
  * and state of canonicalization.
  *
  * @return Following statuses will be returned by the function:
@@ -250,7 +250,7 @@ static SigV4Status_t copyHeaderStringToCanonicalBuffer( const char * pData,
                                                         size_t dataLen,
                                                         uint32_t flags,
                                                         char separator,
-                                                        CanonicalContext_t * canonicalRequest );
+                                                        CanonicalContext_t * pCanonicalRequest );
 
 /**
  * @brief Helper function to determine whether a header string character represents a space
@@ -1420,14 +1420,12 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         SigV4Status_t returnStatus = SigV4Success;
         size_t uxBufIndex;
         size_t encodedLen = 0U;
-        size_t doubleEncodedLen = 0U;
 
         assert( pUri != NULL );
         assert( pCanonicalRequest != NULL );
 
         uxBufIndex = pCanonicalRequest->uxIndexCursor;
         encodedLen = pCanonicalRequest->bufRemaining;
-        doubleEncodedLen = pCanonicalRequest->bufRemaining - encodedLen;
 
         /* If the canonical URI needs to be encoded twice, then we encode once here,
          * and again at the end of the buffer. Afterwards, the second encode is copied
@@ -1438,6 +1436,8 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         {
             if( encodeTwice )
             {
+                size_t doubleEncodedLen = pCanonicalRequest->bufRemaining - encodedLen;
+
                 /* Note that the result of encoding the URI a second time must be
                  * written to a different position in the buffer. It should not be done
                  * at an overlapping position of the single-encoded URI. Once written,
@@ -1452,7 +1452,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                 if( returnStatus == SigV4Success )
                 {
                     ( void ) memmove( &( pCanonicalRequest->pBufProcessing[ uxBufIndex ] ), &( pCanonicalRequest->pBufProcessing[ uxBufIndex + encodedLen ] ), doubleEncodedLen );
-                    uxBufIndex = uxBufIndex + encodedLen;
+                    uxBufIndex = uxBufIndex + doubleEncodedLen;
                     pCanonicalRequest->bufRemaining -= doubleEncodedLen;
                 }
             }
@@ -1473,14 +1473,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             else
             {
                 pCanonicalRequest->pBufProcessing[ uxBufIndex ] = LINEFEED_CHAR;
-                if( encodeTwice )
-                {
-                    pCanonicalRequest->uxIndexCursor = pCanonicalRequest->uxIndexCursor + doubleEncodedLen + 1U;
-                }
-                else
-                {
-                    pCanonicalRequest->uxIndexCursor = pCanonicalRequest->uxIndexCursor + encodedLen + 1U;
-                }
+                pCanonicalRequest->uxIndexCursor = uxBufIndex + 1U;
                 pCanonicalRequest->bufRemaining -= 1U;
             }
         }
@@ -2658,7 +2651,7 @@ static SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
         pCanonicalContext->uxIndexCursor += lineLen;
 
         pCanonicalContext->pBufProcessing[ pCanonicalContext->uxIndexCursor ] = LINEFEED_CHAR;
-        pCanonicalContext->uxIndexCursor ++;
+        pCanonicalContext->uxIndexCursor++;
 
         pCanonicalContext->bufRemaining -= ( lineLen + 1U );
     }
