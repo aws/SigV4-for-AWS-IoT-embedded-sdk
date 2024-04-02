@@ -140,7 +140,7 @@ SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
 
     if( pCanonicalContext->bufRemaining >= ( lineLen + 1U ) )
     {
-        assert( __CPROVER_w_ok( &( pCanonicalRequest->pBufProcessing[ pCanonicalContext->uxIndexCursor ] ), ( lineLen + 1U ) ) );
+        assert( __CPROVER_w_ok( &( pCanonicalContext->pBufProcessing[ pCanonicalContext->uxCursorIndex ] ), ( lineLen + 1U ) ) );
         ret = SigV4Success;
     }
 
