@@ -1734,7 +1734,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 
         assert( pHeaders != NULL );
         assert( headersDataLen > 0 );
-        assert( canonicalRequest != NULL );
+        assert( pCanonicalRequest != NULL );
         assert( headerCount != NULL );
 
         noOfHeaders = *headerCount;
