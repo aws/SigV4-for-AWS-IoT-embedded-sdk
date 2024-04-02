@@ -1430,7 +1430,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         /* If the canonical URI needs to be encoded twice, then we encode once here,
          * and again at the end of the buffer. Afterwards, the second encode is copied
          * to overwrite the first one. */
-        returnStatus = encodeURI( pUri, uriLen, ( char * )&( pCanonicalRequest->pBufProcessing[ uxBufIndex ] ), &encodedLen, false, false );
+        returnStatus = encodeURI( pUri, uriLen, ( char * ) &( pCanonicalRequest->pBufProcessing[ uxBufIndex ] ), &encodedLen, false, false );
 
         if( returnStatus == SigV4Success )
         {
@@ -1442,9 +1442,9 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                  * written to a different position in the buffer. It should not be done
                  * at an overlapping position of the single-encoded URI. Once written,
                  * the double-encoded URI is moved to the starting location of the single-encoded URI. */
-                returnStatus = encodeURI( ( char * )&( pCanonicalRequest->pBufProcessing[ uxBufIndex ] ),
+                returnStatus = encodeURI( ( char * ) &( pCanonicalRequest->pBufProcessing[ uxBufIndex ] ),
                                           encodedLen,
-                                          ( char * )&( pCanonicalRequest->pBufProcessing[ uxBufIndex + encodedLen ] ),
+                                          ( char * ) &( pCanonicalRequest->pBufProcessing[ uxBufIndex + encodedLen ] ),
                                           &doubleEncodedLen,
                                           false,
                                           false );
@@ -1629,7 +1629,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         assert( headerCount > 0 );
 
         /* Store the starting location of the Signed Headers in the Canonical Request buffer. */
-        *pSignedHeaders = ( char * )&( pCanonicalRequest->pBufProcessing[ pCanonicalRequest->uxIndexCursor ] );
+        *pSignedHeaders = ( char * ) &( pCanonicalRequest->pBufProcessing[ pCanonicalRequest->uxIndexCursor ] );
         uxSignedHeaderIndex = pCanonicalRequest->uxIndexCursor;
 
         for( headerIndex = 0; headerIndex < headerCount; headerIndex++ )
@@ -2130,7 +2130,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             encodedLen = remainingLen;
             returnStatus = encodeURI( pCanonicalRequest->pQueryLoc[ paramsIndex ].key.pData,
                                       pCanonicalRequest->pQueryLoc[ paramsIndex ].key.dataLen,
-                                      ( char * )&( pCanonicalRequest->pBufProcessing[ uxBufIndex ] ),
+                                      ( char * ) &( pCanonicalRequest->pBufProcessing[ uxBufIndex ] ),
                                       &encodedLen,
                                       true /* Encode slash (/) */,
                                       false /* Do not double encode '='. */ );
@@ -2141,7 +2141,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                 remainingLen -= encodedLen;
 
                 assert( pCanonicalRequest->pQueryLoc[ paramsIndex ].value.pData != NULL );
-                returnStatus = writeValueInCanonicalizedQueryString( ( char * )&( pCanonicalRequest->pBufProcessing[ uxBufIndex ] ),
+                returnStatus = writeValueInCanonicalizedQueryString( ( char * ) &( pCanonicalRequest->pBufProcessing[ uxBufIndex ] ),
                                                                      remainingLen,
                                                                      pCanonicalRequest->pQueryLoc[ paramsIndex ].value.pData,
                                                                      pCanonicalRequest->pQueryLoc[ paramsIndex ].value.dataLen,
@@ -3122,7 +3122,7 @@ static SigV4Status_t writePayloadHashToCanonicalRequest( const SigV4Parameters_t
         /* Calculate hash of the request payload. */
         returnStatus = completeHashAndHexEncode( pParams->pHttpParameters->pPayload,
                                                  pParams->pHttpParameters->payloadLen,
-                                                 ( char * )&( pCanonicalContext->pBufProcessing[ pCanonicalContext->uxIndexCursor ] ),
+                                                 ( char * ) &( pCanonicalContext->pBufProcessing[ pCanonicalContext->uxIndexCursor ] ),
                                                  &encodedLen,
                                                  pParams->pCryptoInterface );
         pCanonicalContext->uxIndexCursor += encodedLen;
@@ -3274,7 +3274,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
     if( returnStatus == SigV4Success )
     {
         hmacContext.pCryptoInterface = pParams->pCryptoInterface;
-        signingKey.pData = ( char * )&( canonicalContext.pBufProcessing[ canonicalContext.uxIndexCursor ] );
+        signingKey.pData = ( char * ) &( canonicalContext.pBufProcessing[ canonicalContext.uxIndexCursor ] );
         signingKey.dataLen = canonicalContext.bufRemaining;
         returnStatus = generateSigningKey( pParams,
                                            &hmacContext,
@@ -3292,7 +3292,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
                                        signingKey.dataLen,
                                        ( char * ) canonicalContext.pBufProcessing,
                                        ( size_t ) bufferLen,
-                                       ( char * )&( canonicalContext.pBufProcessing[ canonicalContext.uxIndexCursor ] ),
+                                       ( char * ) &( canonicalContext.pBufProcessing[ canonicalContext.uxIndexCursor ] ),
                                        pParams->pCryptoInterface->hashDigestLen ) != 0 )
                        ? SigV4HashError : SigV4Success;
     }
@@ -3303,7 +3303,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
     {
         SigV4String_t originalHmac;
         SigV4String_t hexEncodedHmac;
-        originalHmac.pData = ( char * )&( canonicalContext.pBufProcessing[ canonicalContext.uxIndexCursor ] );
+        originalHmac.pData = ( char * ) &( canonicalContext.pBufProcessing[ canonicalContext.uxIndexCursor ] );
         originalHmac.dataLen = pParams->pCryptoInterface->hashDigestLen;
         hexEncodedHmac.pData = &( pAuthBuf[ authPrefixLen ] );
         /* #authBufLen is an overestimate but the validation was already done earlier. */
