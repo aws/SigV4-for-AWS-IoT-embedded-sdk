@@ -1472,7 +1472,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             }
             else
             {
-                pCanonicalRequest->pBufProcessing[ uxBufIndex ] = ( uint8_t ) LINEFEED_CHAR;
+                ( ( char * ) ( pCanonicalRequest->pBufProcessing ) )[ uxBufIndex ] = LINEFEED_CHAR;
                 pCanonicalRequest->uxCursorIndex = uxBufIndex + 1U;
                 pCanonicalRequest->bufRemaining -= 1U;
             }
@@ -1655,7 +1655,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         if( sigV4Status == SigV4Success )
         {
             /* Replacing the last ';' with '\n' as last header should not have ';'. */
-            pCanonicalRequest->pBufProcessing[ pCanonicalRequest->uxCursorIndex - 1U ] = ( uint8_t ) '\n';
+            ( ( char * ) ( pCanonicalRequest->pBufProcessing ) )[ pCanonicalRequest->uxCursorIndex - 1U ] = '\n';
         }
 
         return sigV4Status;
@@ -1868,7 +1868,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             }
             else
             {
-                canonicalRequest->pBufProcessing[ canonicalRequest->uxCursorIndex ] = ( uint8_t ) LINEFEED_CHAR;
+                ( ( char * ) ( canonicalRequest->pBufProcessing ) )[ canonicalRequest->uxCursorIndex ] = LINEFEED_CHAR;
                 canonicalRequest->uxCursorIndex++;
                 canonicalRequest->bufRemaining--;
             }
@@ -2158,7 +2158,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                  * space in the buffer. */
                 if( remainingLen > 0U )
                 {
-                    pCanonicalRequest->pBufProcessing[ uxBufIndex ] = ( uint8_t ) '&';
+                    ( ( char * ) ( pCanonicalRequest->pBufProcessing ) )[ uxBufIndex ] = '&';
                     uxBufIndex++;
                     remainingLen--;
                 }
@@ -2220,7 +2220,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             if( pCanonicalContext->bufRemaining > 0U )
             {
                 /* Append a linefeed at the end. */
-                pCanonicalContext->pBufProcessing[ pCanonicalContext->uxCursorIndex ] = ( uint8_t ) LINEFEED_CHAR;
+                ( ( char * ) ( pCanonicalContext->pBufProcessing ) )[ pCanonicalContext->uxCursorIndex ] = LINEFEED_CHAR;
                 pCanonicalContext->uxCursorIndex++;
                 pCanonicalContext->bufRemaining -= 1U;
             }
@@ -2650,7 +2650,7 @@ static SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
                          lineLen );
         pCanonicalContext->uxCursorIndex += lineLen;
 
-        pCanonicalContext->pBufProcessing[ pCanonicalContext->uxCursorIndex ] = ( uint8_t ) LINEFEED_CHAR;
+        ( ( char * ) ( pCanonicalContext->pBufProcessing ) )[ pCanonicalContext->uxCursorIndex ] = LINEFEED_CHAR;
         pCanonicalContext->uxCursorIndex++;
 
         pCanonicalContext->bufRemaining -= ( lineLen + 1U );
