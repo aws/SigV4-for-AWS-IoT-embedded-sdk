@@ -1578,11 +1578,11 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                  * does not need to be lowercased. */
                 if( separator == '\n' )
                 {
-                    pCanonicalRequest->pBufProcessing[ uxCurrBufIndex ] = ( uint8_t ) pData[ index ];
+                    ( ( char * ) pCanonicalRequest->pBufProcessing )[ uxCurrBufIndex ] = pData[ index ];
                 }
                 else
                 {
-                    pCanonicalRequest->pBufProcessing[ uxCurrBufIndex ] = ( uint8_t ) lowercaseCharacter( pData[ index ] );
+                    ( ( char * ) pCanonicalRequest->pBufProcessing )[ uxCurrBufIndex ] = lowercaseCharacter( pData[ index ] );
                 }
 
                 uxCurrBufIndex++;
@@ -1603,7 +1603,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         if( status == SigV4Success )
         {
             assert( buffRemaining >= 1 );
-            pCanonicalRequest->pBufProcessing[ uxCurrBufIndex ] = ( uint8_t ) separator;
+            ( ( char * ) ( pCanonicalRequest->pBufProcessing ) )[ uxCurrBufIndex ] = separator;
             uxCurrBufIndex++;
             pCanonicalRequest->uxCursorIndex = uxCurrBufIndex;
             pCanonicalRequest->bufRemaining = ( buffRemaining - 1U );
