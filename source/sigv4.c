@@ -166,14 +166,14 @@ static SigV4Status_t generateCanonicalAndSignedHeaders( const char * pHeaders,
  * @param[in] headerCount Number of headers which needs to be appended.
  * @param[in] flags Flag to indicate if headers are already
  * in the canonical form.
- * @param[in,out] canonicalRequest Struct to maintain intermediary buffer
+ * @param[in,out] pCanonicalRequest Struct to maintain intermediary buffer
  * and state of canonicalization.
  * @param[out] pSignedHeaders The starting location of the signed headers.
  * @param[out] pSignedHeadersLen The length of the signed headers.
  */
 static SigV4Status_t appendSignedHeaders( size_t headerCount,
                                           uint32_t flags,
-                                          CanonicalContext_t * canonicalRequest,
+                                          CanonicalContext_t * pCanonicalRequest,
                                           char ** pSignedHeaders,
                                           size_t * pSignedHeadersLen );
 
@@ -183,7 +183,7 @@ static SigV4Status_t appendSignedHeaders( size_t headerCount,
  * @param[in] headerCount Number of headers which needs to be appended.
  * @param[in] flags Flag to indicate if headers are already
  * in the canonical form.
- * @param[in,out] canonicalRequest Struct to maintain intermediary buffer
+ * @param[in,out] pCanonicalRequest Struct to maintain intermediary buffer
  * and state of canonicalization.
  *
  * @return Following statuses will be returned by the function:
@@ -192,7 +192,7 @@ static SigV4Status_t appendSignedHeaders( size_t headerCount,
  */
 static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
                                                  uint32_t flags,
-                                                 CanonicalContext_t * canonicalRequest );
+                                                 CanonicalContext_t * pCanonicalRequest );
 
 /**
  * @brief Store the location of HTTP request hashed payload in the HTTP request.
@@ -216,7 +216,7 @@ static void storeHashedPayloadLocation( size_t headerIndex,
  * @param[in] flags Flag to indicate if headers are already
  * in the canonical form.
  * @param[out] headerCount Count of key-value pairs parsed from pData.
- * @param[out] canonicalRequest Struct to maintain intermediary buffer
+ * @param[out] pCanonicalRequest Struct to maintain intermediary buffer
  * and state of canonicalization.
  *
  * @return Following statuses will be returned by the function:
@@ -229,7 +229,7 @@ static SigV4Status_t parseHeaderKeyValueEntries( const char * pHeaders,
                                                  size_t headersDataLen,
                                                  uint32_t flags,
                                                  size_t * headerCount,
-                                                 CanonicalContext_t * canonicalRequest );
+                                                 CanonicalContext_t * pCanonicalRequest );
 
 /**
  * @brief Copy header key or header value to the Canonical Request buffer.
@@ -239,7 +239,7 @@ static SigV4Status_t parseHeaderKeyValueEntries( const char * pHeaders,
  * @param[in] flags Flag to indicate if headers are already
  * in the canonical form.
  * @param[in] separator Character separating the multiple key-value pairs or key and values.
- * @param[in,out] canonicalRequest Struct to maintain intermediary buffer
+ * @param[in,out] pCanonicalRequest Struct to maintain intermediary buffer
  * and state of canonicalization.
  *
  * @return Following statuses will be returned by the function:
@@ -250,7 +250,7 @@ static SigV4Status_t copyHeaderStringToCanonicalBuffer( const char * pData,
                                                         size_t dataLen,
                                                         uint32_t flags,
                                                         char separator,
-                                                        CanonicalContext_t * canonicalRequest );
+                                                        CanonicalContext_t * pCanonicalRequest );
 
 /**
  * @brief Helper function to determine whether a header string character represents a space
@@ -1418,20 +1418,19 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                                                CanonicalContext_t * pCanonicalRequest )
     {
         SigV4Status_t returnStatus = SigV4Success;
-        char * pBufLoc = NULL;
+        size_t uxBufIndex;
         size_t encodedLen = 0U;
 
         assert( pUri != NULL );
         assert( pCanonicalRequest != NULL );
-        assert( pCanonicalRequest->pBufCur != NULL );
 
-        pBufLoc = pCanonicalRequest->pBufCur;
+        uxBufIndex = pCanonicalRequest->uxCursorIndex;
         encodedLen = pCanonicalRequest->bufRemaining;
 
         /* If the canonical URI needs to be encoded twice, then we encode once here,
          * and again at the end of the buffer. Afterwards, the second encode is copied
          * to overwrite the first one. */
-        returnStatus = encodeURI( pUri, uriLen, pBufLoc, &encodedLen, false, false );
+        returnStatus = encodeURI( pUri, uriLen, ( char * ) &( pCanonicalRequest->pBufProcessing[ uxBufIndex ] ), &encodedLen, false, false );
 
         if( returnStatus == SigV4Success )
         {
@@ -1443,23 +1442,23 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                  * written to a different position in the buffer. It should not be done
                  * at an overlapping position of the single-encoded URI. Once written,
                  * the double-encoded URI is moved to the starting location of the single-encoded URI. */
-                returnStatus = encodeURI( pBufLoc,
+                returnStatus = encodeURI( ( char * ) &( pCanonicalRequest->pBufProcessing[ uxBufIndex ] ),
                                           encodedLen,
-                                          &( pBufLoc[ encodedLen ] ),
+                                          ( char * ) &( pCanonicalRequest->pBufProcessing[ uxBufIndex + encodedLen ] ),
                                           &doubleEncodedLen,
                                           false,
                                           false );
 
                 if( returnStatus == SigV4Success )
                 {
-                    ( void ) memmove( pBufLoc, &( pBufLoc[ encodedLen ] ), doubleEncodedLen );
-                    pBufLoc = &( pBufLoc[ doubleEncodedLen ] );
+                    ( void ) memmove( &( pCanonicalRequest->pBufProcessing[ uxBufIndex ] ), &( pCanonicalRequest->pBufProcessing[ uxBufIndex + encodedLen ] ), doubleEncodedLen );
+                    uxBufIndex = uxBufIndex + doubleEncodedLen;
                     pCanonicalRequest->bufRemaining -= doubleEncodedLen;
                 }
             }
             else
             {
-                pBufLoc = &( pBufLoc[ encodedLen ] );
+                uxBufIndex = uxBufIndex + encodedLen;
                 pCanonicalRequest->bufRemaining -= encodedLen;
             }
         }
@@ -1473,8 +1472,8 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             }
             else
             {
-                *pBufLoc = LINEFEED_CHAR;
-                pCanonicalRequest->pBufCur = &( pBufLoc[ 1 ] );
+                ( ( char * ) ( pCanonicalRequest->pBufProcessing ) )[ uxBufIndex ] = LINEFEED_CHAR;
+                pCanonicalRequest->uxCursorIndex = uxBufIndex + 1U;
                 pCanonicalRequest->bufRemaining -= 1U;
             }
         }
@@ -1544,20 +1543,19 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                                                             size_t dataLen,
                                                             uint32_t flags,
                                                             char separator,
-                                                            CanonicalContext_t * canonicalRequest )
+                                                            CanonicalContext_t * pCanonicalRequest )
     {
         SigV4Status_t status = SigV4Success;
         size_t index = 0;
         size_t numOfBytesCopied = 0;
         size_t buffRemaining;
-        char * pCurrBufLoc;
+        size_t uxCurrBufIndex;
 
         assert( ( pData != NULL ) && ( dataLen > 0 ) );
-        assert( canonicalRequest != NULL );
-        assert( canonicalRequest->pBufCur != NULL );
+        assert( pCanonicalRequest != NULL );
 
-        buffRemaining = canonicalRequest->bufRemaining;
-        pCurrBufLoc = canonicalRequest->pBufCur;
+        buffRemaining = pCanonicalRequest->bufRemaining;
+        uxCurrBufIndex = pCanonicalRequest->uxCursorIndex;
 
         for( index = 0; index < dataLen; index++ )
         {
@@ -1580,14 +1578,14 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                  * does not need to be lowercased. */
                 if( separator == '\n' )
                 {
-                    *pCurrBufLoc = ( pData[ index ] );
+                    ( ( char * ) pCanonicalRequest->pBufProcessing )[ uxCurrBufIndex ] = pData[ index ];
                 }
                 else
                 {
-                    *pCurrBufLoc = lowercaseCharacter( pData[ index ] );
+                    ( ( char * ) pCanonicalRequest->pBufProcessing )[ uxCurrBufIndex ] = lowercaseCharacter( pData[ index ] );
                 }
 
-                pCurrBufLoc++;
+                uxCurrBufIndex++;
                 numOfBytesCopied++;
                 buffRemaining--;
             }
@@ -1605,10 +1603,10 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         if( status == SigV4Success )
         {
             assert( buffRemaining >= 1 );
-            *pCurrBufLoc = separator;
-            pCurrBufLoc++;
-            canonicalRequest->pBufCur = pCurrBufLoc;
-            canonicalRequest->bufRemaining = ( buffRemaining - 1U );
+            ( ( char * ) ( pCanonicalRequest->pBufProcessing ) )[ uxCurrBufIndex ] = separator;
+            uxCurrBufIndex++;
+            pCanonicalRequest->uxCursorIndex = uxCurrBufIndex;
+            pCanonicalRequest->bufRemaining = ( buffRemaining - 1U );
         }
 
         return status;
@@ -1618,31 +1616,31 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 
     static SigV4Status_t appendSignedHeaders( size_t headerCount,
                                               uint32_t flags,
-                                              CanonicalContext_t * canonicalRequest,
+                                              CanonicalContext_t * pCanonicalRequest,
                                               char ** pSignedHeaders,
                                               size_t * pSignedHeadersLen )
     {
         size_t headerIndex = 0, keyLen = 0;
         SigV4Status_t sigV4Status = SigV4Success;
         const char * headerKey;
-        ptrdiff_t signedHeadersLen = 0;
+        size_t uxSignedHeaderIndex;
 
-        assert( canonicalRequest != NULL );
-        assert( canonicalRequest->pBufCur != NULL );
+        assert( pCanonicalRequest != NULL );
         assert( headerCount > 0 );
 
         /* Store the starting location of the Signed Headers in the Canonical Request buffer. */
-        *pSignedHeaders = canonicalRequest->pBufCur;
+        *pSignedHeaders = ( char * ) &( pCanonicalRequest->pBufProcessing[ pCanonicalRequest->uxCursorIndex ] );
+        uxSignedHeaderIndex = pCanonicalRequest->uxCursorIndex;
 
         for( headerIndex = 0; headerIndex < headerCount; headerIndex++ )
         {
-            assert( ( canonicalRequest->pHeadersLoc[ headerIndex ].key.pData ) != NULL );
-            keyLen = canonicalRequest->pHeadersLoc[ headerIndex ].key.dataLen;
+            assert( ( pCanonicalRequest->pHeadersLoc[ headerIndex ].key.pData ) != NULL );
+            keyLen = pCanonicalRequest->pHeadersLoc[ headerIndex ].key.dataLen;
 
-            headerKey = canonicalRequest->pHeadersLoc[ headerIndex ].key.pData;
+            headerKey = pCanonicalRequest->pHeadersLoc[ headerIndex ].key.pData;
 
             /* ';' is used to separate signed multiple headers in the canonical request. */
-            sigV4Status = copyHeaderStringToCanonicalBuffer( headerKey, keyLen, flags, ';', canonicalRequest );
+            sigV4Status = copyHeaderStringToCanonicalBuffer( headerKey, keyLen, flags, ';', pCanonicalRequest );
 
             if( sigV4Status != SigV4Success )
             {
@@ -1652,13 +1650,12 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         }
 
         /* Store the length of the "Signed Headers" data appended to the Canonical Request. */
-        signedHeadersLen = canonicalRequest->pBufCur - *pSignedHeaders - 1;
-        *pSignedHeadersLen = ( size_t ) signedHeadersLen;
+        *pSignedHeadersLen = pCanonicalRequest->uxCursorIndex - uxSignedHeaderIndex - 1U;
 
         if( sigV4Status == SigV4Success )
         {
             /* Replacing the last ';' with '\n' as last header should not have ';'. */
-            canonicalRequest->pBufCur[ -1 ] = '\n';
+            ( ( char * ) ( pCanonicalRequest->pBufProcessing ) )[ pCanonicalRequest->uxCursorIndex - 1U ] = '\n';
         }
 
         return sigV4Status;
@@ -1685,31 +1682,30 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 
     static SigV4Status_t appendCanonicalizedHeaders( size_t headerCount,
                                                      uint32_t flags,
-                                                     CanonicalContext_t * canonicalRequest )
+                                                     CanonicalContext_t * pCanonicalRequest )
     {
         size_t headerIndex = 0, keyLen = 0, valLen = 0;
         const char * value;
         const char * headerKey;
         SigV4Status_t sigV4Status = SigV4Success;
 
-        assert( canonicalRequest != NULL );
-        assert( canonicalRequest->pBufCur != NULL );
+        assert( pCanonicalRequest != NULL );
         assert( headerCount > 0 );
 
         for( headerIndex = 0; headerIndex < headerCount; headerIndex++ )
         {
-            assert( canonicalRequest->pHeadersLoc[ headerIndex ].key.pData != NULL );
-            keyLen = canonicalRequest->pHeadersLoc[ headerIndex ].key.dataLen;
-            valLen = canonicalRequest->pHeadersLoc[ headerIndex ].value.dataLen;
-            headerKey = canonicalRequest->pHeadersLoc[ headerIndex ].key.pData;
+            assert( pCanonicalRequest->pHeadersLoc[ headerIndex ].key.pData != NULL );
+            keyLen = pCanonicalRequest->pHeadersLoc[ headerIndex ].key.dataLen;
+            valLen = pCanonicalRequest->pHeadersLoc[ headerIndex ].value.dataLen;
+            headerKey = pCanonicalRequest->pHeadersLoc[ headerIndex ].key.pData;
             /* ':' is used to separate header key and header value in the canonical request. */
-            sigV4Status = copyHeaderStringToCanonicalBuffer( headerKey, keyLen, flags, ':', canonicalRequest );
+            sigV4Status = copyHeaderStringToCanonicalBuffer( headerKey, keyLen, flags, ':', pCanonicalRequest );
 
             if( sigV4Status == SigV4Success )
             {
-                value = canonicalRequest->pHeadersLoc[ headerIndex ].value.pData;
+                value = pCanonicalRequest->pHeadersLoc[ headerIndex ].value.pData;
                 /* '\n' is used to separate each key-value pair in the canonical request. */
-                sigV4Status = copyHeaderStringToCanonicalBuffer( value, valLen, flags, '\n', canonicalRequest );
+                sigV4Status = copyHeaderStringToCanonicalBuffer( value, valLen, flags, '\n', pCanonicalRequest );
             }
 
             if( sigV4Status != SigV4Success )
@@ -1727,7 +1723,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                                                      size_t headersDataLen,
                                                      uint32_t flags,
                                                      size_t * headerCount,
-                                                     CanonicalContext_t * canonicalRequest )
+                                                     CanonicalContext_t * pCanonicalRequest )
     {
         size_t index = 0, noOfHeaders;
         const char * pKeyOrValStartLoc;
@@ -1738,7 +1734,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 
         assert( pHeaders != NULL );
         assert( headersDataLen > 0 );
-        assert( canonicalRequest != NULL );
+        assert( pCanonicalRequest != NULL );
         assert( headerCount != NULL );
 
         noOfHeaders = *headerCount;
@@ -1756,8 +1752,8 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             else if( ( keyFlag ) && ( pHeaders[ index ] == ':' ) )
             {
                 dataLen = pCurrLoc - pKeyOrValStartLoc;
-                canonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData = pKeyOrValStartLoc;
-                canonicalRequest->pHeadersLoc[ noOfHeaders ].key.dataLen = ( size_t ) dataLen;
+                pCanonicalRequest->pHeadersLoc[ noOfHeaders ].key.pData = pKeyOrValStartLoc;
+                pCanonicalRequest->pHeadersLoc[ noOfHeaders ].key.dataLen = ( size_t ) dataLen;
                 pKeyOrValStartLoc = &( pCurrLoc[ 1 ] );
                 keyFlag = false;
             }
@@ -1767,11 +1763,11 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                      ( 0 == strncmp( pCurrLoc, HTTP_REQUEST_LINE_ENDING, HTTP_REQUEST_LINE_ENDING_LEN ) ) )
             {
                 dataLen = pCurrLoc - pKeyOrValStartLoc;
-                canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = pKeyOrValStartLoc;
-                canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( size_t ) dataLen;
+                pCanonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = pKeyOrValStartLoc;
+                pCanonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( size_t ) dataLen;
 
                 /* Storing location of hashed request payload */
-                storeHashedPayloadLocation( noOfHeaders, SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER, SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER_LENGTH, canonicalRequest );
+                storeHashedPayloadLocation( noOfHeaders, SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER, SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER_LENGTH, pCanonicalRequest );
 
                 /* Set starting location of the next header key string after the "\r\n". */
                 pKeyOrValStartLoc = &( pCurrLoc[ 2 ] );
@@ -1782,11 +1778,11 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             else if( ( !keyFlag ) && FLAG_IS_SET( flags, SIGV4_HTTP_HEADERS_ARE_CANONICAL_FLAG ) && ( pHeaders[ index ] == '\n' ) )
             {
                 dataLen = pCurrLoc - pKeyOrValStartLoc;
-                canonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = pKeyOrValStartLoc;
-                canonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( size_t ) dataLen;
+                pCanonicalRequest->pHeadersLoc[ noOfHeaders ].value.pData = pKeyOrValStartLoc;
+                pCanonicalRequest->pHeadersLoc[ noOfHeaders ].value.dataLen = ( size_t ) dataLen;
 
                 /* Storing location of hashed request payload */
-                storeHashedPayloadLocation( noOfHeaders, SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER, SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER_LENGTH, canonicalRequest );
+                storeHashedPayloadLocation( noOfHeaders, SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER, SIGV4_HTTP_X_AMZ_CONTENT_SHA256_HEADER_LENGTH, pCanonicalRequest );
 
                 /* Set starting location of the next header key string after the "\n". */
                 pKeyOrValStartLoc = &( pCurrLoc[ 1 ] );
@@ -1832,7 +1828,6 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 
         assert( pHeaders != NULL );
         assert( canonicalRequest != NULL );
-        assert( canonicalRequest->pBufCur != NULL );
         assert( pSignedHeaders != NULL );
         assert( pSignedHeadersLen != NULL );
 
@@ -1873,8 +1868,8 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             }
             else
             {
-                *canonicalRequest->pBufCur = LINEFEED_CHAR;
-                canonicalRequest->pBufCur++;
+                ( ( char * ) ( canonicalRequest->pBufProcessing ) )[ canonicalRequest->uxCursorIndex ] = LINEFEED_CHAR;
+                canonicalRequest->uxCursorIndex++;
                 canonicalRequest->bufRemaining--;
             }
         }
@@ -2118,14 +2113,13 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                                                         const bool doubleEncodeEqualsInParmsValues )
     {
         SigV4Status_t returnStatus = SigV4Success;
-        char * pBufLoc = NULL;
+        size_t uxBufIndex;
         size_t encodedLen = 0U, remainingLen = 0U, paramsIndex = 0U;
 
         assert( pCanonicalRequest != NULL );
-        assert( pCanonicalRequest->pBufCur != NULL );
         assert( pCanonicalRequest->pQueryLoc != NULL );
 
-        pBufLoc = pCanonicalRequest->pBufCur;
+        uxBufIndex = pCanonicalRequest->uxCursorIndex;
         remainingLen = pCanonicalRequest->bufRemaining;
 
         for( paramsIndex = 0U; paramsIndex < numberOfParameters; paramsIndex++ )
@@ -2136,24 +2130,24 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             encodedLen = remainingLen;
             returnStatus = encodeURI( pCanonicalRequest->pQueryLoc[ paramsIndex ].key.pData,
                                       pCanonicalRequest->pQueryLoc[ paramsIndex ].key.dataLen,
-                                      pBufLoc,
+                                      ( char * ) &( pCanonicalRequest->pBufProcessing[ uxBufIndex ] ),
                                       &encodedLen,
                                       true /* Encode slash (/) */,
                                       false /* Do not double encode '='. */ );
 
             if( returnStatus == SigV4Success )
             {
-                pBufLoc = &( pBufLoc[ encodedLen ] );
+                uxBufIndex = uxBufIndex + encodedLen;
                 remainingLen -= encodedLen;
 
                 assert( pCanonicalRequest->pQueryLoc[ paramsIndex ].value.pData != NULL );
-                returnStatus = writeValueInCanonicalizedQueryString( pBufLoc,
+                returnStatus = writeValueInCanonicalizedQueryString( ( char * ) &( pCanonicalRequest->pBufProcessing[ uxBufIndex ] ),
                                                                      remainingLen,
                                                                      pCanonicalRequest->pQueryLoc[ paramsIndex ].value.pData,
                                                                      pCanonicalRequest->pQueryLoc[ paramsIndex ].value.dataLen,
                                                                      &encodedLen,
                                                                      doubleEncodeEqualsInParmsValues );
-                pBufLoc = &( pBufLoc[ encodedLen ] );
+                uxBufIndex = uxBufIndex + encodedLen;
                 remainingLen -= encodedLen;
             }
 
@@ -2164,8 +2158,8 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                  * space in the buffer. */
                 if( remainingLen > 0U )
                 {
-                    *pBufLoc = '&';
-                    ++pBufLoc;
+                    ( ( char * ) ( pCanonicalRequest->pBufProcessing ) )[ uxBufIndex ] = '&';
+                    uxBufIndex++;
                     remainingLen--;
                 }
 
@@ -2183,7 +2177,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         /* Update the context state if canonical query generation was successful. */
         if( returnStatus == SigV4Success )
         {
-            pCanonicalRequest->pBufCur = pBufLoc;
+            pCanonicalRequest->uxCursorIndex = uxBufIndex;
             pCanonicalRequest->bufRemaining = remainingLen;
         }
 
@@ -2201,7 +2195,6 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         size_t numberOfParameters = 0U;
 
         assert( pCanonicalContext != NULL );
-        assert( pCanonicalContext->pBufCur != NULL );
 
         if( pQuery != NULL )
         {
@@ -2227,8 +2220,8 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             if( pCanonicalContext->bufRemaining > 0U )
             {
                 /* Append a linefeed at the end. */
-                *pCanonicalContext->pBufCur = LINEFEED_CHAR;
-                pCanonicalContext->pBufCur = &pCanonicalContext->pBufCur[ 1 ];
+                ( ( char * ) ( pCanonicalContext->pBufProcessing ) )[ pCanonicalContext->uxCursorIndex ] = LINEFEED_CHAR;
+                pCanonicalContext->uxCursorIndex++;
                 pCanonicalContext->bufRemaining -= 1U;
             }
             else
@@ -2643,7 +2636,7 @@ static SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
     SigV4Status_t returnStatus = SigV4Success;
 
     assert( pLine != NULL );
-    assert( ( pCanonicalContext != NULL ) && ( pCanonicalContext->pBufCur != NULL ) );
+    assert( pCanonicalContext != NULL );
 
     /* Make sure that there is space for the Method and the newline character.*/
     if( pCanonicalContext->bufRemaining < ( lineLen + 1U ) )
@@ -2652,13 +2645,13 @@ static SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
     }
     else
     {
-        ( void ) memcpy( pCanonicalContext->pBufCur,
+        ( void ) memcpy( ( char * ) &( pCanonicalContext->pBufProcessing[ pCanonicalContext->uxCursorIndex ] ),
                          pLine,
                          lineLen );
-        pCanonicalContext->pBufCur = &pCanonicalContext->pBufCur[ lineLen ];
+        pCanonicalContext->uxCursorIndex += lineLen;
 
-        *( pCanonicalContext->pBufCur ) = LINEFEED_CHAR;
-        pCanonicalContext->pBufCur = &pCanonicalContext->pBufCur[ 1 ];
+        ( ( char * ) ( pCanonicalContext->pBufProcessing ) )[ pCanonicalContext->uxCursorIndex ] = LINEFEED_CHAR;
+        pCanonicalContext->uxCursorIndex++;
 
         pCanonicalContext->bufRemaining -= ( lineLen + 1U );
     }
@@ -2738,7 +2731,7 @@ static SigV4Status_t writeStringToSign( const SigV4Parameters_t * pParams,
 {
     SigV4Status_t returnStatus = SigV4Success;
     char * pBufStart = ( char * ) pCanonicalContext->pBufProcessing;
-    ptrdiff_t bufferLen = pCanonicalContext->pBufCur - pBufStart;
+    size_t uxBufferLen = pCanonicalContext->uxCursorIndex;
     /* An overestimate but sufficient memory is checked before proceeding. */
     size_t encodedLen = SIGV4_PROCESSING_BUFFER_LENGTH;
 
@@ -2771,7 +2764,7 @@ static SigV4Status_t writeStringToSign( const SigV4Parameters_t * pParams,
     {
         /* Hash the canonical request to its precalculated location in the string to sign. */
         returnStatus = completeHashAndHexEncode( pBufStart,
-                                                 ( size_t ) bufferLen,
+                                                 uxBufferLen,
                                                  &( pBufStart[ sizeNeededBeforeHash ] ),
                                                  &encodedLen,
                                                  pParams->pCryptoInterface );
@@ -2782,7 +2775,7 @@ static SigV4Status_t writeStringToSign( const SigV4Parameters_t * pParams,
         size_t bytesWritten = 0U;
         SigV4String_t credentialScope;
 
-        pCanonicalContext->pBufCur = &( pBufStart[ sizeNeededBeforeHash + encodedLen ] );
+        pCanonicalContext->uxCursorIndex = sizeNeededBeforeHash + encodedLen;
         pCanonicalContext->bufRemaining = SIGV4_PROCESSING_BUFFER_LENGTH - encodedLen - sizeNeededBeforeHash;
 
         bytesWritten = writeStringToSignPrefix( pBufStart,
@@ -2802,7 +2795,7 @@ static SigV4Status_t writeStringToSign( const SigV4Parameters_t * pParams,
     if( returnStatus == SigV4Success )
     {
         LogDebug( ( "Generated String To Sign Key: %.*s",
-                    ( unsigned int ) ( pCanonicalContext->pBufCur - pBufStart ),
+                    ( unsigned int ) ( pCanonicalContext->uxCursorIndex ),
                     pBufStart ) );
     }
 
@@ -2839,7 +2832,7 @@ static SigV4Status_t generateCanonicalRequestUntilHeaders( const SigV4Parameters
         pathLen = pParams->pHttpParameters->pathLen;
     }
 
-    pCanonicalContext->pBufCur = ( char * ) pCanonicalContext->pBufProcessing;
+    pCanonicalContext->uxCursorIndex = 0;
     pCanonicalContext->bufRemaining = SIGV4_PROCESSING_BUFFER_LENGTH;
 
     /* Write the HTTP Request Method to the canonical request. */
@@ -3114,14 +3107,14 @@ static SigV4Status_t writePayloadHashToCanonicalRequest( const SigV4Parameters_t
         /* Copy the hashed payload data supplied by the user in the headers data list. */
         returnStatus = copyHeaderStringToCanonicalBuffer( pCanonicalContext->pHashPayloadLoc, pCanonicalContext->hashPayloadLen, pParams->pHttpParameters->flags, '\n', pCanonicalContext );
         /* Remove new line at the end of the payload. */
-        pCanonicalContext->pBufCur--;
+        pCanonicalContext->uxCursorIndex--;
     }
     else if( FLAG_IS_SET( pParams->pHttpParameters->flags, SIGV4_HTTP_IS_PRESIGNED_URL ) )
     {
         /* Copy the UNSIGNED-PAYLOAD data in the headers data list. */
         returnStatus = copyHeaderStringToCanonicalBuffer( "UNSIGNED-PAYLOAD", strlen( "UNSIGNED-PAYLOAD" ), pParams->pHttpParameters->flags, '\n', pCanonicalContext );
         /* Remove new line at the end of the payload. */
-        pCanonicalContext->pBufCur--;
+        pCanonicalContext->uxCursorIndex--;
     }
     else
     {
@@ -3129,10 +3122,10 @@ static SigV4Status_t writePayloadHashToCanonicalRequest( const SigV4Parameters_t
         /* Calculate hash of the request payload. */
         returnStatus = completeHashAndHexEncode( pParams->pHttpParameters->pPayload,
                                                  pParams->pHttpParameters->payloadLen,
-                                                 pCanonicalContext->pBufCur,
+                                                 ( char * ) &( pCanonicalContext->pBufProcessing[ pCanonicalContext->uxCursorIndex ] ),
                                                  &encodedLen,
                                                  pParams->pCryptoInterface );
-        pCanonicalContext->pBufCur = &pCanonicalContext->pBufCur[ encodedLen ];
+        pCanonicalContext->uxCursorIndex += encodedLen;
         pCanonicalContext->bufRemaining -= encodedLen;
     }
 
@@ -3230,7 +3223,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
     HmacContext_t hmacContext = { 0 };
 
     SigV4String_t signingKey;
-    ptrdiff_t bufferLen;
+    size_t uxBufferLen;
 
     returnStatus = verifyParamsToGenerateAuthHeaderApi( pParams,
                                                         pAuthBuf, authBufLen,
@@ -3259,7 +3252,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
     if( returnStatus == SigV4Success )
     {
         LogDebug( ( "Generated Canonical Request: %.*s",
-                    ( unsigned int ) ( ( uint8_t * ) canonicalContext.pBufCur - canonicalContext.pBufProcessing ),
+                    ( unsigned int ) ( canonicalContext.uxCursorIndex ),
                     canonicalContext.pBufProcessing ) );
 
         authPrefixLen = *authBufLen;
@@ -3281,7 +3274,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
     if( returnStatus == SigV4Success )
     {
         hmacContext.pCryptoInterface = pParams->pCryptoInterface;
-        signingKey.pData = canonicalContext.pBufCur;
+        signingKey.pData = ( char * ) &( canonicalContext.pBufProcessing[ canonicalContext.uxCursorIndex ] );
         signingKey.dataLen = canonicalContext.bufRemaining;
         returnStatus = generateSigningKey( pParams,
                                            &hmacContext,
@@ -3293,18 +3286,13 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
      * Note that the StringToSign starts from the beginning of the processing buffer. */
     if( returnStatus == SigV4Success )
     {
-        assert( canonicalContext.pBufCur >= ( char * ) ( canonicalContext.pBufProcessing ) );
-        assert( canonicalContext.pBufCur <= ( char * ) ( &( canonicalContext.pBufProcessing[ SIGV4_PROCESSING_BUFFER_LENGTH - 1 ] ) ) );
-        /* MISRA Ref 18.2.1 [Pointer subtraction within array] */
-        /* More details at: https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/blob/main/MISRA.md#rule-182 */
-        /* coverity[misra_c_2012_rule_18_2_violation] */
-        bufferLen = canonicalContext.pBufCur - ( char * ) canonicalContext.pBufProcessing;
+        uxBufferLen = canonicalContext.uxCursorIndex;
         returnStatus = ( completeHmac( &hmacContext,
                                        signingKey.pData,
                                        signingKey.dataLen,
                                        ( char * ) canonicalContext.pBufProcessing,
-                                       ( size_t ) bufferLen,
-                                       canonicalContext.pBufCur,
+                                       uxBufferLen,
+                                       ( char * ) &( canonicalContext.pBufProcessing[ canonicalContext.uxCursorIndex ] ),
                                        pParams->pCryptoInterface->hashDigestLen ) != 0 )
                        ? SigV4HashError : SigV4Success;
     }
@@ -3315,7 +3303,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
     {
         SigV4String_t originalHmac;
         SigV4String_t hexEncodedHmac;
-        originalHmac.pData = canonicalContext.pBufCur;
+        originalHmac.pData = ( char * ) &( canonicalContext.pBufProcessing[ canonicalContext.uxCursorIndex ] );
         originalHmac.dataLen = pParams->pCryptoInterface->hashDigestLen;
         hexEncodedHmac.pData = &( pAuthBuf[ authPrefixLen ] );
         /* #authBufLen is an overestimate but the validation was already done earlier. */

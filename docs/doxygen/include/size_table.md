@@ -9,8 +9,8 @@
     </tr>
     <tr>
         <td>sigv4.c</td>
-        <td><center>5.3K</center></td>
-        <td><center>4.4K</center></td>
+        <td><center>5.4K</center></td>
+        <td><center>4.5K</center></td>
     </tr>
     <tr>
         <td>sigv4_quicksort.c</td>
@@ -19,7 +19,7 @@
     </tr>
     <tr>
         <td><b>Total estimates</b></td>
-        <td><b><center>5.7K</center></b></td>
-        <td><b><center>4.7K</center></b></td>
+        <td><b><center>5.8K</center></b></td>
+        <td><b><center>4.8K</center></b></td>
     </tr>
 </table>
