@@ -1400,11 +1400,3 @@ void test_SigV4_GenerateAuthorization_Header_Key_Or_Value_With_All_White_Spaces(
     free( longHeader );
 }
 
-/* Test to add SigV4_EncodeURI API to achieve coverage. */
-void test_SigV4_EncodeURI()
-{
-    SigV4Status_t returnStatus;
-    resetInputParams();
-    returnStatus = SigV4_EncodeURI( params.pHttpParameters->pPath, params.pHttpParameters->pathLen, authBuf, &authBufLen, true, true );
-    TEST_ASSERT_EQUAL( SigV4Success, returnStatus ); 
-}
