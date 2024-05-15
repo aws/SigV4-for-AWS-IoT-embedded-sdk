@@ -245,6 +245,8 @@ static int32_t valid_sha256_final( void * pHashContext,
                                    uint8_t * pOutput,
                                    size_t outputLen )
 {
+    ( void )outputLen;
+
     if( SHA256_Final( ( uint8_t * ) pOutput, ( SHA256_CTX * ) pHashContext ) )
     {
         return 0;
@@ -263,6 +265,8 @@ static size_t finalHashCalledCount = 0U, finalHashCallToFail = SIZE_MAX;
 
 static int32_t hash_init_failable( void * pHashContext )
 {
+    ( void )pHashContext;
+
     int32_t ret = 0;
 
     if( hashInitCalledCount++ == hashInitCallToFail )
@@ -277,6 +281,10 @@ static int32_t hash_update_failable( void * pHashContext,
                                      const uint8_t * pInput,
                                      size_t inputLen )
 {
+    ( void )pHashContext;
+    ( void )pInput;
+    ( void )inputLen;
+
     int32_t ret = 0;
 
     if( updateHashCalledCount++ == updateHashCallToFail )
@@ -291,6 +299,10 @@ static int32_t hash_final_failable( void * pHashContext,
                                     uint8_t * pOutput,
                                     size_t outputLen )
 {
+    ( void )pHashContext;
+    ( void )pOutput;
+    ( void )outputLen;
+
     int32_t ret = 0;
 
     if( finalHashCalledCount++ == finalHashCallToFail )
@@ -681,7 +693,7 @@ void test_SigV4_GenerateHTTPAuthorization_Happy_Paths()
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
     TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
-    printf( "%.*s\n", authBufLen, authBuf );
+    printf( "%ld\n.*%s\n", authBufLen, authBuf );
 
     /* Coverage for the case where the service name has the same length as "s3". */
     params.serviceLen = S3_SERVICE_NAME_LEN;
@@ -689,7 +701,7 @@ void test_SigV4_GenerateHTTPAuthorization_Happy_Paths()
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
     TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
-    printf( "%.*s\n", authBufLen, authBuf );
+    printf( "%ld\n.*%s\n", authBufLen, authBuf );
 
     /* Coverage for the null-terminated path. */
     resetInputParams();
@@ -785,7 +797,7 @@ void test_SigV4_GenerateAuthorization_Query_Strings_Special_Cases()
     TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
                            &params, authBuf, &authBufLen, &signature, &signatureLen ) );
     TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
-    printf( "%.*s\n", authBufLen, authBuf );
+    printf( "%ld\n.*%s\n", authBufLen, authBuf );
     TEST_ASSERT_EQUAL_MEMORY( pExpectedSignature, signature, signatureLen );
 
     params.pHttpParameters->pQuery = QUERY_STRING_WITH_TRAILING_N_LEADING_AMPERSAND;
