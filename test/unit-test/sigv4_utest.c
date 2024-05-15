@@ -1399,4 +1399,3 @@ void test_SigV4_GenerateAuthorization_Header_Key_Or_Value_With_All_White_Spaces(
     TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
     free( longHeader );
 }
-
