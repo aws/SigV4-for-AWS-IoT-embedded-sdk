@@ -245,7 +245,7 @@ static int32_t valid_sha256_final( void * pHashContext,
                                    uint8_t * pOutput,
                                    size_t outputLen )
 {
-    ( void )outputLen;
+    ( void ) outputLen;
 
     if( SHA256_Final( ( uint8_t * ) pOutput, ( SHA256_CTX * ) pHashContext ) )
     {
@@ -265,7 +265,7 @@ static size_t finalHashCalledCount = 0U, finalHashCallToFail = SIZE_MAX;
 
 static int32_t hash_init_failable( void * pHashContext )
 {
-    ( void )pHashContext;
+    ( void ) pHashContext;
 
     int32_t ret = 0;
 
@@ -281,9 +281,9 @@ static int32_t hash_update_failable( void * pHashContext,
                                      const uint8_t * pInput,
                                      size_t inputLen )
 {
-    ( void )pHashContext;
-    ( void )pInput;
-    ( void )inputLen;
+    ( void ) pHashContext;
+    ( void ) pInput;
+    ( void ) inputLen;
 
     int32_t ret = 0;
 
@@ -299,9 +299,9 @@ static int32_t hash_final_failable( void * pHashContext,
                                     uint8_t * pOutput,
                                     size_t outputLen )
 {
-    ( void )pHashContext;
-    ( void )pOutput;
-    ( void )outputLen;
+    ( void ) pHashContext;
+    ( void ) pOutput;
+    ( void ) outputLen;
 
     int32_t ret = 0;
 
@@ -1416,7 +1416,8 @@ void test_SigV4_GenerateAuthorization_Header_Key_Or_Value_With_All_White_Spaces(
 void test_SigV4_EncodeURI()
 {
     SigV4Status_t returnStatus;
+
     resetInputParams();
     returnStatus = SigV4_EncodeURI( params.pHttpParameters->pPath, params.pHttpParameters->pathLen, authBuf, &authBufLen, true, true );
-    TEST_ASSERT_EQUAL( SigV4Success, returnStatus ); 
+    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
 }
