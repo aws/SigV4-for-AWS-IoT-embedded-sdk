@@ -1412,7 +1412,7 @@ void test_SigV4_GenerateAuthorization_Header_Key_Or_Value_With_All_White_Spaces(
     free( longHeader );
 }
 
-/* Test to add SigV4_EncodeURI API to achieve full coverage. */
+/* Test that the public API SigV4_EncodeURI API of the library returns expected result to achieve full coverage. */
 void test_SigV4_EncodeURI()
 {
     SigV4Status_t returnStatus;
