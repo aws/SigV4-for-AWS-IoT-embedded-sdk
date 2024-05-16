@@ -147,12 +147,12 @@ SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
     return ret;
 }
 
-SigV4Status_t encodeURI( const char * pUri,
-                         size_t uriLen,
-                         char * pCanonicalURI,
-                         size_t * canonicalURILen,
-                         bool encodeSlash,
-                         bool doubleEncodeEquals )
+SigV4Status_t SigV4_EncodeURI( const char * pUri,
+                               size_t uriLen,
+                               char * pCanonicalURI,
+                               size_t * canonicalURILen,
+                               bool encodeSlash,
+                               bool doubleEncodeEquals )
 {
     SigV4Status_t returnStatus = SigV4Success;
 
