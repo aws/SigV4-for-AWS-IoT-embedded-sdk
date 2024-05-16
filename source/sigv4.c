@@ -3227,83 +3227,87 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
 
 /*-----------------------------------------------------------*/
 
-SigV4Status_t SigV4_EncodeURI( const char * pUri,
-                               size_t uriLen,
-                               char * pCanonicalURI,
-                               size_t * canonicalURILen,
-                               bool encodeSlash,
-                               bool doubleEncodeEquals )
-{
-    size_t uriIndex = 0U, bytesConsumed = 0U;
-    size_t bufferLen = 0U;
-    SigV4Status_t returnStatus = SigV4Success;
+#if ( SIGV4_USE_CANONICAL_SUPPORT == 1 )
 
-    assert( pUri != NULL );
-    assert( pCanonicalURI != NULL );
-    assert( canonicalURILen != NULL );
-
-    bufferLen = *canonicalURILen;
-
-    while( ( uriIndex < uriLen ) && ( returnStatus == SigV4Success ) )
+    SigV4Status_t SigV4_EncodeURI( const char * pUri,
+                                   size_t uriLen,
+                                   char * pCanonicalURI,
+                                   size_t * canonicalURILen,
+                                   bool encodeSlash,
+                                   bool doubleEncodeEquals )
     {
-        if( doubleEncodeEquals && ( pUri[ uriIndex ] == '=' ) )
+        size_t uriIndex = 0U, bytesConsumed = 0U;
+        size_t bufferLen = 0U;
+        SigV4Status_t returnStatus = SigV4Success;
+
+        assert( pUri != NULL );
+        assert( pCanonicalURI != NULL );
+        assert( canonicalURILen != NULL );
+
+        bufferLen = *canonicalURILen;
+
+        while( ( uriIndex < uriLen ) && ( returnStatus == SigV4Success ) )
         {
-            if( ( bufferLen - bytesConsumed ) < URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE )
+            if( doubleEncodeEquals && ( pUri[ uriIndex ] == '=' ) )
             {
-                returnStatus = SigV4InsufficientMemory;
-                LOG_INSUFFICIENT_MEMORY_ERROR( "double encode '=' character in canonical query",
-                                               ( bytesConsumed + URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE - bufferLen ) );
+                if( ( bufferLen - bytesConsumed ) < URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE )
+                {
+                    returnStatus = SigV4InsufficientMemory;
+                    LOG_INSUFFICIENT_MEMORY_ERROR( "double encode '=' character in canonical query",
+                                                   ( bytesConsumed + URI_DOUBLE_ENCODED_EQUALS_CHAR_SIZE - bufferLen ) );
+                }
+                else
+                {
+                    bytesConsumed += writeDoubleEncodedEquals( &( pCanonicalURI[ bytesConsumed ] ), bufferLen - bytesConsumed );
+                }
+            }
+            else if( isAllowedChar( pUri[ uriIndex ], encodeSlash ) )
+            {
+                /* If the output buffer has space, add the character as-is in URI encoding as it
+                 * is neither a special character nor an '=' character requiring double encoding. */
+                if( bytesConsumed < bufferLen )
+                {
+                    pCanonicalURI[ bytesConsumed ] = pUri[ uriIndex ];
+                    ++bytesConsumed;
+                }
+                else
+                {
+                    returnStatus = SigV4InsufficientMemory;
+                    LogError( ( "Failed to encode URI in buffer due to insufficient memory" ) );
+                }
+            }
+            else if( pUri[ uriIndex ] == '\0' )
+            {
+                /* The URI path beyond the NULL terminator is not encoded. */
+                uriIndex = uriLen;
             }
             else
             {
-                bytesConsumed += writeDoubleEncodedEquals( &( pCanonicalURI[ bytesConsumed ] ), bufferLen - bytesConsumed );
+                if( ( bufferLen - bytesConsumed ) < URI_ENCODED_SPECIAL_CHAR_SIZE )
+                {
+                    returnStatus = SigV4InsufficientMemory;
+                    LOG_INSUFFICIENT_MEMORY_ERROR( "encode special character in canonical URI",
+                                                   ( bytesConsumed + URI_ENCODED_SPECIAL_CHAR_SIZE - bufferLen ) );
+                }
+                else
+                {
+                    bytesConsumed += writeHexCodeOfChar( &( pCanonicalURI[ bytesConsumed ] ), bufferLen - bytesConsumed, pUri[ uriIndex ] );
+                }
             }
-        }
-        else if( isAllowedChar( pUri[ uriIndex ], encodeSlash ) )
-        {
-            /* If the output buffer has space, add the character as-is in URI encoding as it
-             * is neither a special character nor an '=' character requiring double encoding. */
-            if( bytesConsumed < bufferLen )
-            {
-                pCanonicalURI[ bytesConsumed ] = pUri[ uriIndex ];
-                ++bytesConsumed;
-            }
-            else
-            {
-                returnStatus = SigV4InsufficientMemory;
-                LogError( ( "Failed to encode URI in buffer due to insufficient memory" ) );
-            }
-        }
-        else if( pUri[ uriIndex ] == '\0' )
-        {
-            /* The URI path beyond the NULL terminator is not encoded. */
-            uriIndex = uriLen;
-        }
-        else
-        {
-            if( ( bufferLen - bytesConsumed ) < URI_ENCODED_SPECIAL_CHAR_SIZE )
-            {
-                returnStatus = SigV4InsufficientMemory;
-                LOG_INSUFFICIENT_MEMORY_ERROR( "encode special character in canonical URI",
-                                               ( bytesConsumed + URI_ENCODED_SPECIAL_CHAR_SIZE - bufferLen ) );
-            }
-            else
-            {
-                bytesConsumed += writeHexCodeOfChar( &( pCanonicalURI[ bytesConsumed ] ), bufferLen - bytesConsumed, pUri[ uriIndex ] );
-            }
+
+            uriIndex++;
         }
 
-        uriIndex++;
+        if( returnStatus == SigV4Success )
+        {
+            /* Set the output parameter of the number of URI encoded bytes written
+             * to the buffer. */
+            *canonicalURILen = bytesConsumed;
+        }
+
+        return returnStatus;
     }
 
-    if( returnStatus == SigV4Success )
-    {
-        /* Set the output parameter of the number of URI encoded bytes written
-         * to the buffer. */
-        *canonicalURILen = bytesConsumed;
-    }
-
-    return returnStatus;
-}
+#endif /* #if (SIGV4_USE_CANONICAL_SUPPORT == 1) */
 
 /*-----------------------------------------------------------*/
