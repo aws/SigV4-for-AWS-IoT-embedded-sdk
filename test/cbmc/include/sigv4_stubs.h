@@ -50,7 +50,7 @@ SigV4Status_t writeLineToCanonicalRequest( const char * pLine,
                                            size_t lineLen,
                                            CanonicalContext_t * pCanonicalContext );
 
-SigV4Status_t encodeURI( const char * pUri,
+SigV4Status_t SigV4_EncodeURI( const char * pUri,
                          size_t uriLen,
                          char * pCanonicalURI,
                          size_t * canonicalURILen,

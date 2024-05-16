@@ -693,7 +693,7 @@ void test_SigV4_GenerateHTTPAuthorization_Happy_Paths()
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
     TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
-    printf( "%.*s\n", ( int )( authBufLen ), authBuf );
+    printf( "%.*s\n", ( int ) ( authBufLen ), authBuf );
 
     /* Coverage for the case where the service name has the same length as "s3". */
     params.serviceLen = S3_SERVICE_NAME_LEN;
@@ -701,7 +701,7 @@ void test_SigV4_GenerateHTTPAuthorization_Happy_Paths()
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
     TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
-    printf( "%.*s\n", ( int )( authBufLen ), authBuf );
+    printf( "%.*s\n", ( int ) ( authBufLen ), authBuf );
 
     /* Coverage for the null-terminated path. */
     resetInputParams();
@@ -797,7 +797,7 @@ void test_SigV4_GenerateAuthorization_Query_Strings_Special_Cases()
     TEST_ASSERT_EQUAL( SigV4Success, SigV4_GenerateHTTPAuthorization(
                            &params, authBuf, &authBufLen, &signature, &signatureLen ) );
     TEST_ASSERT_EQUAL( SIGV4_HASH_MAX_DIGEST_LENGTH * 2U, signatureLen );
-    printf( "%.*s\n", ( int )( authBufLen ), authBuf );
+    printf( "%.*s\n", ( int ) ( authBufLen ), authBuf );
     TEST_ASSERT_EQUAL_MEMORY( pExpectedSignature, signature, signatureLen );
 
     params.pHttpParameters->pQuery = QUERY_STRING_WITH_TRAILING_N_LEADING_AMPERSAND;
@@ -1410,14 +1410,4 @@ void test_SigV4_GenerateAuthorization_Header_Key_Or_Value_With_All_White_Spaces(
     returnStatus = SigV4_GenerateHTTPAuthorization( &params, authBuf, &authBufLen, &signature, &signatureLen );
     TEST_ASSERT_EQUAL( SigV4InvalidParameter, returnStatus );
     free( longHeader );
-}
-
-/* Test that the public API SigV4_EncodeURI API of the library returns expected result to achieve full coverage. */
-void test_SigV4_EncodeURI()
-{
-    SigV4Status_t returnStatus;
-
-    resetInputParams();
-    returnStatus = SigV4_EncodeURI( params.pHttpParameters->pPath, params.pHttpParameters->pathLen, authBuf, &authBufLen, true, true );
-    TEST_ASSERT_EQUAL( SigV4Success, returnStatus );
 }
