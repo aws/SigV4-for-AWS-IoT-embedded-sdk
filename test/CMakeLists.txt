@@ -1,7 +1,7 @@
 # Project information.
 cmake_minimum_required( VERSION 3.13.0 )
 project( "SigV4 tests"
-          VERSION 1.2.0
+          VERSION 1.3.0
           LANGUAGES C )
 
 # Allow the project to be organized into folders.

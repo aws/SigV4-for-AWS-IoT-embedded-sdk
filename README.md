@@ -114,7 +114,7 @@ HTTP requests to AWS S3 service.
 ## Generating documentation
 
 The Doxygen references found in this repository were created using Doxygen
-version 1.9.2. To generate these Doxygen pages, please run the following command
+version 1.9.6. To generate these Doxygen pages, please run the following command
 from the root of this repository:
 
 ```shell
