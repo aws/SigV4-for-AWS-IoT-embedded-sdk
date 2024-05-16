@@ -1301,11 +1301,11 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 /*-----------------------------------------------------------*/
 
     SigV4Status_t SigV4_EncodeURI( const char * pUri,
-                                    size_t uriLen,
-                                    char * pCanonicalURI,
-                                    size_t * canonicalURILen,
-                                    bool encodeSlash,
-                                    bool doubleEncodeEquals )
+                                   size_t uriLen,
+                                   char * pCanonicalURI,
+                                   size_t * canonicalURILen,
+                                   bool encodeSlash,
+                                   bool doubleEncodeEquals )
     {
         size_t uriIndex = 0U, bytesConsumed = 0U;
         size_t bufferLen = 0U;
@@ -1412,11 +1412,11 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
                  * at an overlapping position of the single-encoded URI. Once written,
                  * the double-encoded URI is moved to the starting location of the single-encoded URI. */
                 returnStatus = SigV4_EncodeURI( ( char * ) &( pCanonicalRequest->pBufProcessing[ uxBufIndex ] ),
-                                          encodedLen,
-                                          ( char * ) &( pCanonicalRequest->pBufProcessing[ uxBufIndex + encodedLen ] ),
-                                          &doubleEncodedLen,
-                                          false,
-                                          false );
+                                                encodedLen,
+                                                ( char * ) &( pCanonicalRequest->pBufProcessing[ uxBufIndex + encodedLen ] ),
+                                                &doubleEncodedLen,
+                                                false,
+                                                false );
 
                 if( returnStatus == SigV4Success )
                 {
@@ -2059,11 +2059,11 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             if( valueLen > 0U )
             {
                 returnStatus = SigV4_EncodeURI( pValue,
-                                          valueLen,
-                                          &( pBufCur[ 1 ] ),
-                                          &valueBytesWritten,
-                                          true /* Encode slash (/) */,
-                                          doubleEncodeEqualsInParmsValues );
+                                                valueLen,
+                                                &( pBufCur[ 1 ] ),
+                                                &valueBytesWritten,
+                                                true /* Encode slash (/) */,
+                                                doubleEncodeEqualsInParmsValues );
 
                 if( returnStatus == SigV4Success )
                 {
@@ -2098,11 +2098,11 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 
             encodedLen = remainingLen;
             returnStatus = SigV4_EncodeURI( pCanonicalRequest->pQueryLoc[ paramsIndex ].key.pData,
-                                      pCanonicalRequest->pQueryLoc[ paramsIndex ].key.dataLen,
-                                      ( char * ) &( pCanonicalRequest->pBufProcessing[ uxBufIndex ] ),
-                                      &encodedLen,
-                                      true /* Encode slash (/) */,
-                                      false /* Do not double encode '='. */ );
+                                            pCanonicalRequest->pQueryLoc[ paramsIndex ].key.dataLen,
+                                            ( char * ) &( pCanonicalRequest->pBufProcessing[ uxBufIndex ] ),
+                                            &encodedLen,
+                                            true /* Encode slash (/) */,
+                                            false /* Do not double encode '='. */ );
 
             if( returnStatus == SigV4Success )
             {
