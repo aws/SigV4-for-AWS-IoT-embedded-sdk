@@ -1,5 +1,13 @@
 # Changelog for AWS SigV4 Library
 
+## v1.3.0 (May 2024)
+
+- [#93](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/pull/93) Update CanonicalContext structure for MISRA compliance
+- [#92](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/pull/92) MISRA C:2012 Compliance Update
+- [#89](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/pull/89) Support presigned URL signature "UNSIGNED-PAYLOAD" and expose EncodeURI
+- [#85](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/pull/85) Fix bugs in generating canonical Query
+- [#77](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/pull/77) Update Doxygen version to 1.9.6
+
 ## v1.2.0 (October 2022)
 
 - [#71](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/pull/71) MISRA C:2012 Compliance Update
