@@ -157,7 +157,6 @@ typedef enum SigV4Status
      * - #SigV4_GenerateHTTPAuthorization
      * - #SigV4_AwsIotDateToIso8601
      * - #SigV4_EncodeURI
-     * 
      */
     SigV4Success,
 
