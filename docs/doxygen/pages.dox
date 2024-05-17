@@ -72,6 +72,7 @@ compiler option such as -D in gcc.
 @brief Primary functions of the AWS SigV4 library:<br><br>
 @subpage sigV4_generateHTTPAuthorization_function <br>
 @subpage sigV4_awsIotDateToIso8601_function <br>
+@subpage sigV4_encodeURI_function <br>
 
 @page sigV4_generateHTTPAuthorization_function SigV4_GenerateHTTPAuthorization
 @snippet sigv4.h declare_sigV4_generateHTTPAuthorization_function
@@ -80,6 +81,10 @@ compiler option such as -D in gcc.
 @page sigV4_awsIotDateToIso8601_function SigV4_AwsIotDateToIso8601
 @snippet sigv4.h declare_sigV4_awsIotDateToIso8601_function
 @copydoc SigV4_AwsIotDateToIso8601
+
+@page sigV4_encodeURI_function SigV4_EncodeURI
+@snippet sigv4.h declare_sigV4_encodeURI_function
+@copydoc SigV4_EncodeURI
 */
 
 <!-- We do not use doxygen ALIASes here because there have been issues in the past versions with "^^" newlines within the alias definition. -->

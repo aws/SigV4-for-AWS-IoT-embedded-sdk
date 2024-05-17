@@ -156,6 +156,7 @@ typedef enum SigV4Status
      * Functions that may return this value:
      * - #SigV4_GenerateHTTPAuthorization
      * - #SigV4_AwsIotDateToIso8601
+     * - #SigV4_EncodeURI
      */
     SigV4Success,
 
@@ -175,6 +176,7 @@ typedef enum SigV4Status
      *
      * Functions that may return this value:
      * - #SigV4_GenerateHTTPAuthorization
+     * - #SigV4_EncodeURI
      */
     SigV4InsufficientMemory,
 
@@ -588,8 +590,10 @@ SigV4Status_t SigV4_AwsIotDateToIso8601( const char * pDate,
  * output: the length of the generated canonical URI.
  * @param[in] encodeSlash Option to indicate if slashes should be encoded.
  * @param[in] doubleEncodeEquals Option to indicate if equals should be double-encoded.
+ *
+ * @return #SigV4Success code if successful, error code otherwise.
  */
-/* @[declare_sigV4_EncodeURI_function] */
+/* @[declare_sigV4_encodeURI_function] */
     SigV4Status_t SigV4_EncodeURI( const char * pUri,
                                    size_t uriLen,
                                    char * pCanonicalURI,
