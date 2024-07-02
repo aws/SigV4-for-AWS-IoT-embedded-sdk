@@ -23,10 +23,10 @@ See memory requirements for this library [here][memory_table].
 
 [memory_table]: ./docs/doxygen/include/size_table.md
 
-**AWS SigV4 v1.2.0
-[source code](https://github.com/aws/Sigv4-for-AWS-IoT-embedded-sdk/tree/v1.2.0/source)
+**AWS SigV4 v1.3.0
+[source code](https://github.com/aws/Sigv4-for-AWS-IoT-embedded-sdk/tree/v1.3.0/source)
 is part of the
-[FreeRTOS 202210.00 LTS](https://github.com/FreeRTOS/FreeRTOS-LTS/tree/202210.00-LTS)
+[FreeRTOS 202406.00 LTS](https://github.com/FreeRTOS/FreeRTOS-LTS/tree/202406.00-LTS)
 release.**
 
 ## AWS SigV4 Library Config File
