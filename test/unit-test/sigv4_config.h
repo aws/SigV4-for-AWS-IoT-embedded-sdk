@@ -36,9 +36,6 @@
 #ifndef SIGV4_CONFIG_H_
 #define SIGV4_CONFIG_H_
 
-
-#define LOGGING_LEVEL_DEBUG    1
-
 /* @[code_example_loggingmacros] */
 /************* Define Logging Macros using printf function ***********/
 
