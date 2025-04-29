@@ -2408,7 +2408,7 @@ static int32_t hmacIntermediate( HmacContext_t * pHmacContext,
 {
     int32_t returnStatus = 0;
     size_t i = 0U;
-    const SigV4CryptoInterface_t * pCryptoInterface = pHmacContext->pCryptoInterface;
+    const SigV4CryptoInterface_t * pCryptoInterface;
 
     assert( pHmacContext != NULL );
     assert( dataLen > 0U );
@@ -2417,7 +2417,9 @@ static int32_t hmacIntermediate( HmacContext_t * pHmacContext,
     assert( pHmacContext->pCryptoInterface->hashInit != NULL );
     assert( pHmacContext->pCryptoInterface->hashUpdate != NULL );
     assert( pHmacContext->pCryptoInterface->hashFinal != NULL );
-    assert( pHmacContext->keyLen == pCryptoInterface->hashBlockLen );
+    assert( pHmacContext->keyLen == pHmacContext->pCryptoInterface->hashBlockLen );
+
+    pCryptoInterface = pHmacContext->pCryptoInterface;
 
     /* Derive the inner HMAC key by XORing the key with inner pad byte. */
     for( i = 0U; i < pCryptoInterface->hashBlockLen; i++ )
