@@ -1167,7 +1167,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
     {
         const SigV4KeyValuePair_t * pFirst, * pSecond = NULL;
         size_t lenSmall = 0U;
-        int32_t compResult = -1;
+        int32_t compResult;
 
         assert( pFirstVal != NULL );
         assert( pSecondVal != NULL );
@@ -2250,7 +2250,7 @@ static int32_t completeHash( const uint8_t * pInput,
                              size_t outputLen,
                              const SigV4CryptoInterface_t * pCryptoInterface )
 {
-    int32_t hashStatus = -1;
+    int32_t hashStatus;
 
     assert( pOutput != NULL );
     assert( outputLen > 0 );
@@ -2457,7 +2457,7 @@ static int32_t hmacFinal( HmacContext_t * pHmacContext,
                           char * pMac,
                           size_t macLen )
 {
-    int32_t returnStatus = -1;
+    int32_t returnStatus;
     uint8_t innerHashDigest[ SIGV4_HASH_MAX_DIGEST_LENGTH ];
     size_t i = 0U;
     const SigV4CryptoInterface_t * pCryptoInterface = NULL;
