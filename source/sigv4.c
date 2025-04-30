@@ -3125,6 +3125,7 @@ SigV4Status_t SigV4_GenerateHTTPAuthorization( const SigV4Parameters_t * pParams
                                                size_t * signatureLen )
 {
     SigV4Status_t returnStatus = SigV4Success;
+    /* coverity[stack_use] 10528 bytes on x86_64 */
     CanonicalContext_t canonicalContext;
     const char * pAlgorithm = NULL;
     char * pSignedHeaders = NULL;
