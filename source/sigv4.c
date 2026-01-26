@@ -1410,21 +1410,21 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
 /*-----------------------------------------------------------*/
     static char lowercaseCharacter( char inputChar )
     {
-        char outputChar;
+        int8_t outputChar;
 
         /* Get the offset from a capital to lowercase character */
         int8_t offset = 'a' - 'A';
 
         if( ( inputChar >= 'A' ) && ( inputChar <= 'Z' ) )
         {
-            outputChar = ( char ) ( ( ( int8_t ) inputChar ) + offset );
+            outputChar = ( ( int8_t ) inputChar ) + offset;
         }
         else
         {
-            outputChar = inputChar;
+            outputChar = ( int8_t ) inputChar;
         }
 
-        return outputChar;
+        return ( char ) outputChar;
     }
 
     static SigV4Status_t copyHeaderStringToCanonicalBuffer( const char * pData,
@@ -1738,7 +1738,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             else
             {
                 /* Sorting headers based on keys. */
-                quickSort( canonicalRequest->pHeadersLoc, noOfHeaders, sizeof( SigV4KeyValuePair_t ), cmpHeaderField );
+                quickSort( canonicalRequest->pHeadersLoc, noOfHeaders, sizeof( SigV4KeyValuePair_t ), &cmpHeaderField );
 
                 /* If the headers are canonicalized, we will copy them directly into the buffer as they do not
                  * need processing, else we need to call the following function. */
@@ -2093,7 +2093,7 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
         {
             /* Sort the parameter names by character code point in ascending order.
              * Parameters with duplicate names should be sorted by value. */
-            quickSort( pCanonicalContext->pQueryLoc, numberOfParameters, sizeof( SigV4KeyValuePair_t ), cmpQueryFieldValue );
+            quickSort( pCanonicalContext->pQueryLoc, numberOfParameters, sizeof( SigV4KeyValuePair_t ), &cmpQueryFieldValue );
 
             /* URI-encode each parameter name and value according to the following rules specified for SigV4:
              *  - Do not URI-encode any of the unreserved characters that RFC 3986 defines:
