@@ -41,6 +41,16 @@
 #endif
 /* *INDENT-ON* */
 
+/**
+ * @cond DOXYGEN_IGNORE
+ * The current version of this library.
+ *
+ * If SIGV4_LIBRARY_VERSION ends with + it represents the version in development
+ * after the numbered release.
+ */
+#define SIGV4_LIBRARY_VERSION    "v1.3.0+"
+/** @endcond */
+
 /* SIGV4_DO_NOT_USE_CUSTOM_CONFIG allows building of the SigV4 library without a
  * config file. If a config file is provided, the SIGV4_DO_NOT_USE_CUSTOM_CONFIG
  * macro must not be defined.
