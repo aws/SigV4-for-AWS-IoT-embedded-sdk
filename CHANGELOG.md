@@ -1,5 +1,16 @@
 # Changelog for AWS SigV4 Library
 
+## v1.3.1 (March 2026)
+
+- [#114](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/pull/114) Update unit-test to use latest OpenSSL APIs
+- [#110](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/pull/110) Fix MISRA violations
+- [#109](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/pull/109) Add artifact backup action
+- [#108](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/pull/108) Remove formatting bot workflow
+- [#106](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/pull/106) Move deref to after non-null assert
+- [#105](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/pull/105) Add typecasting to lowercaseCharacter function and fix GHA workflow use of Ubuntu 20.04
+- [#104](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/pull/104) Adjust proof tooling to support CBMC v6
+- [#103](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/pull/103) Update LTS 202406 information
+
 ## v1.3.0 (May 2024)
 
 - [#93](https://github.com/aws/SigV4-for-AWS-IoT-embedded-sdk/pull/93) Update CanonicalContext structure for MISRA compliance
