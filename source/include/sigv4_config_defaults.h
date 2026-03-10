@@ -1,5 +1,5 @@
 /*
- * SigV4 Library v1.3.0
+ * SigV4 Library
  * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * SPDX-License-Identifier: MIT
