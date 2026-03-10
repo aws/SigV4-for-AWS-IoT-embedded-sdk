@@ -24,7 +24,7 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <openssl/sha.h>
+#include <openssl/evp.h>
 
 #include "unity.h"
 
@@ -180,7 +180,7 @@ static SigV4Parameters_t params;
 static SigV4HttpParameters_t httpParams;
 static SigV4CryptoInterface_t cryptoInterface;
 static SigV4Credentials_t creds;
-static SHA256_CTX sha256;
+static EVP_MD_CTX * hashContext = NULL;
 
 static char authBuf[ AUTH_BUF_LENGTH ];
 static size_t authBufLen = AUTH_BUF_LENGTH;
@@ -221,7 +221,11 @@ void formatAndVerifyInputDate( const char * pInputDate,
 
 static int32_t valid_sha256_init( void * pHashContext )
 {
-    if( SHA256_Init( ( SHA256_CTX * ) pHashContext ) == 1 )
+    EVP_MD_CTX ** ppCtx = ( EVP_MD_CTX ** ) pHashContext;
+
+    *ppCtx = EVP_MD_CTX_new();
+
+    if( ( *ppCtx != NULL ) && ( EVP_DigestInit_ex( *ppCtx, EVP_sha256(), NULL ) == 1 ) )
     {
         return 0;
     }
@@ -233,7 +237,9 @@ static int32_t valid_sha256_update( void * pHashContext,
                                     const uint8_t * pInput,
                                     size_t inputLen )
 {
-    if( SHA256_Update( ( SHA256_CTX * ) pHashContext, pInput, inputLen ) )
+    EVP_MD_CTX * pCtx = *( EVP_MD_CTX ** ) pHashContext;
+
+    if( EVP_DigestUpdate( pCtx, pInput, inputLen ) == 1 )
     {
         return 0;
     }
@@ -245,13 +251,18 @@ static int32_t valid_sha256_final( void * pHashContext,
                                    uint8_t * pOutput,
                                    size_t outputLen )
 {
+    EVP_MD_CTX * pCtx = *( EVP_MD_CTX ** ) pHashContext;
+    unsigned int len = 0;
+
     ( void ) outputLen;
 
-    if( SHA256_Final( ( uint8_t * ) pOutput, ( SHA256_CTX * ) pHashContext ) )
+    if( EVP_DigestFinal_ex( pCtx, pOutput, &len ) == 1 )
     {
+        EVP_MD_CTX_free( pCtx );
         return 0;
     }
 
+    EVP_MD_CTX_free( pCtx );
     return -1;
 }
 
@@ -336,7 +347,6 @@ static void resetInputParams()
     memset( &httpParams, 0, sizeof( httpParams ) );
     memset( &cryptoInterface, 0, sizeof( cryptoInterface ) );
     memset( &creds, 0, sizeof( creds ) );
-    memset( &sha256, 0, sizeof( sha256 ) );
     memset( authBuf, 0, AUTH_BUF_LENGTH );
     authBufLen = AUTH_BUF_LENGTH;
     signature = NULL;
@@ -364,7 +374,7 @@ static void resetInputParams()
     params.regionLen = sizeof( REGION ) - 1U;
     params.pService = SERVICE;
     params.serviceLen = sizeof( SERVICE ) - 1U;
-    cryptoInterface.pHashContext = &sha256;
+    cryptoInterface.pHashContext = &hashContext;
     cryptoInterface.hashInit = valid_sha256_init;
     cryptoInterface.hashUpdate = valid_sha256_update;
     cryptoInterface.hashFinal = valid_sha256_final;
