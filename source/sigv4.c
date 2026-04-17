@@ -1685,9 +1685,6 @@ static void generateCredentialScope( const SigV4Parameters_t * pSigV4Params,
             pCurrLoc++;
         }
 
-        /* Ensure each key has its corresponding value. */
-        assert( keyFlag == true );
-
         /* If no header was found OR header value was not found for a header key,
          *  that represents incorrect HTTP headers data passed by the application. */
         if( ( noOfHeaders == 0U ) || ( keyFlag == false ) )
