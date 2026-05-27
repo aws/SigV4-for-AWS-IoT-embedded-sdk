@@ -22,6 +22,28 @@ jobs:
           -DCMAKE_C_FLAGS='-Wall -Wextra -Werror'
           make -C build/ all
 
+  rust-bindings:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone This Repo
+        uses: actions/checkout@v3
+
+      - name: Build
+        working-directory: rust
+        run: cargo build --all-targets
+
+      - name: Check Formatting
+        working-directory: rust
+        run: cargo fmt -- --check
+
+      - name: Run Tests
+        working-directory: rust
+        run: cargo test --all-targets
+
+      - name: Run Clippy
+        working-directory: rust
+        run: cargo clippy --all-targets -- -D warnings
+
   unittest:
     runs-on: ubuntu-latest
     steps:
