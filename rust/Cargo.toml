@@ -1,0 +1,27 @@
+[package]
+name = "sigv4"
+version = "1.3.1"
+edition = "2024"
+license = "MIT"
+description = "Rust bindings for the SigV4-for-AWS-IoT-embedded-sdk C library"
+keywords = ["aws", "sigv4", "iot", "embedded"]
+categories = ["api-bindings"]
+include = [
+    "src/",
+    "examples/",
+    "build.rs",
+    "wrapper.h",
+    "include/",
+    "csrc/",
+]
+
+[features]
+default = []
+custom-config = []
+
+[build-dependencies]
+bindgen = "0.72.1"
+cc = "1"
+
+[dev-dependencies]
+ring = "0.17"
