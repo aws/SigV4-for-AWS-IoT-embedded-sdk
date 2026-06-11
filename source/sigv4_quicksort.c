@@ -141,6 +141,7 @@ static void quickSortHelper( void * pArray,
     {
         size_t partitionIndex;
         size_t len1, len2;
+        /* coverity[integer_overflow] */
         POP_STACK( hi, stack, top );
         POP_STACK( lo, stack, top );
 
